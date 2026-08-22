@@ -50,6 +50,8 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.animation.core.animate
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -89,11 +91,19 @@ fun RoundPicker(
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val square = maxWidth - 16.dp                       // 정사각형이었을 때의 한 변
-        val minH = 9.dp * 2 + square * DICT_FOOT            // 입력 칸 한 줄만 남는 높이
-        val maxH = square * 1.5f
+        val minH = square * DICT_FOOT                       // 입력 칸 한 줄만 남는 높이
+        // 訓音 자리가 이만큼도 안 나오면 접는 편이 낫다
+        val foldH = square * DICT_HEAD + square * DICT_FOOT + 40.dp
+        val maxH = square                          // 최대는 정사각형까지
         val minPx = with(density) { minH.toPx() }
+        val foldPx = with(density) { foldH.toPx() }
         val maxPx = with(density) { maxH.toPx() }
         var height by remember(square) { mutableFloatStateOf(with(density) { square.toPx() }) }
+
+        // 訓音 자리가 안 나올 만큼 줄었으면 입력 칸만 남기고 접는다
+        suspend fun fold() {
+            if (height < foldPx && height > minPx) animate(height, minPx) { v, _ -> height = v }
+        }
 
         // 목록의 스크롤을 먼저 판이 받아 먹는다
         val nested = remember(minPx, maxPx) {
@@ -117,18 +127,27 @@ fun RoundPicker(
                     height += used
                     return Offset(0f, used)
                 }
+
+                // 손을 뗀 뒤, 訓音 자리가 안 나올 만큼 줄었으면 입력 칸만 남기고 접는다
+                override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                    fold()
+                    return Velocity.Zero
+                }
             }
         }
 
         Column(Modifier.fillMaxSize()) {
             if (dict != null) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(4.dp))
                 DictPanel(
                     dict,
-                    radius,
-                    Modifier
-                        .padding(horizontal = 8.dp)
-                        .height(with(density) { height.toDp() }),
+                    onInput = {
+                        // 무언가 넣기 시작하면 판을 다시 펼친다
+                        if (height < maxPx) scope.launch {
+                            animate(height, maxPx) { v, _ -> height = v }
+                        }
+                    },
+                    modifier = Modifier.height(with(density) { height.toDp() }),
                 )
             }
 
@@ -152,6 +171,7 @@ fun RoundPicker(
                             state = rememberDraggableState { dy ->
                                 height = (height + dy).coerceIn(minPx, maxPx)
                             },
+                            onDragStopped = { fold() },
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -182,12 +202,12 @@ fun RoundPicker(
                         Cell(
                             radius = radius,
                             big = when {
-                                progress == -2f -> "새 판"
-                                progress < 0f -> "받는 중"
+                                progress == -2f -> "Update"
+                                progress < 0f -> "Fetching"
                                 progress < 1f -> "${(progress * 100).toInt()}%"
-                                else -> "설치"
+                                else -> "Install"
                             },
-                            small = if (progress == -2f) fresh.version else "누르면 열립니다",
+                            small = if (progress == -2f) fresh.version else "tap to open",
                             color = Hak3.Amber,
                             enabled = progress == -2f,
                         ) {
@@ -212,7 +232,7 @@ fun RoundPicker(
                 }
                 if (words > 0) {
                     item(key = "words") {
-                        Cell(radius, "$words", "단어장", Hak3.Hanja, true, onWords)
+                        Cell(radius, "$words", "words", Hak3.Hanja, true, onWords)
                     }
                 }
                 if (trouble != null) {
@@ -257,11 +277,11 @@ private fun Setup(radius: Dp, trouble: String, onFolder: () -> Unit, onFile: () 
             .background(Hak3.Surface, RoundedCornerShape(radius))
             .padding(20.dp),
     ) {
-        Text("기출 데이터가 아직 없습니다", fontSize = 16.sp, color = Hak3.Text)
+        Text("No exam data yet", fontSize = 16.sp, color = Hak3.Text)
         Spacer(Modifier.height(8.dp))
         Text(
-            "다운로드 폴더에 26HAKC 폴더를 만들고 그 안에 hanja3.db 를 둔 뒤, " +
-                "그 폴더를 지정해 주세요. 사전은 그동안에도 쓸 수 있습니다.",
+            "Put hanja3.db in a 26HAKC folder inside Downloads, then point the app " +
+                "at that folder. The dictionary works meanwhile.",
             fontSize = 13.sp,
             lineHeight = 21.sp,
             color = Hak3.TextDim,
@@ -273,7 +293,7 @@ private fun Setup(radius: Dp, trouble: String, onFolder: () -> Unit, onFile: () 
         Spacer(Modifier.height(14.dp))
         Row {
             Text(
-                "폴더 지정",
+                "Choose folder",
                 fontSize = 14.sp,
                 color = Hak3.Amber,
                 modifier = Modifier
@@ -283,7 +303,7 @@ private fun Setup(radius: Dp, trouble: String, onFolder: () -> Unit, onFile: () 
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                "파일 고르기",
+                "Choose file",
                 fontSize = 14.sp,
                 color = Hak3.TextDim,
                 modifier = Modifier
@@ -392,7 +412,7 @@ private fun RoundCell(e: ExamRow, radius: Dp, onPick: (Int) -> Unit) {
             )
         } else {
             Text(
-                if (live) e.date?.replace('-', '.') ?: "" else "본문 없음",
+                if (live) e.date?.replace('-', '.') ?: "" else "no text",
                 fontSize = 11.sp,
                 color = Hak3.TextDim,
                 textAlign = TextAlign.Center,

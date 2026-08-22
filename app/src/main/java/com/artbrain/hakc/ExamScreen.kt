@@ -222,7 +222,7 @@ fun ExamScreen(round: Int, db: ExamDb, onBack: () -> Unit) {
     }
     Deck(
         all = all,
-        title = "제${round}회",
+        title = "Round $round",
         subOf = { p -> "問 ${p.section.start}–${p.section.end}" },
         marks = marks,
         numbered = true,
@@ -266,7 +266,7 @@ fun WordScreen(db: ExamDb, onBack: () -> Unit) {
     }
     Deck(
         all = all,
-        title = "단어장",
+        title = "Words",
         subOf = { null },
         marks = marks,
         numbered = false,
@@ -552,8 +552,8 @@ private fun EmptyList(filter: Mark?, modifier: Modifier, radius: Dp) {
     ) {
         Text(
             when (filter) {
-                Mark.AMBER -> "애매한 문항이 없습니다."
-                else -> "외운 문항이 없습니다."
+                Mark.AMBER -> "Nothing marked yellow."
+                else -> "Nothing marked green."
             },
             fontSize = 16.sp,
             color = Hak3.TextDim,
@@ -738,7 +738,7 @@ private fun AnswerSlot(item: Item, revealed: Boolean) {
         ) {
         Column(Modifier.width(ANSWER)) {
             Text(
-                a ?: "정답 없음",
+                a ?: "no answer",
                 fontFamily = if (hanja) ThinHanja else FontFamily.Default,
                 fontWeight = if (hanja) FontWeight.Thin else FontWeight.Normal,
                 fontSize = if (hanja) 56.sp else 30.sp,
@@ -837,7 +837,7 @@ private fun BottomBar(
             Modifier.weight(1f),
             index = index,
             total = total,
-            text = if (lastNo != null) "$label / $lastNo" else "${label}번 · ${index + 1} / $total",
+            text = if (lastNo != null) "$label / $lastNo" else "$label · ${index + 1} / $total",
             onSeek = onSeek,
         )
         if (markOnLeft) Spacer(Modifier.size(BAR)) else AmberDot(enabled, onAmber)

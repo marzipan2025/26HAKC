@@ -38,9 +38,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.BaselineShift
@@ -83,9 +85,13 @@ private fun gradeColor(grade: Int?) = when (grade) {
 private const val HEAD = 84f / 244f
 private const val FOOT = 50f / 244f * 0.6f     // 입력 칸은 예전의 60%
 
-/** 목록 쪽에서 판의 최소 높이를 셈할 때 쓴다. */
+/** 벽에서 물러나는 거리. 실선도 글도 이 선에 맞춘다. */
+private val WALL = 16.dp
+private val RULE_GAP = 10.dp
+
+/** 목록 쪽에서 판의 높이를 셈할 때 쓴다. */
 const val DICT_FOOT = FOOT
-private val PAD = 9.dp
+const val DICT_HEAD = HEAD
 
 /** 위 한자 줄에 늘어놓는 한 칸 — 어느 낱말의 몇 번째 표기인지까지 안다. */
 private class Slot(val word: Found, val index: Int, val variant: Variant, val many: Boolean)
@@ -98,7 +104,7 @@ private class Slot(val word: Found, val index: Int, val variant: Variant, val ma
  * 訓音과 뜻이 따라온다 — 한자를 고르면 그 표기의 풀이가 바로 아래 서 있게.
  */
 @Composable
-fun DictPanel(dict: Dict, radius: Dp, modifier: Modifier = Modifier) {
+fun DictPanel(dict: Dict, onInput: () -> Unit, modifier: Modifier = Modifier) {
     var text by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<List<Found>>(emptyList()) }
     LaunchedEffect(text) { found = dict.search(text) }
@@ -117,45 +123,32 @@ fun DictPanel(dict: Dict, radius: Dp, modifier: Modifier = Modifier) {
         if (slots.isNotEmpty()) mid.animateScrollToItem(active.coerceIn(slots.indices))
     }
 
-    BoxWithConstraints(
-        modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(radius))
-            .background(Hak3.Surface)
-            .background(Hak3.Rule)          // 01HAKA 의 패널 바탕 한 겹
-            .padding(PAD)
-    ) {
-        // 안쪽 캡슐은 판 라운딩에서 여백만큼 뺀다 — 화면·카드와 같은 동심원 규칙
-        val inner = (radius - PAD).coerceAtLeast(0.dp)
+    BoxWithConstraints(modifier.fillMaxWidth()) {
         val square = maxWidth                       // 정사각형이었을 때의 한 변
         val foot = square * FOOT
-        val head = (maxHeight - foot - PAD * 2).coerceIn(0.dp, square * HEAD)
+        val head = (maxHeight - foot - RULE_GAP * 2).coerceIn(0.dp, square * HEAD)
         val glyph = (head.value * 0.68f).sp
 
         Column(Modifier.fillMaxSize()) {
-            // 위 캡슐 — 동음이의어를 좌우로 훑는다
+            // 위 — 동음이의어를 좌우로 훑는다
             if (head > 0.dp) {
                 Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(head)
-                        .clip(RoundedCornerShape(inner))
-                        .background(Hak3.Surface),
-                    contentAlignment = Alignment.Center,
+                    Modifier.fillMaxWidth().height(head),
+                    contentAlignment = Alignment.CenterStart,
                 ) {
                     if (slots.isEmpty()) {
                         Text(
-                            if (text.isBlank()) "漢字" else "없다",
-                            fontFamily = ThinHanja,
+                            if (text.isBlank()) "漢字" else "Nope, not here.",
+                            fontFamily = if (text.isBlank()) ThinHanja else FontFamily.Default,
                             fontWeight = FontWeight.Thin,
-                            fontSize = glyph,
+                            fontSize = if (text.isBlank()) glyph else glyph * 0.34f,
                             color = Hak3.HanjaDim,
-                            modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
+                            modifier = Modifier.padding(start = WALL),
                         )
                     } else {
                         LazyRow(
                             state = top,
-                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            contentPadding = PaddingValues(horizontal = WALL),
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -191,65 +184,67 @@ fun DictPanel(dict: Dict, radius: Dp, modifier: Modifier = Modifier) {
                         }
                     }
                 }
+                Rule()
             }
 
-            if (head > 0.dp) Spacer(Modifier.height(PAD))
-
             // 가운데 — 위에서 고른 표기의 訓音과 뜻
-            Box(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(0.dp))) {
-                if (slots.isEmpty()) {
-                    Text(
-                        if (text.isBlank()) "한글을 넣으면 한자를 찾습니다" else "찾지 못했습니다.",
-                        fontSize = 13.sp,
-                        color = Hak3.TextDim,
-                        modifier = Modifier.padding(start = 6.dp, top = 4.dp),
-                    )
-                } else {
+            Box(Modifier.fillMaxWidth().weight(1f)) {
+                if (slots.isNotEmpty()) {
                     LazyColumn(
                         state = mid,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 6.dp),
+                        contentPadding = PaddingValues(WALL, RULE_GAP, WALL, RULE_GAP),
                     ) {
                         itemsIndexed(slots) { _, s -> VariantBlock(s) }
                     }
                 }
             }
 
-            Spacer(Modifier.height(PAD))
+            Rule()
 
-            // 아래 캡슐 — 입력
+            // 아래 — 입력. 01HAKA 처럼 안내 문구를 두지 않는다.
             Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(foot)
-                    .clip(RoundedCornerShape(inner))
-                    .background(Hak3.Surface)
-                    .padding(start = 18.dp, end = 7.dp),
+                Modifier.fillMaxWidth().height(foot).padding(start = WALL, end = 8.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 BasicTextField(
                     value = text,
-                    onValueChange = { text = it },
+                    onValueChange = {
+                        text = it
+                        onInput()
+                    },
                     singleLine = true,
                     textStyle = TextStyle(color = Hak3.Text, fontSize = 19.sp),
                     cursorBrush = SolidColor(Hak3.Amber),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    modifier = Modifier.fillMaxWidth().padding(end = 44.dp),
+                    modifier = Modifier.fillMaxWidth().padding(end = 46.dp),
                 )
-                if (text.isEmpty()) {
-                    Text("한글을 넣으세요", fontSize = 17.sp, color = Hak3.TextDim)
-                } else {
-                    Box(
-                        Modifier
-                            .align(Alignment.CenterEnd)
-                            .size(foot * 0.62f)
-                            .background(Hak3.Text, CircleShape)
-                            .clickable { text = "" },
-                    )
-                }
+                Box(
+                    Modifier
+                        .align(Alignment.CenterEnd)
+                        .size(foot * 0.66f)
+                        .background(if (text.isEmpty()) Hak3.Rule else Hak3.Text, CircleShape)
+                        .clickable { text = "" },
+                )
             }
         }
     }
+}
+
+/**
+ * 세 부분을 가르는 실선. 벽에서 16dp 물러난다.
+ * 높이는 1물리픽셀 — Dp.Hairline 은 0dp 라서 칸으로 쓰면 아무것도 안 그려진다.
+ */
+@Composable
+private fun Rule() {
+    val one = with(LocalDensity.current) { 1.toDp() }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = WALL)
+            .height(one)
+            .background(Hak3.Rule)
+    )
 }
 
 /** 표기 하나의 풀이 — 글자마다 `음 : 급수 훈`, 그 아래 뜻. */

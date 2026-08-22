@@ -93,13 +93,13 @@ object DataFile {
         }
         try {
             c.contentResolver.openInputStream(pick.uri).use { input ->
-                if (input == null) return@withContext Result.Failed("파일을 열 수 없습니다.")
+                if (input == null) return@withContext Result.Failed("Could not open the file.")
                 out.outputStream().use { input.copyTo(it) }
             }
             prefs(c).edit().putString(KEY_STAMP, stamp).apply()
             Result.Ok(out, name)
         } catch (e: Exception) {
-            Result.Failed(e.message ?: "읽는 중 문제가 생겼습니다.")
+            Result.Failed(e.message ?: "Could not read the file.")
         }
     }
 }

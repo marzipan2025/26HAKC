@@ -114,7 +114,7 @@ private fun Root() {
 private fun trouble(state: DataFile.Result?): String = when (state) {
     DataFile.Result.NoFolder, null -> ""
     DataFile.Result.NoFile ->
-        "그 폴더에서 ${DataFile.PREFIX}…${DataFile.SUFFIX} 파일을 찾지 못했습니다."
+        "No ${DataFile.PREFIX}…${DataFile.SUFFIX} in that folder."
     is DataFile.Result.Failed -> state.why
-    is DataFile.Result.Ok -> "파일을 읽었지만 기출 데이터 형식이 아닙니다."
+    is DataFile.Result.Ok -> "That file is not exam data."
 }
