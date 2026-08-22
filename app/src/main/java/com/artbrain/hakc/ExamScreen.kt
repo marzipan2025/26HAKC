@@ -811,9 +811,9 @@ private fun BottomBar(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 노랑 단추 반대편은 비워 둔다. 슬라이더가 한가운데 서 있으려면 양쪽이
-        // 같은 너비를 차지해야 한다.
-        if (markOnLeft) AmberDot(enabled, onAmber) else Spacer(Modifier.size(BAR))
+        // 남색 단추가 빠진 자리는 슬라이더가 먹는다. 노랑 단추 하나와 둘이서
+        // 줄을 채운다.
+        if (markOnLeft) AmberDot(enabled, onAmber)
         Scrubber(
             Modifier.weight(1f),
             index = index,
@@ -821,7 +821,7 @@ private fun BottomBar(
             text = if (lastNo != null) "$label / $lastNo" else "$label · ${index + 1} / $total",
             onSeek = onSeek,
         )
-        if (markOnLeft) Spacer(Modifier.size(BAR)) else AmberDot(enabled, onAmber)
+        if (!markOnLeft) AmberDot(enabled, onAmber)
     }
 }
 

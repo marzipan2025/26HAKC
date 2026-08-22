@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -89,6 +90,13 @@ val Korail = FontFamily(
     Font(R.font.korail_b, FontWeight.Bold),
 )
 
+/**
+ * 자간을 좁히는 값. 코레일체의 한글은 글자 하나마다 좌우로 0.094em 이 비는데,
+ * 그 빈 자리를 70% 로 줄인 만큼(0.3 × 0.094)을 도로 당긴다. em 으로 두어야
+ * 글자 크기를 따라간다.
+ */
+private val KORAIL_TRACK = (-0.028f).em
+
 private val scheme = darkColorScheme(
     primary = Hak3.Hanja,
     background = Hak3.Ground,
@@ -110,7 +118,10 @@ fun Hak3Theme(content: @Composable () -> Unit) {
         // 글씨를 하나하나 지정하는 대신 여기서 한 번 깔아 둔다. 서체를 따로 부르는
         // 자리(큰 한자)만 제 것을 쓴다.
         CompositionLocalProvider(
-            LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = Korail),
+            LocalTextStyle provides LocalTextStyle.current.copy(
+                fontFamily = Korail,
+                letterSpacing = KORAIL_TRACK,
+            ),
             content = content,
         )
     }
