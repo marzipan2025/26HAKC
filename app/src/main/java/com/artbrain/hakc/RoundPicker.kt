@@ -229,10 +229,11 @@ fun RoundPicker(
                     },
                     contentAlignment = Alignment.Center,
                 ) {
-                    // 서랍이 열려 있으면 돌아가는 화살표가 그 자리에 선다
+                    // 서랍이 열려 있으면 화살표가 그 자리에 선다. 판이 도로 밀려갈
+                    // 쪽을 가리킨다 — 왼쪽 서랍은 판을 오른쪽에서 되돌려 온다.
                     Icon(
                         painterResource(
-                            if (drawer == Drawer.USER) R.drawable.ic_arrow_left
+                            if (drawer == Drawer.USER) R.drawable.ic_arrow_right
                             else R.drawable.ic_user
                         ),
                         contentDescription = null,
@@ -273,7 +274,7 @@ fun RoundPicker(
                 ) {
                     Icon(
                         painterResource(
-                            if (drawer == Drawer.SETTINGS) R.drawable.ic_arrow_right
+                            if (drawer == Drawer.SETTINGS) R.drawable.ic_arrow_left
                             else R.drawable.ic_settings
                         ),
                         contentDescription = null,
