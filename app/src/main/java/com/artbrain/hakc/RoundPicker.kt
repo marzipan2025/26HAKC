@@ -91,10 +91,9 @@ fun RoundPicker(
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val square = maxWidth - 16.dp                       // 정사각형이었을 때의 한 변
-        val minH = square * DICT_FOOT                       // 입력 칸 한 줄만 남는 높이
-        // 訓音 자리가 이만큼도 안 나오면 접는 편이 낫다
-        val foldH = square * DICT_HEAD + square * DICT_FOOT + 40.dp
-        val maxH = square                          // 최대는 정사각형까지
+        val minH = dictMin(square)                          // 입력 칸 한 줄만 남는 높이
+        val foldH = dictFold(square)                        // 이보다 줄면 접는다
+        val maxH = maxHeight - 46.dp                        // 위로는 화면이 허락하는 만큼
         val minPx = with(density) { minH.toPx() }
         val foldPx = with(density) { foldH.toPx() }
         val maxPx = with(density) { maxH.toPx() }
@@ -141,13 +140,16 @@ fun RoundPicker(
                 Spacer(Modifier.height(4.dp))
                 DictPanel(
                     dict,
+                    radius = radius,
                     onInput = {
                         // 무언가 넣기 시작하면 판을 다시 펼친다
                         if (height < maxPx) scope.launch {
                             animate(height, maxPx) { v, _ -> height = v }
                         }
                     },
-                    modifier = Modifier.height(with(density) { height.toDp() }),
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp)
+                        .height(with(density) { height.toDp() }),
                 )
             }
 

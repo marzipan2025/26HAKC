@@ -89,6 +89,18 @@ private const val FOOT = 50f / 244f * 0.6f     // 입력 칸은 예전의 60%
 private val WALL = 16.dp
 private val RULE_GAP = 10.dp
 
+/** 訓音 자리는 두 줄에 한 줄 남짓 여백까지는 있어야 읽을 만하다. */
+private val MID_MIN = 72.dp
+
+/** 한자 자리는 제 높이의 1/4 까지 줄어든다. */
+private const val HEAD_FLOOR = 0.25f
+
+/** 이만큼도 안 되면 펼쳐 둘 이유가 없다 — 입력 칸만 남기고 접는다. */
+fun dictFold(square: Dp): Dp = square * HEAD * HEAD_FLOOR + MID_MIN + square * FOOT + 4.dp
+
+/** 접었을 때의 높이 — 입력 칸 한 줄. */
+fun dictMin(square: Dp): Dp = square * FOOT
+
 /** 목록 쪽에서 판의 높이를 셈할 때 쓴다. */
 const val DICT_FOOT = FOOT
 const val DICT_HEAD = HEAD
@@ -104,7 +116,7 @@ private class Slot(val word: Found, val index: Int, val variant: Variant, val ma
  * 訓音과 뜻이 따라온다 — 한자를 고르면 그 표기의 풀이가 바로 아래 서 있게.
  */
 @Composable
-fun DictPanel(dict: Dict, onInput: () -> Unit, modifier: Modifier = Modifier) {
+fun DictPanel(dict: Dict, radius: Dp, onInput: () -> Unit, modifier: Modifier = Modifier) {
     var text by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<List<Found>>(emptyList()) }
     LaunchedEffect(text) { found = dict.search(text) }
@@ -123,10 +135,22 @@ fun DictPanel(dict: Dict, onInput: () -> Unit, modifier: Modifier = Modifier) {
         if (slots.isNotEmpty()) mid.animateScrollToItem(active.coerceIn(slots.indices))
     }
 
-    BoxWithConstraints(modifier.fillMaxWidth()) {
+    BoxWithConstraints(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(radius))
+            .background(Hak3.Surface)
+            .background(Hak3.Rule)          // 01HAKA 의 패널 바탕 한 겹
+    ) {
         val square = maxWidth                       // 정사각형이었을 때의 한 변
         val foot = square * FOOT
-        val head = (maxHeight - foot - RULE_GAP * 2).coerceIn(0.dp, square * HEAD)
+        val full = square * HEAD                    // 한자 자리의 제 높이
+        // 판이 줄면 訓音 자리부터 좁히고, 그 자리가 최소에 닿으면 한자 자리가 줄어든다
+        val room = (maxHeight - foot - 2.dp).coerceAtLeast(0.dp)
+        val head = when {
+            room >= full + MID_MIN -> full
+            else -> (room - MID_MIN).coerceIn(full * HEAD_FLOOR, full)
+        }
         val glyph = (head.value * 0.68f).sp
 
         Column(Modifier.fillMaxSize()) {
@@ -256,10 +280,10 @@ private fun VariantBlock(s: Slot) {
             Row(verticalAlignment = Alignment.Top) {
                 Text(
                     "${g.eum} :",
-                    fontSize = 14.sp,
-                    lineHeight = 21.sp,
+                    fontSize = 16.sp,
+                    lineHeight = 23.sp,
                     color = Hak3.Text,
-                    modifier = Modifier.width(34.dp),
+                    modifier = Modifier.width(38.dp),
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
@@ -276,8 +300,8 @@ private fun VariantBlock(s: Slot) {
                             ) { append(if (s.index == 0) "  ●" else "  ${s.index}") }
                         }
                     },
-                    fontSize = 14.sp,
-                    lineHeight = 21.sp,
+                    fontSize = 16.sp,
+                    lineHeight = 23.sp,
                     color = Hak3.Text,
                 )
             }
@@ -285,10 +309,10 @@ private fun VariantBlock(s: Slot) {
         s.variant.meaning?.let {
             Text(
                 it,
-                fontSize = 13.sp,
-                lineHeight = 20.sp,
+                fontSize = 15.sp,
+                lineHeight = 22.sp,
                 color = Hak3.TextDim,
-                modifier = Modifier.padding(start = 38.dp, top = 3.dp),
+                modifier = Modifier.padding(start = 40.dp, top = 3.dp),
             )
         }
     }
