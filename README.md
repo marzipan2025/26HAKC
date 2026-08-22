@@ -37,7 +37,7 @@ Kotlin + Jetpack Compose, minSdk 26.
 두 가지가 서로 다른 자리에 있다.
 
 **사전은 앱 안에** — `app/src/main/assets/dict.db`. 공개된 자료이고 바뀔 일이 없어서
-넣어 둔다. 낱말 303,494개, 글자 7,374개(그중 5,403개에 급수), 뜻풀이 13,763개.
+넣어 둔다. 낱말 303,494개, 글자 7,374개(그중 5,403개에 급수), 뜻풀이 13,946개.
 
 ```bash
 python3 tools/dict.py app/src/main/assets/dict.db          # 낱말·글자·급수
@@ -47,7 +47,7 @@ python3 tools/gloss.py kowiktionary-latest.xml.bz2 app/src/main/assets/dict.db  
 뜻풀이는 위키낱말사전 덤프에서 가져온다. 우리가 가진 낱말로만 훑고, 문서가 한자를
 짚어 준 뜻만 받는다 — 표기가 하나뿐이라고 넘겨짚으면 '나무' 문서의 뜻이 南無 에
 붙는 식으로 어긋난다. 그렇게 딸려 오는 3,500 개는 대개 고유어 문서였다. 카드에 한 줄로
-앉아야 하므로 30자가 넘는 풀이는 버린다.
+앉아야 하므로 40자가 넘는 풀이는 버린다. 25자가 넘으면 카드에서는 한 줄로 접고 +/− 로 여닫는다 — 01HAKA 의 더보기 규칙 그대로다.
 
 01HAKA 의 `hanja.txt`(libhangul, BSD)와 `hanja_grades.txt`를 구워 만든다.
 원본은 `~/MyGit/01HAKA/claude_kanji/HanjaWidget/HanjaWidget/` 에 있다.

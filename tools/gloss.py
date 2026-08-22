@@ -14,7 +14,7 @@
 둘 다 받아 (한글, 한자) 짝에 뜻을 맞춘다. 짝을 못 지으면 그 낱말에 한자 표기가
 하나뿐일 때만 붙인다 — 여럿인데 어느 것인지 모르면 안 붙이는 편이 낫다.
 
-카드에 한 줄로 앉아야 하므로 30자가 넘는 풀이는 버린다.
+카드에 한 줄로 앉아야 하므로 40자가 넘는 풀이는 버린다.
 """
 import bz2
 import pathlib
@@ -23,7 +23,7 @@ import sqlite3
 import sys
 import unicodedata
 
-LIMIT = 30
+LIMIT = 40
 
 TITLE = re.compile(r"<title>(.*?)</title>")
 WON_TPL = re.compile(r"\{\{어원\|([^|}]+)\|")

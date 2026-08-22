@@ -47,6 +47,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -316,14 +318,34 @@ private fun VariantBlock(s: Slot) {
                 )
             }
         }
-        s.variant.meaning?.let {
-            Text(
-                it,
-                fontSize = 15.sp,
-                lineHeight = 22.sp,
-                color = Hak3.TextDim,
-                modifier = Modifier.padding(start = 40.dp, top = 3.dp),
-            )
+        s.variant.meaning?.let { body ->
+            // 01HAKA 의 더보기 규칙 그대로 — 길면 한 줄로 접고 +/− 로 여닫는다.
+            // 짧으면 표시를 두지 않되 그 자리는 비워 글 시작선이 흔들리지 않게 한다.
+            var open by remember(s.variant.hanja) { mutableStateOf(false) }
+            val long = body.length > 25
+            Row(
+                Modifier
+                    .padding(start = 38.dp, top = 3.dp)
+                    .clickable(enabled = long) { open = !open },
+                verticalAlignment = Alignment.Top,
+            ) {
+                Text(
+                    if (!long) "" else if (open) "−" else "+",
+                    fontSize = 13.sp,
+                    color = Hak3.TextDim,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.width(14.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    body,
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
+                    color = Hak3.TextDim,
+                    maxLines = if (open) Int.MAX_VALUE else 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
