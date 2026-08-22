@@ -318,24 +318,24 @@ private fun Setup(radius: Dp, trouble: String, onFolder: () -> Unit, onFile: () 
             .background(Hak3.Surface, RoundedCornerShape(radius))
             .padding(20.dp),
     ) {
-        Text("No exam data yet", fontSize = 16.sp, color = Hak3.Text)
+        Text("No exam data yet", fontSize = 17.sp, color = Hak3.Text)
         Spacer(Modifier.height(8.dp))
         Text(
             "Put hanja3.db in a 26HAKC folder inside Downloads, then point the app " +
                 "at that folder. The dictionary works meanwhile.",
-            fontSize = 13.sp,
-            lineHeight = 21.sp,
-            color = Hak3.TextDim,
+            fontSize = 15.sp,
+            lineHeight = 23.sp,
+            color = Hak3.TextSoft,
         )
         if (trouble.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
-            Text(trouble, fontSize = 13.sp, color = Hak3.Red)
+            Text(trouble, fontSize = 15.sp, color = Hak3.Red)
         }
         Spacer(Modifier.height(14.dp))
         Row {
             Text(
                 "Choose folder",
-                fontSize = 14.sp,
+                fontSize = 15.sp,
                 color = Hak3.Amber,
                 modifier = Modifier
                     .border(1.dp, Hak3.Amber, RoundedCornerShape(10.dp))
@@ -345,37 +345,13 @@ private fun Setup(radius: Dp, trouble: String, onFolder: () -> Unit, onFile: () 
             Spacer(Modifier.width(8.dp))
             Text(
                 "Choose file",
-                fontSize = 14.sp,
+                fontSize = 15.sp,
                 color = Hak3.TextDim,
                 modifier = Modifier
                     .border(1.dp, Hak3.Rule, RoundedCornerShape(10.dp))
                     .clickable(onClick = onFile)
                     .padding(horizontal = 16.dp, vertical = 11.dp),
             )
-        }
-    }
-}
-
-/** 이름과 판 번호, 그리고 설정으로 드는 톱니. 사전 판과 회차 목록 사이에 선다. */
-@Composable
-private fun Header(built: String?, onSettings: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().padding(start = 4.dp, top = 14.dp, bottom = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text("26HAKC", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Hak3.Text)
-            Text(
-                "version ${BuildConfig.VERSION_NAME}" + (built?.let { " · 데이터 $it" } ?: ""),
-                fontSize = 13.sp,
-                color = Hak3.TextDim,
-            )
-        }
-        Box(
-            Modifier.size(40.dp).clickable(onClick = onSettings),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("⚙", fontSize = 24.sp, color = Hak3.TextDim)
         }
     }
 }

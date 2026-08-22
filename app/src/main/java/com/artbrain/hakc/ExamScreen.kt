@@ -421,12 +421,12 @@ fun SettingsPanel(
             Spacer(Modifier.height(10.dp))
             Text(
                 "Data ${built ?: "unknown"}",
-                fontSize = 14.sp,
+                fontSize = 15.sp,
                 color = Hak3.TextDim,
             )
             Text(
                 "Version ${BuildConfig.VERSION_NAME}",
-                fontSize = 14.sp,
+                fontSize = 15.sp,
                 color = Hak3.TextDim,
             )
 
@@ -486,10 +486,10 @@ private fun TopBar(
         }
         // 제목과 곁줄은 한 덩이로 캡슐 한가운데
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(title, fontSize = 14.sp, color = Hak3.Text)
+            Text(title, fontSize = 15.sp, color = Hak3.Text)
             if (sub != null) {
                 Spacer(Modifier.width(8.dp))
-                Text(sub, fontSize = 14.sp, color = Hak3.Hanja)
+                Text(sub, fontSize = 15.sp, color = Hak3.Hanja)
             }
         }
         Box(
@@ -518,7 +518,7 @@ private fun FilterDot(color: Color, on: Boolean, count: Int, onClick: () -> Unit
         contentAlignment = Alignment.Center,
     ) {
         if (count > 0) {
-            Text("$count", fontSize = 12.sp, color = Hak3.Ground)
+            Text("$count", fontSize = 13.sp, color = Hak3.Ground)
         }
     }
 }
@@ -536,7 +536,7 @@ private fun EmptyList(filter: Mark?, modifier: Modifier, radius: Dp) {
                 Mark.AMBER -> "Nothing marked yellow."
                 else -> "Nothing marked green."
             },
-            fontSize = 16.sp,
+            fontSize = 15.sp,
             color = Hak3.TextDim,
             textAlign = TextAlign.Center,
         )
@@ -878,7 +878,7 @@ private fun Scrubber(
                     .background(Hak3.Hanja, CircleShape)
             )
         }
-        Text(text, fontSize = 14.sp, color = Hak3.Text)
+        Text(text, fontSize = 15.sp, color = Hak3.Text)
         Box(
             Modifier
                 .matchParentSize()

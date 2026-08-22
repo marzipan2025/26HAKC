@@ -326,8 +326,8 @@ private fun VariantBlock(s: Slot) {
             Row(verticalAlignment = Alignment.Top) {
                 Text(
                     "${g.eum} :",
-                    fontSize = 16.sp,
-                    lineHeight = 23.sp,
+                    fontSize = 18.sp,
+                    lineHeight = 25.sp,
                     color = Hak3.Text,
                     modifier = Modifier.width(38.dp),
                 )
@@ -340,16 +340,16 @@ private fun VariantBlock(s: Slot) {
                         // 여러 표기가 있을 때, 첫 글자에 어느 표기인지 표시를 단다
                         if (s.many && i == 0) {
                             withStyle(
-                                SpanStyle(fontSize = 9.sp, baselineShift = BaselineShift(0.6f))
+                                SpanStyle(fontSize = 11.sp, baselineShift = BaselineShift(0.6f))
                             ) { append(if (s.index == 0) "  ●" else "  ${s.index}") }
                         }
                     },
-                    fontSize = 16.sp,
-                    lineHeight = 23.sp,
+                    fontSize = 18.sp,
+                    lineHeight = 25.sp,
                     color = Hak3.Text,
                     inlineContent = mapOf(
                         GRADE_SLOT to InlineTextContent(
-                            Placeholder(16.sp, 16.sp, PlaceholderVerticalAlign.TextCenter)
+                            Placeholder(18.sp, 18.sp, PlaceholderVerticalAlign.TextCenter)
                         ) {
                             Icon(
                                 painterResource(gradeIcon(g.grade)),
@@ -374,7 +374,7 @@ private fun VariantBlock(s: Slot) {
             ) {
                 Text(
                     if (!long) "" else if (open) "−" else "+",
-                    fontSize = 13.sp,
+                    fontSize = 15.sp,
                     color = Hak3.TextDim,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.width(14.dp),
@@ -382,9 +382,9 @@ private fun VariantBlock(s: Slot) {
                 Spacer(Modifier.width(6.dp))
                 Text(
                     body,
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp,
-                    color = Hak3.TextDim,
+                    fontSize = 17.sp,
+                    lineHeight = 24.sp,
+                    color = Hak3.TextSoft,
                     maxLines = if (open) Int.MAX_VALUE else 1,
                     overflow = TextOverflow.Ellipsis,
                 )

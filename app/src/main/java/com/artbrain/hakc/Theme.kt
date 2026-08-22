@@ -24,26 +24,31 @@ import androidx.compose.ui.unit.sp
 import android.os.Build
 import android.view.RoundedCorner
 
-/** 01haka 다크 모드에서 그대로 가져온 값 (ContentView.swift). */
+/**
+ * 세 화면(사전·목록·기출 상세)이 함께 쓰는 색. 01haka 다크 모드에서 가져왔다.
+ *
+ * 같은 구실에는 같은 색을 쓴다 — 이름이 곧 구실이다. 쓰이지 않는 이름은 두지 않는다.
+ */
 object Hak3 {
+    // 바탕
     val Ground = Color(0xFF000000)          // 기기 화면과 이어지는 검은 바탕
-    val Surface = Color(0xFF21252D)         // 카드
-    val SurfaceHi = Color(0xFF262B34)       // 눌린 카드
-    val Hanja = Color(0xD9A8BAD6)           // 한자 (#A8BAD6 @85%)
-    val HanjaDim = Color(0xCC647185)        // 흐린 한자
-    val Rule = Color(0x24BAD0E2)            // 경계선 틴트 (#BAD0E2 @14%)
-    val Text = Color(0xF2FFFFFF)
-    val TextDim = Color(0x61FFFFFF)         // 보조 텍스트 (백색 38%)
-    val Mark = Color(0xFFFFBD2E)            // 정답 – 01haka 신호등 앰버
-    val MarkSoft = Color(0x1FFFBD2E)
-    val MarkDim = Color(0x99FFBD2E)         // 정답 밑 訓音
+    val Surface = Color(0xFF21252D)         // 카드와 사전 판
+    val Rule = Color(0x24BAD0E2)            // 경계선·손잡이·꺼진 것 (#BAD0E2 @14%)
 
-    // 01haka 신호등 세 색. 애매/모름/외움을 가른다.
-    val Amber = Color(0xFFFFBD2E)           // 애매하게 모름
-    val Red = Color(0xFFFF6157)             // 잘못된 것을 알릴 때
+    // 글
+    val Text = Color(0xF2FFFFFF)            // 본문 (백색 95%)
+    val TextSoft = Color(0x92FFFFFF)        // 뜻풀이처럼 읽히되 물러나는 글 (57%)
+    val TextDim = Color(0x61FFFFFF)         // 곁들이는 글 — 날짜·판 번호·라벨 (38%)
+
+    // 한자
+    val Hanja = Color(0xD9A8BAD6)           // 한자 (#A8BAD6 @85%)
+    val HanjaDim = Color(0xCC647185)        // 고르지 않은 한자
+
+    // 01haka 신호등. 애매/외움을 가르고, 알림에도 그대로 쓴다.
+    val Amber = Color(0xFFFFBD2E)           // 애매하게 모름 · 새 판 알림
     val Green = Color(0xFF29C745)           // 외웠음
     val Neon = Color(0xFF3DFF6E)            // 펼쳐진 정답 — 형광 녹색
-    val Navy = Color(0xFF26467A)            // 설정 단추
+    val Red = Color(0xFFFF6157)             // 잘못된 것을 알릴 때
 }
 
 /**
