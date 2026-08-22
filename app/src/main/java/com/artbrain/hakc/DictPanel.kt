@@ -48,13 +48,25 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.style.LineHeightStyle
 import kotlinx.coroutines.launch
 
+/** 글자 위아래에 붙는 서체 여백을 걷어낸다 — 칸을 꽉 채워 보이게. */
+private val FLUSH = TextStyle(
+    platformStyle = PlatformTextStyle(includeFontPadding = false),
+    lineHeightStyle = LineHeightStyle(
+        alignment = LineHeightStyle.Alignment.Center,
+        trim = LineHeightStyle.Trim.Both,
+    ),
+)
+
 /**
- * 급수 기호와 색. 01HAKA 의 것을 그대로 옮겼다 — 특급부터 3급까지만 색을 주고
- * 나머지는 본문 색으로 둔다. 다 칠하면 어느 것이 높은 급수인지 되레 안 보인다.
+ * 급수 기호와 색. 색은 01HAKA 그대로 특급~3급만 준다 — 다 칠하면 어느 것이 높은
+ * 급수인지 되레 안 보인다. 기호는 빈 원으로 통일했다. 채운 원과 빈 원을 섞으면
+ * 무게가 달라 급수와 상관없이 몇 개만 튀어 보인다.
  */
-private val GRADE_MARK = listOf("●", "❶", "❷", "❸", "❹", "❺", "⑥", "⑦", "⑧")
+private val GRADE_MARK = listOf("◉", "①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧")
 
 private fun gradeMark(grade: Int?) = GRADE_MARK[(grade ?: 0).coerceIn(0, 8)]
 
@@ -69,7 +81,11 @@ private fun gradeColor(grade: Int?) = when (grade) {
 // 01HAKA 의 창은 310×270 이고 그 안이 한자 84 · 訓音 나머지 · 입력 50 으로 나뉜다.
 // 창 단추 자리(26)는 안드로이드에 올 것이 없으니 뺀 244 를 기준으로 삼는다.
 private const val HEAD = 84f / 244f
-private const val FOOT = 50f / 244f
+private const val FOOT = 50f / 244f * 0.6f     // 입력 칸은 예전의 60%
+
+/** 목록 쪽에서 판의 최소 높이를 셈할 때 쓴다. */
+const val DICT_FOOT = FOOT
+private val PAD = 9.dp
 
 /** 위 한자 줄에 늘어놓는 한 칸 — 어느 낱말의 몇 번째 표기인지까지 안다. */
 private class Slot(val word: Found, val index: Int, val variant: Variant, val many: Boolean)
@@ -104,73 +120,83 @@ fun DictPanel(dict: Dict, radius: Dp, modifier: Modifier = Modifier) {
     BoxWithConstraints(
         modifier
             .fillMaxWidth()
-            .aspectRatio(1f)
             .clip(RoundedCornerShape(radius))
             .background(Hak3.Surface)
             .background(Hak3.Rule)          // 01HAKA 의 패널 바탕 한 겹
-            .padding(9.dp)
+            .padding(PAD)
     ) {
-        val head = maxHeight * HEAD
-        val foot = maxHeight * FOOT
-        val glyph = (head.value * 0.52f).sp
+        // 안쪽 캡슐은 판 라운딩에서 여백만큼 뺀다 — 화면·카드와 같은 동심원 규칙
+        val inner = (radius - PAD).coerceAtLeast(0.dp)
+        val square = maxWidth                       // 정사각형이었을 때의 한 변
+        val foot = square * FOOT
+        val head = (maxHeight - foot - PAD * 2).coerceIn(0.dp, square * HEAD)
+        val glyph = (head.value * 0.68f).sp
 
         Column(Modifier.fillMaxSize()) {
             // 위 캡슐 — 동음이의어를 좌우로 훑는다
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(head)
-                    .clip(RoundedCornerShape(head / 3))
-                    .background(Hak3.Surface),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                if (slots.isEmpty()) {
-                    Text(
-                        if (text.isBlank()) "漢字" else "없다",
-                        fontFamily = ThinHanja,
-                        fontWeight = FontWeight.Thin,
-                        fontSize = glyph,
-                        color = Hak3.HanjaDim,
-                        modifier = Modifier.padding(start = 18.dp),
-                    )
-                } else {
-                    LazyRow(
-                        state = top,
-                        contentPadding = PaddingValues(horizontal = 18.dp),
-                        horizontalArrangement = Arrangement.spacedBy(18.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        itemsIndexed(slots) { i, s ->
-                            Text(
-                                buildAnnotatedString {
-                                    append(s.variant.hanja)
+            if (head > 0.dp) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(head)
+                        .clip(RoundedCornerShape(inner))
+                        .background(Hak3.Surface),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (slots.isEmpty()) {
+                        Text(
+                            if (text.isBlank()) "漢字" else "없다",
+                            fontFamily = ThinHanja,
+                            fontWeight = FontWeight.Thin,
+                            fontSize = glyph,
+                            color = Hak3.HanjaDim,
+                            modifier = Modifier.fillMaxWidth().padding(start = 16.dp),
+                        )
+                    } else {
+                        LazyRow(
+                            state = top,
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            itemsIndexed(slots) { i, s ->
+                                // 표시는 글자와 한 줄에 두지 않는다. 같은 글 안에서 위로
+                                // 올리면 줄 상자가 그만큼 부풀어 글자가 칸 밖으로 밀린다.
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.clickable {
+                                        scope.launch { top.animateScrollToItem(i) }
+                                    },
+                                ) {
+                                    Text(
+                                        s.variant.hanja,
+                                        fontFamily = ThinHanja,
+                                        fontWeight = FontWeight.Thin,
+                                        fontSize = glyph,
+                                        color = if (i == active) Hak3.Hanja else Hak3.HanjaDim,
+                                        maxLines = 1,
+                                    )
                                     if (s.many) {
-                                        withStyle(
-                                            SpanStyle(
-                                                fontSize = glyph * 0.22f,
-                                                baselineShift = BaselineShift(0.9f),
-                                            )
-                                        ) { append(if (s.index == 0) " ●" else " ${s.index}") }
+                                        Text(
+                                            if (s.index == 0) "●" else "${s.index}",
+                                            fontSize = glyph * 0.16f,
+                                            color = if (s.index == 0) Hak3.Red else Hak3.HanjaDim,
+                                            modifier = Modifier
+                                                .align(Alignment.Top)
+                                                .padding(start = 2.dp, top = (head.value * 0.15f).dp),
+                                        )
                                     }
-                                },
-                                fontFamily = ThinHanja,
-                                fontWeight = FontWeight.Thin,
-                                fontSize = glyph,
-                                color = if (i == active) Hak3.Hanja else Hak3.HanjaDim,
-                                maxLines = 1,
-                                modifier = Modifier.clickable {
-                                    scope.launch { top.animateScrollToItem(i) }
-                                },
-                            )
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.height(9.dp))
+            if (head > 0.dp) Spacer(Modifier.height(PAD))
 
             // 가운데 — 위에서 고른 표기의 訓音과 뜻
-            Box(Modifier.fillMaxWidth().weight(1f)) {
+            Box(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(0.dp))) {
                 if (slots.isEmpty()) {
                     Text(
                         if (text.isBlank()) "한글을 넣으면 한자를 찾습니다" else "찾지 못했습니다.",
@@ -189,16 +215,16 @@ fun DictPanel(dict: Dict, radius: Dp, modifier: Modifier = Modifier) {
                 }
             }
 
-            Spacer(Modifier.height(9.dp))
+            Spacer(Modifier.height(PAD))
 
             // 아래 캡슐 — 입력
             Box(
                 Modifier
                     .fillMaxWidth()
                     .height(foot)
-                    .clip(RoundedCornerShape(percent = 50))
+                    .clip(RoundedCornerShape(inner))
                     .background(Hak3.Surface)
-                    .padding(start = 20.dp, end = 8.dp),
+                    .padding(start = 18.dp, end = 7.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 BasicTextField(

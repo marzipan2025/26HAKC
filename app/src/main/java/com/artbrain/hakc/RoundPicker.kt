@@ -29,6 +29,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
@@ -44,8 +55,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * 첫 화면. 맨 위에 사전 판이 앉고, 그 아래 이름·판 번호 줄, 그 아래로 회차 목록이 붙는다.
- * 셋을 한 격자 안에 넣어 두었으므로 화면 전체가 함께 움직인다.
+ * 첫 화면. 위에 사전 판이 붙박여 있고 아래로 회차 목록이 흐른다.
+ *
+ * 목록을 내리면 판이 최소로 접힐 때까지 줄고, 그 뒤에야 목록이 움직인다. 거꾸로
+ * 올리면 판이 최대까지 자란 뒤 목록이 따라 온다. 사이의 손잡이를 잡아 직접 여닫아도
+ * 된다. 최대는 정사각형의 1.5배, 최소는 입력 칸 한 줄이다.
  */
 @Composable
 fun RoundPicker(
@@ -59,6 +73,7 @@ fun RoundPicker(
     onWords: () -> Unit,
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
     // 상세 화면 카드와 같은 곡률
     val radius = (screenCornerRadius() - 8.dp).coerceAtLeast(0.dp)
     val words = remember { Collect.size(context) }
@@ -72,65 +87,141 @@ fun RoundPicker(
     var settings by remember { mutableStateOf(false) }
     var markOnLeft by remember { mutableStateOf(Settings.markOnLeft(context)) }
 
-    Box(Modifier.fillMaxSize()) {
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(112.dp),
-            contentPadding = PaddingValues(8.dp, 8.dp, 8.dp, 32.dp),
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp),
-        ) {
-            if (dict != null) {
-                item(key = "dict", span = { GridItemSpan(maxLineSpan) }) {
-                    DictPanel(dict, radius)
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val square = maxWidth - 16.dp                       // 정사각형이었을 때의 한 변
+        val minH = 9.dp * 2 + square * DICT_FOOT            // 입력 칸 한 줄만 남는 높이
+        val maxH = square * 1.5f
+        val minPx = with(density) { minH.toPx() }
+        val maxPx = with(density) { maxH.toPx() }
+        var height by remember(square) { mutableFloatStateOf(with(density) { square.toPx() }) }
+
+        // 목록의 스크롤을 먼저 판이 받아 먹는다
+        val nested = remember(minPx, maxPx) {
+            object : NestedScrollConnection {
+                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                    val dy = available.y
+                    if (dy >= 0f) return Offset.Zero        // 내릴 때만 먼저 먹는다
+                    val used = (-dy).coerceAtMost(height - minPx)
+                    height -= used
+                    return Offset(0f, -used)
+                }
+
+                override fun onPostScroll(
+                    consumed: Offset,
+                    available: Offset,
+                    source: NestedScrollSource,
+                ): Offset {
+                    val dy = available.y
+                    if (dy <= 0f) return Offset.Zero        // 목록이 맨 위에 닿은 뒤에 키운다
+                    val used = dy.coerceAtMost(maxPx - height)
+                    height += used
+                    return Offset(0f, used)
                 }
             }
-            item(key = "head", span = { GridItemSpan(maxLineSpan) }) {
-                Header(built) { settings = true }
+        }
+
+        Column(Modifier.fillMaxSize()) {
+            if (dict != null) {
+                Spacer(Modifier.height(8.dp))
+                DictPanel(
+                    dict,
+                    radius,
+                    Modifier
+                        .padding(horizontal = 8.dp)
+                        .height(with(density) { height.toDp() }),
+                )
             }
-            if (fresh != null) {
-                item(key = "update") {
-                    Cell(
-                        radius = radius,
-                        big = when {
-                            progress == -2f -> "새 판"
-                            progress < 0f -> "받는 중"
-                            progress < 1f -> "${(progress * 100).toInt()}%"
-                            else -> "설치"
-                        },
-                        small = if (progress == -2f) fresh.version else "누르면 열립니다",
-                        color = Hak3.Amber,
-                        enabled = progress == -2f,
-                    ) {
-                        val url = fresh.apkUrl
-                        if (url == null) {
-                            Updater.openReleasesPage(context)
-                            return@Cell
-                        }
-                        progress = -1f
-                        scope.launch {
-                            val apk = Updater.download(context, url, fresh.version) { progress = it }
-                            if (apk == null) {
-                                progress = -2f
+
+            // 손잡이 줄 — 왼쪽 차림표, 가운데 손잡이, 오른쪽 설정
+            Row(
+                Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    Modifier.size(40.dp).clickable { },     // 아직 열 것이 없다. 자리만.
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("☰", fontSize = 20.sp, color = Hak3.TextDim)
+                }
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .draggable(
+                            orientation = Orientation.Vertical,
+                            state = rememberDraggableState { dy ->
+                                height = (height + dy).coerceIn(minPx, maxPx)
+                            },
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier
+                            .width(38.dp)
+                            .height(4.dp)
+                            .background(Hak3.Rule, RoundedCornerShape(2.dp))
+                    )
+                }
+                Box(
+                    Modifier.size(40.dp).clickable { settings = true },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("⚙", fontSize = 22.sp, color = Hak3.TextDim)
+                }
+            }
+
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(112.dp),
+                modifier = Modifier.nestedScroll(nested),
+                contentPadding = PaddingValues(8.dp, 0.dp, 8.dp, 32.dp),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                if (fresh != null) {
+                    item(key = "update") {
+                        Cell(
+                            radius = radius,
+                            big = when {
+                                progress == -2f -> "새 판"
+                                progress < 0f -> "받는 중"
+                                progress < 1f -> "${(progress * 100).toInt()}%"
+                                else -> "설치"
+                            },
+                            small = if (progress == -2f) fresh.version else "누르면 열립니다",
+                            color = Hak3.Amber,
+                            enabled = progress == -2f,
+                        ) {
+                            val url = fresh.apkUrl
+                            if (url == null) {
                                 Updater.openReleasesPage(context)
-                            } else {
-                                progress = 1f
-                                Updater.install(context, apk)
+                                return@Cell
+                            }
+                            progress = -1f
+                            scope.launch {
+                                val apk = Updater.download(context, url, fresh.version) { progress = it }
+                                if (apk == null) {
+                                    progress = -2f
+                                    Updater.openReleasesPage(context)
+                                } else {
+                                    progress = 1f
+                                    Updater.install(context, apk)
+                                }
                             }
                         }
                     }
                 }
-            }
-            if (words > 0) {
-                item(key = "words") {
-                    Cell(radius, "$words", "단어장", Hak3.Hanja, true, onWords)
+                if (words > 0) {
+                    item(key = "words") {
+                        Cell(radius, "$words", "단어장", Hak3.Hanja, true, onWords)
+                    }
                 }
-            }
-            if (trouble != null) {
-                item(key = "setup", span = { GridItemSpan(maxLineSpan) }) {
-                    Setup(radius, trouble, onFolder, onFile)
+                if (trouble != null) {
+                    item(key = "setup", span = { GridItemSpan(maxLineSpan) }) {
+                        Setup(radius, trouble, onFolder, onFile)
+                    }
                 }
+                items(exams, key = { it.round }) { e -> RoundCell(e, radius, onPick) }
             }
-            items(exams, key = { it.round }) { e -> RoundCell(e, radius, onPick) }
         }
 
         if (settings) {
