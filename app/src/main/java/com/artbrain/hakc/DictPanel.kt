@@ -149,8 +149,12 @@ fun DictPanel(dict: Dict, radius: Dp, onInput: () -> Unit, modifier: Modifier = 
         val room = (maxHeight - foot - 2.dp).coerceAtLeast(0.dp)
         val head = when {
             room >= full + MID_MIN -> full
-            else -> (room - MID_MIN).coerceIn(full * HEAD_FLOOR, full)
+            // 한자 자리는 제 높이의 1/4 까지만 버틴다. 그 아래로는 아예 접는다 —
+            // 접힌 판에는 입력 칸만 남아야 하므로 실선도 訓音 자리도 두지 않는다.
+            room >= full * HEAD_FLOOR + MID_MIN -> (room - MID_MIN).coerceAtMost(full)
+            else -> 0.dp
         }
+        val folded = head <= 0.dp
         val glyph = (head.value * 0.68f).sp
 
         Column(Modifier.fillMaxSize()) {
@@ -212,7 +216,7 @@ fun DictPanel(dict: Dict, radius: Dp, onInput: () -> Unit, modifier: Modifier = 
             }
 
             // 가운데 — 위에서 고른 표기의 訓音과 뜻
-            Box(Modifier.fillMaxWidth().weight(1f)) {
+            if (!folded) Box(Modifier.fillMaxWidth().weight(1f)) {
                 if (slots.isNotEmpty()) {
                     LazyColumn(
                         state = mid,
@@ -224,7 +228,7 @@ fun DictPanel(dict: Dict, radius: Dp, onInput: () -> Unit, modifier: Modifier = 
                 }
             }
 
-            Rule()
+            if (!folded) Rule()
 
             // 아래 — 입력. 01HAKA 처럼 안내 문구를 두지 않는다.
             Box(
