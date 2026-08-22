@@ -51,7 +51,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.animation.core.animate
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -97,18 +96,6 @@ fun RoundPicker(
         val maxPx = with(density) { maxH.toPx() }
         var height by remember(square) { mutableFloatStateOf(with(density) { square.toPx() }) }
 
-        /**
-         * 손을 뗀 자리를 보고 붙일 데에 붙인다.
-         *
-         * 바닥이 한 뼘(20%)밖에 안 남았으면 화면 아래까지 활짝 편다.
-         */
-        suspend fun settle() {
-            // 바닥이 한 뼘(20%)밖에 안 남게 자랐으면 끝까지 붙인다
-            if (height > maxPx * 0.8f && height < maxPx) {
-                animate(height, maxPx) { v, _ -> height = v }
-            }
-        }
-
         // 목록의 스크롤을 먼저 판이 받아 먹는다
         val nested = remember(minPx, maxPx) {
             object : NestedScrollConnection {
@@ -130,12 +117,6 @@ fun RoundPicker(
                     val used = dy.coerceAtMost(maxPx - height)
                     height += used
                     return Offset(0f, used)
-                }
-
-                // 손을 뗀 뒤, 訓音 자리가 안 나올 만큼 줄었으면 입력 칸만 남기고 접는다
-                override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                    settle()
-                    return Velocity.Zero
                 }
             }
         }
@@ -178,7 +159,6 @@ fun RoundPicker(
                             state = rememberDraggableState { dy ->
                                 height = (height + dy).coerceIn(minPx, maxPx)
                             },
-                            onDragStopped = { settle() },
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
