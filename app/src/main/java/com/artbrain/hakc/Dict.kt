@@ -32,8 +32,9 @@ class Dict private constructor(private val db: SQLiteDatabase) {
      * 갈리지 않게 하려는 것이다. 한자를 그대로 넣으면 글자마다 訓音을 돌려준다.
      */
     fun search(text: String): List<Found> {
-        val clean = text.trim()
+        val clean = text.trim().replace('（', '(').replace('）', ')')
         if (clean.isEmpty()) return emptyList()
+        if (clean.startsWith("(") && clean.endsWith(")")) return bracket(clean)
         if (clean.any(::isHan)) return listOf(ofHanja(clean))
 
         val out = mutableListOf<Found>()
@@ -83,6 +84,69 @@ class Dict private constructor(private val db: SQLiteDatabase) {
         if (variants.isEmpty()) return@use null
         Found(ko, variants, glyphs(variants.joinToString("") { it.hanja }))
     }
+
+    /**
+     * 괄호 룰 — 01HAKA 에서 그대로 가져온 입력 규칙. 낱말이 아니라 글자를 찾는다.
+     *
+     *     (어미 모)   훈과 음을 함께 넣으면 그 글자를 콕 집는다
+     *     (어미)      훈만 넣으면 훈에 그 말이 든 한자를 모두 모은다
+     *
+     * 찾은 글자들은 한 낱말의 여러 표기처럼 담아 돌려준다 — 위 줄에서 좌우로 훑으면
+     * 아래 訓音이 따라오는 그 얼개를 그대로 쓴다.
+     */
+    private fun bracket(text: String): List<Found> {
+        val parts = text.drop(1).dropLast(1).trim().split(' ').filter { it.isNotEmpty() }
+        val hits = when {
+            parts.size >= 2 -> byHunEum(parts.dropLast(1).joinToString(" "), parts.last())
+            parts.size == 1 -> byHun(parts[0])
+            else -> emptyList()
+        }
+        if (hits.isEmpty()) return emptyList()
+        return listOf(
+            Found(
+                text,
+                hits.map { Variant(it.han, null) },
+                hits.associateBy { it.han },
+            )
+        )
+    }
+
+    /**
+     * 훈과 음을 함께 준 경우. 음이 같은 글자만 보고 훈을 맞춘다.
+     * 꼭 맞는 것을 앞에, 스쳐 맞는 것(어머니↔어미)을 뒤에 둔다.
+     */
+    private fun byHunEum(hun: String, eum: String): List<Glyph> {
+        val exact = mutableListOf<Glyph>()
+        val near = mutableListOf<Glyph>()
+        db.rawQuery(
+            "SELECT han, hun, eum, grade FROM chars WHERE eum=?", arrayOf(eum)
+        ).use { c ->
+            while (c.moveToNext()) {
+                val g = row(c)
+                val parts = g.hun.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+                when {
+                    parts.any { it == hun } -> exact.add(g)
+                    parts.any { it.contains(hun) || hun.contains(it) } -> near.add(g)
+                }
+            }
+        }
+        return exact + near
+    }
+
+    /** 훈만 준 경우. 훈에 그 말이 든 글자를 다 모은다. */
+    private fun byHun(hun: String): List<Glyph> = db.rawQuery(
+        "SELECT han, hun, eum, grade FROM chars WHERE hun LIKE ? ORDER BY grade IS NULL, grade",
+        arrayOf("%$hun%")
+    ).use { c ->
+        buildList { while (c.moveToNext()) add(row(c)) }
+    }
+
+    private fun row(c: android.database.Cursor) = Glyph(
+        c.getString(0),
+        c.getString(1) ?: "",
+        c.getString(2) ?: "",
+        if (c.isNull(3)) null else c.getInt(3),
+    )
 
     /** 한자를 그대로 넣었을 때 — 글자마다 訓音만 돌려준다. */
     private fun ofHanja(text: String): Found {

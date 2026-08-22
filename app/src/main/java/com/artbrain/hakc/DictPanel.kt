@@ -33,9 +33,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,7 +66,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
-import kotlinx.coroutines.launch
 
 /** 글자 위아래에 붙는 서체 여백을 걷어낸다 — 칸을 꽉 채워 보이게. */
 private val FLUSH = TextStyle(
@@ -158,11 +159,26 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
     }
     val top = rememberLazyListState()
     val mid = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    // 위 줄에서 맨 앞에 걸린 칸이 곧 지금 보고 있는 표기다
-    val active by remember { derivedStateOf { top.firstVisibleItemIndex } }
+    // 위 한자 줄과 아래 訓音 줄은 한 자리를 함께 본다. 어느 쪽을 끌든 다른 쪽이
+    // 따라온다 — 끄는 쪽이 자리를 정하고, 정해진 자리로 나머지가 움직인다.
+    // 손으로 끄는 것만 자리를 정할 수 있다. 따라가는 움직임까지 자리를 정하면
+    // 둘이 서로를 밀어 끝없이 튄다.
+    var active by remember(slots) { mutableIntStateOf(0) }
+    val topHeld by top.interactionSource.collectIsDraggedAsState()
+    val midHeld by mid.interactionSource.collectIsDraggedAsState()
+    LaunchedEffect(slots) {
+        snapshotFlow { topHeld to top.firstVisibleItemIndex }
+            .collect { (held, i) -> if (held) active = i }
+    }
+    LaunchedEffect(slots) {
+        snapshotFlow { midHeld to mid.firstVisibleItemIndex }
+            .collect { (held, i) -> if (held) active = i }
+    }
     LaunchedEffect(active, slots) {
-        if (slots.isNotEmpty()) mid.animateScrollToItem(active.coerceIn(slots.indices))
+        if (slots.isEmpty()) return@LaunchedEffect
+        val i = active.coerceIn(slots.indices)
+        if (!topHeld && top.firstVisibleItemIndex != i) top.animateScrollToItem(i)
+        if (!midHeld && mid.firstVisibleItemIndex != i) mid.animateScrollToItem(i)
     }
 
     BoxWithConstraints(
@@ -215,9 +231,7 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                                 // 올리면 줄 상자가 그만큼 부풀어 글자가 칸 밖으로 밀린다.
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.clickable {
-                                        scope.launch { top.animateScrollToItem(i) }
-                                    },
+                                    modifier = Modifier.clickable { active = i },
                                 ) {
                                     Text(
                                         s.variant.hanja,
