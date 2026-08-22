@@ -69,8 +69,11 @@ import androidx.compose.ui.unit.sp
  * 된다. 최대는 화면의 60%, 최소는 한자 한 줄과 訓音 두 줄이 남는 높이다. 입력 칸에
  * 포커스가 가면 키보드 바로 위까지 자란다.
  */
-/** 판과 목록 사이의 손잡이 줄 높이. 키보드 위에 남길 자리를 셈할 때도 쓴다. */
-private val HANDLE = 46.dp
+/**
+ * 판과 목록 사이의 손잡이 줄 높이. 키보드 위에 남길 자리를 셈할 때도 쓴다.
+ * 아이콘 21 에 위아래 여백 18.75 씩 — 처음 12.5 씩에서 반을 더 준 것이다.
+ */
+private val HANDLE = 58.5.dp
 
 @Composable
 fun RoundPicker(

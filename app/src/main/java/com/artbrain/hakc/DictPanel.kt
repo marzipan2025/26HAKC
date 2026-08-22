@@ -86,12 +86,15 @@ private val GRADE_ICON = listOf(
     R.drawable.ic_grade_6, R.drawable.ic_grade_7, R.drawable.ic_grade_8,
 )
 
-private fun gradeIcon(grade: Int?) = GRADE_ICON[(grade ?: 0).coerceIn(0, 8)]
+/** 급수를 모르는 글자는 빈 동그라미. 특급(0)과 한 칸으로 쓰면 金 같은 글자가 특급이 된다. */
+private fun gradeIcon(grade: Int?) =
+    if (grade == null) R.drawable.ic_grade_none else GRADE_ICON[grade.coerceIn(0, 8)]
 
 /** 訓 앞에 끼워 넣는 급수 표시의 이름. 글 흐름을 타야 해서 인라인으로 둔다. */
 private const val GRADE_SLOT = "grade"
 
 private fun gradeColor(grade: Int?) = when (grade) {
+    null -> Hak3.Text.copy(alpha = 0.3f)       // 급수를 모르는 글자는 흐리게
     0 -> Color.White
     1 -> Color(0xFF2999D1)
     2 -> Color(0xFFFFEB3B)
