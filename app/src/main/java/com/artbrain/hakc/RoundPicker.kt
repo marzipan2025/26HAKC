@@ -91,26 +91,21 @@ fun RoundPicker(
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val square = maxWidth - 16.dp                       // 정사각형이었을 때의 한 변
-        val minH = dictMin(square)                          // 입력 칸 한 줄만 남는 높이
-        val foldH = dictFold(square)                        // 이보다 줄면 접는다
-        val maxH = maxHeight - 46.dp                        // 위로는 화면이 허락하는 만큼
+        val minH = dictMin(square)                          // 한자 한 줄과 訓音 두 줄은 남는다
+        val maxH = dictMax(square)                          // 가로:세로 4:5 까지
         val minPx = with(density) { minH.toPx() }
-        val foldPx = with(density) { foldH.toPx() }
         val maxPx = with(density) { maxH.toPx() }
         var height by remember(square) { mutableFloatStateOf(with(density) { square.toPx() }) }
 
         /**
          * 손을 뗀 자리를 보고 붙일 데에 붙인다.
          *
-         *   訓音 자리가 안 나올 만큼 줄었으면  → 입력 칸 한 줄로
-         *   바닥이 한 뼘(20%)밖에 안 남았으면 → 화면 아래까지 활짝
+         * 바닥이 한 뼘(20%)밖에 안 남았으면 화면 아래까지 활짝 편다.
          */
         suspend fun settle() {
-            when {
-                height < foldPx && height > minPx ->
-                    animate(height, minPx) { v, _ -> height = v }
-                height > maxPx * 0.8f && height < maxPx ->
-                    animate(height, maxPx) { v, _ -> height = v }
+            // 바닥이 한 뼘(20%)밖에 안 남게 자랐으면 끝까지 붙인다
+            if (height > maxPx * 0.8f && height < maxPx) {
+                animate(height, maxPx) { v, _ -> height = v }
             }
         }
 

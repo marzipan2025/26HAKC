@@ -83,10 +83,13 @@ private fun gradeColor(grade: Int?) = when (grade) {
 // 01HAKA 의 창은 310×270 이고 그 안이 한자 84 · 訓音 나머지 · 입력 50 으로 나뉜다.
 // 창 단추 자리(26)는 안드로이드에 올 것이 없으니 뺀 244 를 기준으로 삼는다.
 private const val HEAD = 84f / 244f
-private const val FOOT = 50f / 244f * 0.6f     // 입력 칸은 예전의 60%
+private const val FOOT = 50f / 244f * 0.72f    // 입력 칸
 
-/** 벽에서 물러나는 거리. 실선도 글도 이 선에 맞춘다. */
+/** 실선이 벽에서 물러나는 거리. */
 private val WALL = 16.dp
+
+/** 글이 벽에서 물러나는 거리. 모서리가 둥그니 실선보다 더 안쪽에서 시작한다. */
+private val TEXT_WALL = 26.dp
 private val RULE_GAP = 10.dp
 
 /** 訓音 자리는 두 줄에 한 줄 남짓 여백까지는 있어야 읽을 만하다. */
@@ -95,11 +98,14 @@ private val MID_MIN = 72.dp
 /** 한자 자리는 제 높이의 1/4 까지 줄어든다. */
 private const val HEAD_FLOOR = 0.25f
 
-/** 이만큼도 안 되면 펼쳐 둘 이유가 없다 — 입력 칸만 남기고 접는다. */
-fun dictFold(square: Dp): Dp = square * HEAD * HEAD_FLOOR + MID_MIN + square * FOOT + 4.dp
+/**
+ * 가장 낮췄을 때의 높이. 한자 한 줄과 訓音 두 줄은 남는다.
+ * 입력 칸만 남기는 자리까지 접어 보았으나 칸이 서로 밀려 자꾸 어그러졌다.
+ */
+fun dictMin(square: Dp): Dp = square * 0.53f
 
-/** 접었을 때의 높이 — 입력 칸 한 줄. */
-fun dictMin(square: Dp): Dp = square * FOOT
+/** 가장 키웠을 때의 높이. 가로:세로 4:5 까지만. */
+fun dictMax(square: Dp): Dp = square * 1.25f
 
 /** 목록 쪽에서 판의 높이를 셈할 때 쓴다. */
 const val DICT_FOOT = FOOT
@@ -171,12 +177,12 @@ fun DictPanel(dict: Dict, radius: Dp, onInput: () -> Unit, modifier: Modifier = 
                             fontWeight = FontWeight.Thin,
                             fontSize = if (text.isBlank()) glyph else glyph * 0.34f,
                             color = Hak3.HanjaDim,
-                            modifier = Modifier.padding(start = WALL),
+                            modifier = Modifier.padding(start = TEXT_WALL),
                         )
                     } else {
                         LazyRow(
                             state = top,
-                            contentPadding = PaddingValues(horizontal = WALL),
+                            contentPadding = PaddingValues(horizontal = TEXT_WALL),
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -221,7 +227,7 @@ fun DictPanel(dict: Dict, radius: Dp, onInput: () -> Unit, modifier: Modifier = 
                     LazyColumn(
                         state = mid,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(WALL, RULE_GAP, WALL, RULE_GAP),
+                        contentPadding = PaddingValues(TEXT_WALL, RULE_GAP, TEXT_WALL, RULE_GAP),
                     ) {
                         itemsIndexed(slots) { _, s -> VariantBlock(s) }
                     }
@@ -232,7 +238,7 @@ fun DictPanel(dict: Dict, radius: Dp, onInput: () -> Unit, modifier: Modifier = 
 
             // 아래 — 입력. 01HAKA 처럼 안내 문구를 두지 않는다.
             Box(
-                Modifier.fillMaxWidth().height(foot).padding(start = WALL, end = 8.dp),
+                Modifier.fillMaxWidth().height(foot).padding(start = TEXT_WALL, end = 16.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 BasicTextField(
@@ -245,12 +251,12 @@ fun DictPanel(dict: Dict, radius: Dp, onInput: () -> Unit, modifier: Modifier = 
                     textStyle = TextStyle(color = Hak3.Text, fontSize = 19.sp),
                     cursorBrush = SolidColor(Hak3.Amber),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    modifier = Modifier.fillMaxWidth().padding(end = 46.dp),
+                    modifier = Modifier.fillMaxWidth().padding(end = 52.dp),
                 )
                 Box(
                     Modifier
                         .align(Alignment.CenterEnd)
-                        .size(foot * 0.66f)
+                        .size(foot * 0.25f)
                         .background(if (text.isEmpty()) Hak3.Rule else Hak3.Text, CircleShape)
                         .clickable { text = "" },
                 )
