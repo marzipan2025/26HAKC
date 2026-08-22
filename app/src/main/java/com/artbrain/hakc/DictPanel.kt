@@ -44,6 +44,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.withStyle
@@ -106,8 +107,8 @@ private const val HEAD_FLOOR = 0.25f
  */
 fun dictMin(square: Dp): Dp = square * 0.53f
 
-/** 가장 키웠을 때의 높이. 가로:세로 4:5 까지만. */
-fun dictMax(square: Dp): Dp = square * 1.25f
+/** 가장 키웠을 때의 높이. 폰 화면의 60% 까지만. */
+fun dictMax(screen: Dp): Dp = screen * 0.60f
 
 /** 목록 쪽에서 판의 높이를 셈할 때 쓴다. */
 const val DICT_FOOT = FOOT
@@ -124,7 +125,7 @@ private class Slot(val word: Found, val index: Int, val variant: Variant, val ma
  * 訓音과 뜻이 따라온다 — 한자를 고르면 그 표기의 풀이가 바로 아래 서 있게.
  */
 @Composable
-fun DictPanel(dict: Dict, radius: Dp, onInput: () -> Unit, modifier: Modifier = Modifier) {
+fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modifier = Modifier) {
     var text by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<List<Found>>(emptyList()) }
     LaunchedEffect(text) { found = dict.search(text) }
@@ -245,15 +246,15 @@ fun DictPanel(dict: Dict, radius: Dp, onInput: () -> Unit, modifier: Modifier = 
             ) {
                 BasicTextField(
                     value = text,
-                    onValueChange = {
-                        text = it
-                        onInput()
-                    },
+                    onValueChange = { text = it },
                     singleLine = true,
                     textStyle = TextStyle(color = Hak3.Text, fontSize = 19.sp),
                     cursorBrush = SolidColor(Hak3.Amber),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    modifier = Modifier.fillMaxWidth().padding(end = 52.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(end = 52.dp)
+                        .onFocusChanged { onFocus(it.isFocused) },
                 )
                 Box(
                     Modifier

@@ -33,6 +33,9 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.geometry.Offset
@@ -50,7 +53,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.animation.core.animate
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,8 +62,12 @@ import androidx.compose.ui.unit.sp
  *
  * 목록을 내리면 판이 최소로 접힐 때까지 줄고, 그 뒤에야 목록이 움직인다. 거꾸로
  * 올리면 판이 최대까지 자란 뒤 목록이 따라 온다. 사이의 손잡이를 잡아 직접 여닫아도
- * 된다. 최대는 정사각형의 1.5배, 최소는 입력 칸 한 줄이다.
+ * 된다. 최대는 화면의 60%, 최소는 한자 한 줄과 訓音 두 줄이 남는 높이다. 입력 칸에
+ * 포커스가 가면 키보드 바로 위까지 자란다.
  */
+/** 판과 목록 사이의 손잡이 줄 높이. 키보드 위에 남길 자리를 셈할 때도 쓴다. */
+private val HANDLE = 46.dp
+
 @Composable
 fun RoundPicker(
     exams: List<ExamRow>,
@@ -90,11 +96,36 @@ fun RoundPicker(
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val square = maxWidth - 16.dp                       // 정사각형이었을 때의 한 변
+
+        // 지금 실제로 쓸 수 있는 높이. 키보드가 뜰 때 창이 줄어드는 기기가 있고
+        // 인셋만 오는 기기가 있어서 양쪽을 다 빼 둔다 — 한쪽은 늘 0이다.
+        val availPx = with(density) { maxHeight.toPx() }
+        val keyboard = (WindowInsets.ime.getBottom(density) -
+            WindowInsets.navigationBars.getBottom(density)).coerceAtLeast(0)
+        val usable = availPx - keyboard
+
+        // 폰의 높이는 여태 받아 본 것 중 가장 큰 값으로 친다. 키보드가 올라와 있는
+        // 동안에도 최댓값이 따라 줄어들면 판이 저 혼자 오그라든다.
+        var screenPx by remember { mutableFloatStateOf(availPx) }
+        LaunchedEffect(usable) { if (usable > screenPx) screenPx = usable }
+
         val minH = dictMin(square)                          // 한자 한 줄과 訓音 두 줄은 남는다
-        val maxH = dictMax(square)                          // 가로:세로 4:5 까지
+        val maxH = dictMax(with(density) { screenPx.toDp() })
         val minPx = with(density) { minH.toPx() }
         val maxPx = with(density) { maxH.toPx() }
         var height by remember(square) { mutableFloatStateOf(with(density) { square.toPx() }) }
+        LaunchedEffect(minPx, maxPx) { height = height.coerceIn(minPx, maxPx) }
+
+        // 입력 칸에 포커스가 가면 키보드 바로 위까지 키운다 — 손잡이 줄만 남기고
+        // 아래 카드는 가린다. 인셋이 한 프레임씩 오므로 키보드가 오르는 대로 따라 붙는다.
+        // 60% 를 넘겨서까지 키우지는 않는다.
+        var typing by remember { mutableStateOf(false) }
+        LaunchedEffect(typing, usable) {
+            if (typing && usable < screenPx) {
+                height = (usable - with(density) { (HANDLE + 4.dp).toPx() })
+                    .coerceIn(minPx, maxPx)
+            }
+        }
 
         // 목록의 스크롤을 먼저 판이 받아 먹는다
         val nested = remember(minPx, maxPx) {
@@ -127,12 +158,7 @@ fun RoundPicker(
                 DictPanel(
                     dict,
                     radius = radius,
-                    onInput = {
-                        // 무언가 넣기 시작하면 판을 다시 펼친다
-                        if (height < maxPx) scope.launch {
-                            animate(height, maxPx) { v, _ -> height = v }
-                        }
-                    },
+                    onFocus = { typing = it },
                     modifier = Modifier
                         .padding(horizontal = 8.dp)
                         .height(with(density) { height.toDp() }),
@@ -141,7 +167,7 @@ fun RoundPicker(
 
             // 손잡이 줄 — 왼쪽 차림표, 가운데 손잡이, 오른쪽 설정
             Row(
-                Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 12.dp),
+                Modifier.fillMaxWidth().height(HANDLE).padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
