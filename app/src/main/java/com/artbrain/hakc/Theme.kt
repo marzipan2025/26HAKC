@@ -11,6 +11,8 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalDensity
@@ -73,6 +75,20 @@ fun screenCornerRadius(fallback: Dp = 32.dp): Dp {
 /** 한자를 크고 얇게 띄우기 위한 Thin(w100) 서체. 시스템 CJK에는 이 굵기가 없다. */
 val ThinHanja = FontFamily(Font(R.font.noto_sans_kr_thin, FontWeight.Thin))
 
+/**
+ * 앱의 기본 글씨 — 코레일체.
+ *
+ * 한자 글리프가 하나도 없는 한글 서체다(한글 11,172자와 숫자뿐). 글 속의 한자는
+ * 안드로이드가 알아서 시스템 CJK 로 떨군다. 크게 띄우는 한자는 [ThinHanja] 를
+ * 그대로 두는데, 코레일체에는 그만한 얇은 굵기(w100)도 없다.
+ *
+ * 굵기는 M(보통)과 B(굵게)만 담는다. L 은 부르는 데가 없어 넣지 않았다.
+ */
+val Korail = FontFamily(
+    Font(R.font.korail_m, FontWeight.Normal),
+    Font(R.font.korail_b, FontWeight.Bold),
+)
+
 private val scheme = darkColorScheme(
     primary = Hak3.Hanja,
     background = Hak3.Ground,
@@ -90,5 +106,12 @@ private val type = Typography(
 @Composable
 fun Hak3Theme(content: @Composable () -> Unit) {
     @Suppress("UNUSED_EXPRESSION") isSystemInDarkTheme()  // 앱은 다크 톤 하나로 간다
-    MaterialTheme(colorScheme = scheme, typography = type, content = content)
+    MaterialTheme(colorScheme = scheme, typography = type) {
+        // 글씨를 하나하나 지정하는 대신 여기서 한 번 깔아 둔다. 서체를 따로 부르는
+        // 자리(큰 한자)만 제 것을 쓴다.
+        CompositionLocalProvider(
+            LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = Korail),
+            content = content,
+        )
+    }
 }

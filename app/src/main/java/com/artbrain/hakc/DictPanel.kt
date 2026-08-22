@@ -197,8 +197,8 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                     if (slots.isEmpty()) {
                         Text(
                             if (text.isBlank()) "漢字" else "Nope, not here.",
-                            fontFamily = if (text.isBlank()) ThinHanja else FontFamily.Default,
-                            fontWeight = FontWeight.Thin,
+                            fontFamily = if (text.isBlank()) ThinHanja else Korail,
+                            fontWeight = if (text.isBlank()) FontWeight.Thin else FontWeight.Normal,
                             fontSize = if (text.isBlank()) glyph else glyph * 0.34f,
                             color = Hak3.HanjaDim,
                             modifier = Modifier.padding(start = TEXT_WALL),
@@ -269,7 +269,7 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                     value = text,
                     onValueChange = { text = it },
                     singleLine = true,
-                    textStyle = TextStyle(color = Hak3.Text, fontSize = 19.sp),
+                    textStyle = TextStyle(color = Hak3.Text, fontSize = 19.sp, fontFamily = Korail),
                     cursorBrush = SolidColor(Hak3.Amber),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     // 키보드의 찾기 단추도 엔터와 같은 일을 한다

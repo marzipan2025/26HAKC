@@ -227,7 +227,6 @@ fun ExamScreen(round: Int, db: ExamDb, onBack: () -> Unit) {
         marks = marks,
         numbered = true,
         start = start,
-        built = db.meta()["built"],
         onMark = { p, m ->
             book.set(p.item.no, m)
             if (m == null) marks.remove(p.id) else marks[p.id] = m
@@ -271,7 +270,6 @@ fun WordScreen(db: ExamDb, onBack: () -> Unit) {
         marks = marks,
         numbered = false,
         start = 0,
-        built = db.meta()["built"],
         onMark = { p, m ->
             Collect.set(context, p.id, m)
             if (m == null) marks.remove(p.id) else marks[p.id] = m
@@ -293,7 +291,6 @@ private fun Deck(
     marks: SnapshotStateMap<String, Mark>,
     numbered: Boolean,
     start: Int,
-    built: String?,
     onMark: (Page, Mark?) -> Unit,
     onSeen: (Page) -> Unit,
     onBack: () -> Unit,
@@ -312,7 +309,6 @@ private fun Deck(
     val radius = (screenCornerRadius() - OUTER).coerceAtLeast(0.dp)
     // 카드를 들고 있는 동안만 카드층을 맨 위로. 그동안 두 줄은 눌리지 않는다.
     var lifted by remember(all) { mutableStateOf(false) }
-    var settings by remember(all) { mutableStateOf(false) }
     var markOnLeft by remember(all) { mutableStateOf(Settings.markOnLeft(context)) }
     val index = pager.currentPage.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
     val page = pages.getOrNull(index)
@@ -395,21 +391,6 @@ private fun Deck(
             }
         }
 
-        // 설정을 열면 남색 단추만 남기고 모두 덮는다
-        if (settings) {
-            SettingsPanel(
-                built = built,
-                markOnLeft = markOnLeft,
-                onMarkSide = { left ->
-                    markOnLeft = left
-                    Settings.setMarkOnLeft(context, left)
-                },
-            )
-            BackHandler { settings = false }
-        }
-        SettingsDot(
-            Modifier.align(if (markOnLeft) Alignment.BottomEnd else Alignment.BottomStart),
-        ) { settings = !settings }
     }
 }
 
@@ -739,7 +720,7 @@ private fun AnswerSlot(item: Item, revealed: Boolean) {
         Column(Modifier.width(ANSWER)) {
             Text(
                 a ?: "no answer",
-                fontFamily = if (hanja) ThinHanja else FontFamily.Default,
+                fontFamily = if (hanja) ThinHanja else Korail,
                 fontWeight = if (hanja) FontWeight.Thin else FontWeight.Normal,
                 fontSize = if (hanja) 56.sp else 30.sp,
                 lineHeight = if (hanja) 70.sp else 40.sp,
@@ -830,8 +811,8 @@ private fun BottomBar(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 설정 단추는 이 줄에 넣지 않고 화면 맨 위층에 따로 띄운다 — 설정을 열면
-        // 그 단추만 남고 나머지가 덮이기 때문이다. 여기서는 자리만 비워 둔다.
+        // 노랑 단추 반대편은 비워 둔다. 슬라이더가 한가운데 서 있으려면 양쪽이
+        // 같은 너비를 차지해야 한다.
         if (markOnLeft) AmberDot(enabled, onAmber) else Spacer(Modifier.size(BAR))
         Scrubber(
             Modifier.weight(1f),
@@ -842,17 +823,6 @@ private fun BottomBar(
         )
         if (markOnLeft) Spacer(Modifier.size(BAR)) else AmberDot(enabled, onAmber)
     }
-}
-
-/** 아이콘 없는 남색 원. 설정을 여닫는다. */
-@Composable
-private fun SettingsDot(modifier: Modifier, onClick: () -> Unit) {
-    Box(
-        modifier
-            .size(BAR)
-            .background(Hak3.Navy, CircleShape)
-            .clickable(onClick = onClick)
-    )
 }
 
 @Composable
