@@ -44,6 +44,8 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,6 +83,8 @@ fun RoundPicker(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
+    val focus = LocalFocusManager.current
+    val ime = LocalSoftwareKeyboardController.current
     // 상세 화면 카드와 같은 곡률
     val radius = (screenCornerRadius() - 8.dp).coerceAtLeast(0.dp)
     val words = remember { Collect.size(context) }
@@ -116,14 +120,17 @@ fun RoundPicker(
         var height by remember(square) { mutableFloatStateOf(with(density) { square.toPx() }) }
         LaunchedEffect(minPx, maxPx) { height = height.coerceIn(minPx, maxPx) }
 
-        // 입력 칸에 포커스가 가면 키보드 바로 위까지 키운다 — 손잡이 줄만 남기고
-        // 아래 카드는 가린다. 인셋이 한 프레임씩 오므로 키보드가 오르는 대로 따라 붙는다.
-        // 60% 를 넘겨서까지 키우지는 않는다.
+        // 입력 칸에 포커스가 가면 손잡이 줄이 키보드 바로 위에 붙을 만큼 키운다.
+        // 그 아래로 목록이 딱 안 보이는 자리다. 인셋이 한 프레임씩 오므로 키보드가
+        // 오르는 대로 따라 붙는다.
+        //
+        // 여기서는 60% 를 넘겨도 좋다 — 그 한계는 손으로 여닫을 때의 것이고, 찾는
+        // 동안에는 손잡이를 키보드 위에 붙이는 쪽이 먼저다.
         var typing by remember { mutableStateOf(false) }
         LaunchedEffect(typing, usable) {
             if (typing && usable < screenPx) {
                 height = (usable - with(density) { (HANDLE + 4.dp).toPx() })
-                    .coerceIn(minPx, maxPx)
+                    .coerceAtLeast(minPx)
             }
         }
 
@@ -184,6 +191,12 @@ fun RoundPicker(
                             orientation = Orientation.Vertical,
                             state = rememberDraggableState { dy ->
                                 height = (height + dy).coerceIn(minPx, maxPx)
+                            },
+                            // 손잡이를 잡으면 입력 칸이 포커스를 놓고 키보드가 내려간다.
+                            // 판을 손으로 여닫겠다는 뜻이니 키보드가 남아 있을 까닭이 없다.
+                            onDragStarted = {
+                                focus.clearFocus()
+                                ime?.hide()
                             },
                         ),
                     contentAlignment = Alignment.Center,
