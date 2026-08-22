@@ -24,7 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.Icon
@@ -176,23 +175,46 @@ fun RoundPicker(
         // 서랍은 판을 통째로 밀어내고 그 자리에 선다. 왼쪽 것은 아직 비었고,
         // 오른쪽 것에는 설정이 든다. 남는 판 1/3 은 돌아가는 길로만 쓴다.
         val open = drawer != Drawer.NONE
-        val room = with(density) { (maxWidth * 2 / 3).toPx() }
+        val wide = maxWidth                                 // 안쪽 Box 에서는 가려진다
+        val roomDp = wide * 2 / 3
+        val room = with(density) { roomDp.toPx() }
         val shift = remember { Animatable(0f) }
         LaunchedEffect(drawer, room) {
-            shift.animateTo(
-                when (drawer) {
-                    Drawer.USER -> room
-                    Drawer.SETTINGS -> -room
-                    Drawer.NONE -> 0f
-                },
-                tween(320, easing = FastOutSlowInEasing),
-            )
+            shift.animateTo(anchor(drawer, room), tween(320, easing = FastOutSlowInEasing))
         }
         if (open) BackHandler { drawer = Drawer.NONE }
 
-        // 닫히는 동안에도 세워 둔다 — 판이 아직 덜 돌아왔는데 먼저 치우면 검게 번쩍인다
-        if (drawer == Drawer.SETTINGS || shift.value < -0.5f) {
-            Box(Modifier.align(Alignment.CenterEnd).fillMaxWidth(2f / 3f).fillMaxHeight()) {
+        // 단추를 누르지 않고 끌어서도 연다. 손짓은 화면 전체에서 받되, 가로로 넘기는
+        // 자리(위 한자 줄)가 먼저 집어 가는 것은 그대로 둔다.
+        val drag = rememberDraggableState { dx ->
+            scope.launch { shift.snapTo((shift.value + dx).coerceIn(-room, room)) }
+        }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .draggable(
+                    orientation = Orientation.Horizontal,
+                    state = drag,
+                    onDragStopped = { v ->
+                        val s = shift.value
+                        val next = when {
+                            v > FLING -> if (s > 0f) Drawer.USER else Drawer.NONE
+                            v < -FLING -> if (s < 0f) Drawer.SETTINGS else Drawer.NONE
+                            s > room * 0.4f -> Drawer.USER
+                            s < -room * 0.4f -> Drawer.SETTINGS
+                            else -> Drawer.NONE
+                        }
+                        // 서랍이 그대로면 LaunchedEffect 가 돌지 않는다. 여기서 앉힌다.
+                        if (next != drawer) drawer = next
+                        else shift.animateTo(anchor(next, room), tween(240))
+                    },
+                )
+        ) {
+        Box(Modifier.fillMaxSize().offset { IntOffset(shift.value.roundToInt(), 0) }) {
+            // 서랍 둘은 판의 양옆에 붙어 함께 밀린다. 제자리에 두면 판이 그 위를
+            // 덮고 지나가는데, 덮는 것이 아니라 밀려나야 한다.
+            Box(Modifier.offset(x = -roomDp).width(roomDp).fillMaxHeight())   // 왼쪽 — 아직 비었다
+            Box(Modifier.offset(x = wide).width(roomDp).fillMaxHeight()) {
                 SettingsPanel(
                     built = built,
                     markOnLeft = markOnLeft,
@@ -202,9 +224,6 @@ fun RoundPicker(
                     },
                 )
             }
-        }
-
-        Box(Modifier.fillMaxSize().offset { IntOffset(shift.value.roundToInt(), 0) }) {
         Column(Modifier.fillMaxSize()) {
             if (dict != null) {
                 Spacer(Modifier.height(4.dp))
@@ -342,63 +361,35 @@ fun RoundPicker(
         // 돌아갈 수 있게 하고, 나머지는 이 층이 다 삼킨다. 옆으로 쓸면 닫힌다.
         if (open) Column(Modifier.matchParentSize()) {
             val band = if (dict != null) 4.dp + with(density) { height.toDp() } else 0.dp
-            Deaf(Modifier.fillMaxWidth().height(band), drawer, room, shift) { drawer = it }
+            Deaf(Modifier.fillMaxWidth().height(band))
             Spacer(Modifier.height(HANDLE))
-            Deaf(Modifier.fillMaxWidth().weight(1f), drawer, room, shift) { drawer = it }
+            Deaf(Modifier.fillMaxWidth().weight(1f))
+        }
         }
         }
     }
 }
 
+/** 서랍이 저마다 앉는 자리. */
+private fun anchor(drawer: Drawer, room: Float) = when (drawer) {
+    Drawer.USER -> room
+    Drawer.SETTINGS -> -room
+    Drawer.NONE -> 0f
+}
+
+/** 이만큼 빠르게 튕기면 끌린 거리와 상관없이 그쪽으로 앉힌다. (px/s) */
+private const val FLING = 900f
+
 /** 서랍이 문 자리. 왼쪽은 아직 비었다. */
 enum class Drawer { NONE, USER, SETTINGS }
 
 /**
- * 밀려난 판을 덮어 손짓을 삼키는 층. 옆으로 쓸어 닫는 길만 남긴다.
- * 반쯤 끌다 놓으면 원래 자리로 돌아가고, 2/3 의 6할을 넘겨 끌면 닫힌다.
+ * 밀려난 판을 덮어 누르는 손짓을 삼키는 층. 끄는 것은 삼키지 않는다 —
+ * 밑에 깔린 것 대신 바깥의 서랍 손짓이 받아 간다.
  */
 @Composable
-private fun Deaf(
-    modifier: Modifier,
-    drawer: Drawer,
-    room: Float,
-    shift: Animatable<Float, *>,
-    onDrawer: (Drawer) -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-    Box(
-        modifier
-            .pointerInput(drawer) { detectTapGestures { } }
-            .pointerInput(drawer, room) {
-                detectHorizontalDragGestures(
-                    onDragEnd = {
-                        val stay = when (drawer) {
-                            Drawer.USER -> shift.value > room * 0.6f
-                            Drawer.SETTINGS -> shift.value < -room * 0.6f
-                            Drawer.NONE -> false
-                        }
-                        if (!stay) onDrawer(Drawer.NONE)
-                        else scope.launch {
-                            shift.animateTo(
-                                if (drawer == Drawer.USER) room else -room,
-                                tween(220),
-                            )
-                        }
-                    },
-                ) { _, dx ->
-                    scope.launch {
-                        val v = shift.value + dx
-                        shift.snapTo(
-                            when (drawer) {
-                                Drawer.USER -> v.coerceIn(0f, room)
-                                Drawer.SETTINGS -> v.coerceIn(-room, 0f)
-                                Drawer.NONE -> 0f
-                            }
-                        )
-                    }
-                }
-            }
-    )
+private fun Deaf(modifier: Modifier) {
+    Box(modifier.pointerInput(Unit) { detectTapGestures { } })
 }
 
 /** 기출 데이터를 아직 못 읽었을 때 목록 자리에 서는 카드. 사전은 그동안에도 쓴다. */
