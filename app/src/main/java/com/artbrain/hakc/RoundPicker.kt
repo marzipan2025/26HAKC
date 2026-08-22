@@ -99,9 +99,19 @@ fun RoundPicker(
         val maxPx = with(density) { maxH.toPx() }
         var height by remember(square) { mutableFloatStateOf(with(density) { square.toPx() }) }
 
-        // 訓音 자리가 안 나올 만큼 줄었으면 입력 칸만 남기고 접는다
-        suspend fun fold() {
-            if (height < foldPx && height > minPx) animate(height, minPx) { v, _ -> height = v }
+        /**
+         * 손을 뗀 자리를 보고 붙일 데에 붙인다.
+         *
+         *   訓音 자리가 안 나올 만큼 줄었으면  → 입력 칸 한 줄로
+         *   바닥이 한 뼘(20%)밖에 안 남았으면 → 화면 아래까지 활짝
+         */
+        suspend fun settle() {
+            when {
+                height < foldPx && height > minPx ->
+                    animate(height, minPx) { v, _ -> height = v }
+                height > maxPx * 0.8f && height < maxPx ->
+                    animate(height, maxPx) { v, _ -> height = v }
+            }
         }
 
         // 목록의 스크롤을 먼저 판이 받아 먹는다
@@ -129,7 +139,7 @@ fun RoundPicker(
 
                 // 손을 뗀 뒤, 訓音 자리가 안 나올 만큼 줄었으면 입력 칸만 남기고 접는다
                 override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                    fold()
+                    settle()
                     return Velocity.Zero
                 }
             }
@@ -173,7 +183,7 @@ fun RoundPicker(
                             state = rememberDraggableState { dy ->
                                 height = (height + dy).coerceIn(minPx, maxPx)
                             },
-                            onDragStopped = { fold() },
+                            onDragStopped = { settle() },
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
