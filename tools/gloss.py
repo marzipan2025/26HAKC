@@ -23,7 +23,7 @@ import sqlite3
 import sys
 import unicodedata
 
-LIMIT = 40
+LIMIT = 400            # 길이로는 거르지 않는다. 카드에서 접어 보인다
 
 TITLE = re.compile(r"<title>(.*?)</title>")
 WON_TPL = re.compile(r"\{\{어원\|([^|}]+)\|")
@@ -45,49 +45,57 @@ def clean(s):
 
 
 def senses(text):
-    """[(한자 or None, 뜻)] — 문서 하나에서 뽑는다."""
-    # 덤프는 <text …>== 한국어 == 처럼 첫 줄에 태그가 붙어 나온다.
-    # 그대로 두면 첫 마당 표시를 통째로 놓친다.
+    """
+    [(한자, 뜻)] — 문서 하나에서 뽑는다.
+
+    위키의 어원 줄은 뜻 앞에 올 때도 있고 뒤에 올 때도 있다.
+
+        *어원: 한자 [[變死]]              # 한 나라의 입법, 사법 …
+        # 뜻밖의 사고로 죽음.             *어원: 한자 [[政府]].
+        (어원이 먼저)                     (뜻이 먼저)
+
+    한 문서 안에서는 그 차례가 한결같으므로, 한국어 마당에서 어느 쪽이 먼저
+    나오는지로 문서의 차례를 정하고 그대로만 짝짓는다. 가까운 것을 집는 식으로
+    하면 '정부' 문서처럼 둘이 번갈아 나오는 데서 한 칸씩 밀린다.
+
+    비어 있는 `#` 줄도 뜻으로 센다. 그 자리는 '뜻이 없는 뜻'이라 짝을 메워 주는
+    구실을 한다 — 세지 않으면 그다음 뜻이 앞 한자에게 딸려 간다.
+    """
     text = re.sub(r"<text[^>]*>", "", text).replace("</text>", "")
-    out, pending, cur, korean = [], [], None, False
+    korean, events = False, []
     for raw in text.splitlines():
         line = raw.strip()
-        if line.startswith("==") and "==" in line[2:]:
+        if line.startswith("==") and line.endswith("==") and len(line) > 4:
             name = line.strip("= ")
-            if name in ("한국어",):
+            if name == "한국어":
                 korean = True
-            elif not name.startswith("명사") and not name.startswith("어원") \
-                    and not name.startswith("표제") and len(name) <= 12 \
-                    and not name[0].isdigit():
-                # 다른 언어 마당으로 넘어갔다
+            elif not (name.startswith("명사") or name.startswith("어원")
+                      or name.startswith("표제") or name[0].isdigit()):
                 if korean and name not in ("파생어", "합성어", "관련 어휘", "번역"):
                     korean = False
-            cur = None
             continue
         if not korean:
             continue
-        m = WON_TPL.search(line)
+        m = WON_TPL.search(line) or WON_OLD.search(line)
         if m and HANJA.match(m.group(1)):
-            cur = m.group(1)
-            continue
-        m = WON_OLD.search(line)
-        if m:
-            # 옛 꼴은 어원이 뜻 뒤에 온다. 바로 앞의 뜻 하나만 가져간다 —
-            # 앞엣것까지 싸잡으면 다른 한자의 뜻이 딸려 붙는다.
-            if pending:
-                out.append((m.group(1), pending[-1]))
-            pending = []
-            cur = None
+            events.append(("한자", m.group(1)))
             continue
         if line.startswith("#") and not line.startswith("#*") and not line.startswith("#:"):
             body = clean(line.lstrip("#").strip())
-            if not body or len(body) > LIMIT:
-                continue
-            if cur:
-                out.append((cur, body))
-            else:
-                pending.append(body)
-    return out + [(None, p) for p in pending]
+            events.append(("뜻", body if len(body) <= LIMIT else ""))
+
+    if not events:
+        return []
+    # 문서의 차례 — 먼저 나온 쪽이 앞이다
+    won_first = events[0][0] == "한자"
+    out = []
+    for i, (kind, val) in enumerate(events):
+        if kind != "한자":
+            continue
+        j = i + 1 if won_first else i - 1
+        if 0 <= j < len(events) and events[j][0] == "뜻" and events[j][1]:
+            out.append((val, events[j][1]))
+    return out
 
 
 def main(dump, db):
@@ -117,7 +125,7 @@ def main(dump, db):
                     # '나무' 문서의 뜻이 南無 에 붙는 식으로 어긋난다 — 그렇게 딸려
                     # 오는 3,500 개는 대개 고유어 문서였다. 적더라도 맞는 것만 쓴다.
                     for han, body in senses("".join(buf)):
-                        if han and han in words[title]:
+                        if han in words[title]:
                             got.setdefault((title, han), body)
 
     print(f"우리 낱말과 겹치는 위키 문서 {seen:,}개 → 뜻 {len(got):,}개")
