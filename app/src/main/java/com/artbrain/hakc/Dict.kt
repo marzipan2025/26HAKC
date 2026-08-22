@@ -34,7 +34,11 @@ class Dict private constructor(private val db: SQLiteDatabase) {
     fun search(text: String): List<Found> {
         val clean = text.trim().replace('（', '(').replace('）', ')')
         if (clean.isEmpty()) return emptyList()
-        if (clean.startsWith("(") && clean.endsWith(")")) return bracket(clean)
+        if (clean.startsWith("/")) return reverse(clean.drop(1).trim(), clean)
+        // 데스크톱(01HAKA)에서 쓰던 괄호도 그대로 받는다
+        if (clean.startsWith("(") && clean.endsWith(")"))
+            return reverse(clean.drop(1).dropLast(1).trim(), clean)
+        if (clean.length == 1 && isHangul(clean[0])) return byEum(clean)
         if (clean.any(::isHan)) return listOf(ofHanja(clean))
 
         val out = mutableListOf<Found>()
@@ -86,30 +90,38 @@ class Dict private constructor(private val db: SQLiteDatabase) {
     }
 
     /**
-     * 괄호 룰 — 01HAKA 에서 그대로 가져온 입력 규칙. 낱말이 아니라 글자를 찾는다.
+     * 거꾸로 찾기 — 낱말이 아니라 글자를 찾는다. 01HAKA 는 괄호로 감쌌지만
+     * 폰에서는 양쪽을 맞추기가 번거로워 맨 앞의 슬래시 하나로 대신한다.
      *
-     *     (어미 모)   훈과 음을 함께 넣으면 그 글자를 콕 집는다
-     *     (어미)      훈만 넣으면 훈에 그 말이 든 한자를 모두 모은다
-     *
-     * 찾은 글자들은 한 낱말의 여러 표기처럼 담아 돌려준다 — 위 줄에서 좌우로 훑으면
-     * 아래 訓音이 따라오는 그 얼개를 그대로 쓴다.
+     *     /어미 모    훈과 음을 함께 넣으면 그 글자를 콕 집는다
+     *     /어미       훈만 넣으면 훈에 그 말이 든 한자를 모두 모은다
      */
-    private fun bracket(text: String): List<Found> {
-        val parts = text.drop(1).dropLast(1).trim().split(' ').filter { it.isNotEmpty() }
-        val hits = when {
+    private fun reverse(inner: String, shown: String): List<Found> {
+        val parts = inner.split(' ').filter { it.isNotEmpty() }
+        return pack(shown, when {
             parts.size >= 2 -> byHunEum(parts.dropLast(1).joinToString(" "), parts.last())
             parts.size == 1 -> byHun(parts[0])
             else -> emptyList()
-        }
-        if (hits.isEmpty()) return emptyList()
-        return listOf(
-            Found(
-                text,
-                hits.map { Variant(it.han, null) },
-                hits.associateBy { it.han },
-            )
-        )
+        })
     }
+
+    /**
+     * 한글 한 글자 — 그 음으로 읽는 한자를 모두. 잔뜩 걸리는 것이 이 길의 쓸모다.
+     * 8급이 가장 흔하니 그쪽부터 세우고, 급수 없는 글자를 맨 뒤로 보낸다.
+     */
+    private fun byEum(eum: String): List<Found> = pack(eum, db.rawQuery(
+        "SELECT han, hun, eum, grade FROM chars WHERE eum=? " +
+            "ORDER BY grade IS NULL, grade DESC",
+        arrayOf(eum)
+    ).use { c -> buildList { while (c.moveToNext()) add(row(c)) } })
+
+    /**
+     * 찾아낸 글자들을 한 낱말의 여러 표기처럼 담는다 — 위 줄에서 좌우로 훑으면
+     * 아래 訓音이 따라오는 그 얼개를 그대로 쓰려는 것이다.
+     */
+    private fun pack(shown: String, hits: List<Glyph>): List<Found> =
+        if (hits.isEmpty()) emptyList()
+        else listOf(Found(shown, hits.map { Variant(it.han, null) }, hits.associateBy { it.han }))
 
     /**
      * 훈과 음을 함께 준 경우. 음이 같은 글자만 보고 훈을 맞춘다.
@@ -130,12 +142,14 @@ class Dict private constructor(private val db: SQLiteDatabase) {
                 }
             }
         }
-        return exact + near
+        // 8급이 가장 흔하다. 아는 글자를 앞에 세운다.
+        return (exact + near).sortedByDescending { it.grade ?: -1 }
     }
 
-    /** 훈만 준 경우. 훈에 그 말이 든 글자를 다 모은다. */
+    /** 훈만 준 경우. 훈에 그 말이 든 글자를 다 모은다. 흔한 글자(8급)부터. */
     private fun byHun(hun: String): List<Glyph> = db.rawQuery(
-        "SELECT han, hun, eum, grade FROM chars WHERE hun LIKE ? ORDER BY grade IS NULL, grade",
+        "SELECT han, hun, eum, grade FROM chars WHERE hun LIKE ? " +
+            "ORDER BY grade IS NULL, grade DESC",
         arrayOf("%$hun%")
     ).use { c ->
         buildList { while (c.moveToNext()) add(row(c)) }
