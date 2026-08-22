@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -42,13 +44,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * 첫 화면은 회차 목록뿐이다. 이름도 판 번호도 적지 않는다 — 그런 것들은 설정에 있다.
- * 맨 앞에는 새 판 알림과 단어장이 회차와 같은 카드 모양으로 선다.
+ * 첫 화면. 맨 위에 사전 판이 앉고, 그 아래 이름·판 번호 줄, 그 아래로 회차 목록이 붙는다.
+ * 셋을 한 격자 안에 넣어 두었으므로 화면 전체가 함께 움직인다.
  */
 @Composable
 fun RoundPicker(
     exams: List<ExamRow>,
     dict: Dict?,
+    built: String?,
+    trouble: String?,
+    onFolder: () -> Unit,
+    onFile: () -> Unit,
     onPick: (Int) -> Unit,
     onWords: () -> Unit,
 ) {
@@ -63,20 +69,161 @@ fun RoundPicker(
     LaunchedEffect(Unit) { status = Updater.check(BuildConfig.VERSION_NAME) }
     val fresh = (status as? Updater.Status.Available)?.release
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
-        // 01HAKA 자리 — 사전은 늘 맨 위에 떠 있다
-        if (dict != null) {
-            Spacer(Modifier.height(8.dp))
-            DictPanel(dict, radius)
-            Spacer(Modifier.height(5.dp))     // 회차 칸 사이와 같은 간격
-        }
+    var settings by remember { mutableStateOf(false) }
+    var markOnLeft by remember { mutableStateOf(Settings.markOnLeft(context)) }
+
+    Box(Modifier.fillMaxSize()) {
         LazyVerticalGrid(
             columns = GridCells.Adaptive(112.dp),
-            contentPadding = PaddingValues(0.dp, 8.dp, 0.dp, 32.dp),
+            contentPadding = PaddingValues(8.dp, 8.dp, 8.dp, 32.dp),
             horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
+            if (dict != null) {
+                item(key = "dict", span = { GridItemSpan(maxLineSpan) }) {
+                    DictPanel(dict, radius)
+                }
+            }
+            item(key = "head", span = { GridItemSpan(maxLineSpan) }) {
+                Header(built) { settings = true }
+            }
+            if (fresh != null) {
+                item(key = "update") {
+                    Cell(
+                        radius = radius,
+                        big = when {
+                            progress == -2f -> "새 판"
+                            progress < 0f -> "받는 중"
+                            progress < 1f -> "${(progress * 100).toInt()}%"
+                            else -> "설치"
+                        },
+                        small = if (progress == -2f) fresh.version else "누르면 열립니다",
+                        color = Hak3.Amber,
+                        enabled = progress == -2f,
+                    ) {
+                        val url = fresh.apkUrl
+                        if (url == null) {
+                            Updater.openReleasesPage(context)
+                            return@Cell
+                        }
+                        progress = -1f
+                        scope.launch {
+                            val apk = Updater.download(context, url, fresh.version) { progress = it }
+                            if (apk == null) {
+                                progress = -2f
+                                Updater.openReleasesPage(context)
+                            } else {
+                                progress = 1f
+                                Updater.install(context, apk)
+                            }
+                        }
+                    }
+                }
+            }
+            if (words > 0) {
+                item(key = "words") {
+                    Cell(radius, "$words", "단어장", Hak3.Hanja, true, onWords)
+                }
+            }
+            if (trouble != null) {
+                item(key = "setup", span = { GridItemSpan(maxLineSpan) }) {
+                    Setup(radius, trouble, onFolder, onFile)
+                }
+            }
             items(exams, key = { it.round }) { e -> RoundCell(e, radius, onPick) }
+        }
+
+        if (settings) {
+            BackHandler { settings = false }
+            SettingsPanel(
+                built = built,
+                markOnLeft = markOnLeft,
+                onMarkSide = { left ->
+                    markOnLeft = left
+                    Settings.setMarkOnLeft(context, left)
+                },
+            )
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(18.dp)
+                    .size(40.dp)
+                    .clickable { settings = false },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("✕", fontSize = 18.sp, color = Hak3.Text)
+            }
+        }
+    }
+}
+
+/** 기출 데이터를 아직 못 읽었을 때 목록 자리에 서는 카드. 사전은 그동안에도 쓴다. */
+@Composable
+private fun Setup(radius: Dp, trouble: String, onFolder: () -> Unit, onFile: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(Hak3.Surface, RoundedCornerShape(radius))
+            .padding(20.dp),
+    ) {
+        Text("기출 데이터가 아직 없습니다", fontSize = 16.sp, color = Hak3.Text)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "다운로드 폴더에 26HAKC 폴더를 만들고 그 안에 hanja3.db 를 둔 뒤, " +
+                "그 폴더를 지정해 주세요. 사전은 그동안에도 쓸 수 있습니다.",
+            fontSize = 13.sp,
+            lineHeight = 21.sp,
+            color = Hak3.TextDim,
+        )
+        if (trouble.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text(trouble, fontSize = 13.sp, color = Hak3.Red)
+        }
+        Spacer(Modifier.height(14.dp))
+        Row {
+            Text(
+                "폴더 지정",
+                fontSize = 14.sp,
+                color = Hak3.Amber,
+                modifier = Modifier
+                    .border(1.dp, Hak3.Amber, RoundedCornerShape(10.dp))
+                    .clickable(onClick = onFolder)
+                    .padding(horizontal = 16.dp, vertical = 11.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "파일 고르기",
+                fontSize = 14.sp,
+                color = Hak3.TextDim,
+                modifier = Modifier
+                    .border(1.dp, Hak3.Rule, RoundedCornerShape(10.dp))
+                    .clickable(onClick = onFile)
+                    .padding(horizontal = 16.dp, vertical = 11.dp),
+            )
+        }
+    }
+}
+
+/** 이름과 판 번호, 그리고 설정으로 드는 톱니. 사전 판과 회차 목록 사이에 선다. */
+@Composable
+private fun Header(built: String?, onSettings: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(start = 4.dp, top = 14.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text("26HAKC", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Hak3.Text)
+            Text(
+                "version ${BuildConfig.VERSION_NAME}" + (built?.let { " · 데이터 $it" } ?: ""),
+                fontSize = 13.sp,
+                color = Hak3.TextDim,
+            )
+        }
+        Box(
+            Modifier.size(40.dp).clickable(onClick = onSettings),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("⚙", fontSize = 24.sp, color = Hak3.TextDim)
         }
     }
 }

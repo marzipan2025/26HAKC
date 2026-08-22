@@ -32,7 +32,9 @@ def main(dst):
     dst.unlink(missing_ok=True)
     con = sqlite3.connect(dst)
     con.executescript("""
-        CREATE TABLE words(ko TEXT NOT NULL, hanja TEXT NOT NULL, meaning TEXT);
+        -- seq 는 원본 파일에 적힌 차례다. 그 순서가 곧 쓸모의 차례라서
+        -- '이사' 를 넣으면 二四 가 아니라 移徙 가 먼저 온다.
+        CREATE TABLE words(seq INTEGER, ko TEXT NOT NULL, hanja TEXT NOT NULL, meaning TEXT);
         CREATE TABLE chars(han TEXT PRIMARY KEY, hun TEXT, eum TEXT, grade INTEGER);
         CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT);
     """)
@@ -49,12 +51,16 @@ def main(dst):
         mean = unicodedata.normalize("NFC", part[2]).strip() if len(part) > 2 else ""
         if not ko or not han:
             continue
-        words.append((ko, han, mean or None))
-        # '만:萬:일만 만' 처럼 한 글자짜리는 그 글자의 訓音이다
-        if len(han) == 1 and mean and " " in mean:
-            hun, _, eum = mean.rpartition(" ")
-            chars.setdefault(han, (hun.strip(), eum.strip()))
-    con.executemany("INSERT INTO words(ko, hanja, meaning) VALUES(?,?,?)", words)
+        words.append((len(words), ko, han, mean or None))
+        # '移:옮길 이, 모낼 이, 변할' 처럼 한 글자짜리는 그 글자의 訓音이다.
+        # 훈마다 음이 되풀이되므로 떼어 낸다 — '옮길, 모낼, 변할'.
+        if len(han) == 1 and mean:
+            hun = ", ".join(
+                part[: -len(ko)].strip() if part.endswith(ko) and len(part) > len(ko) else part
+                for part in (p.strip() for p in mean.split(","))
+            )
+            chars.setdefault(han, (hun, ko))
+    con.executemany("INSERT INTO words(seq, ko, hanja, meaning) VALUES(?,?,?,?)", words)
     con.executemany(
         "INSERT INTO chars(han, hun, eum, grade) VALUES(?,?,?,?)",
         [(h, v[0], v[1], g.get(h)) for h, v in chars.items()])

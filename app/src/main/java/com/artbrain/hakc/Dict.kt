@@ -7,12 +7,14 @@ import java.io.File
 /** 한자 한 글자 — 訓과 音, 그리고 급수. */
 data class Glyph(val han: String, val hun: String, val eum: String, val grade: Int?)
 
+/** 같은 소리로 적히는 한자 표기 하나. */
+data class Variant(val hanja: String, val meaning: String?)
+
 /** 찾아낸 낱말 하나. 같은 소리에 여러 한자가 있으면 variants 에 모두 담긴다. */
 data class Found(
     val ko: String,
-    val variants: List<String>,
-    val glyphs: List<Glyph>,
-    val meaning: String?,
+    val variants: List<Variant>,
+    val chars: Map<String, Glyph>,
 )
 
 /**
@@ -64,45 +66,49 @@ class Dict private constructor(private val db: SQLiteDatabase) {
         return out
     }
 
-    /** 한글 낱말 하나를 찾는다. 없으면 null. */
+    /**
+     * 한글 낱말 하나를 찾는다. 없으면 null.
+     *
+     * 원본 파일에 적힌 차례를 그대로 지킨다 — 그 순서가 곧 쓸모의 차례라서
+     * '이사' 를 넣으면 二四 가 아니라 移徙 가 먼저 온다.
+     */
     private fun lookup(ko: String): Found? = db.rawQuery(
-        "SELECT hanja, meaning FROM words WHERE ko=? ORDER BY length(hanja), hanja",
+        "SELECT hanja, meaning FROM words WHERE ko=? ORDER BY seq",
         arrayOf(ko)
     ).use { c ->
-        val variants = mutableListOf<String>()
-        var meaning: String? = null
+        val variants = mutableListOf<Variant>()
         while (c.moveToNext()) {
-            variants.add(c.getString(0))
-            if (meaning == null) meaning = c.getString(1)
+            variants.add(Variant(c.getString(0), c.getString(1)?.takeIf { it.isNotBlank() }))
         }
         if (variants.isEmpty()) return@use null
-        Found(ko, variants, glyphs(variants.joinToString("")), meaning)
+        Found(ko, variants, glyphs(variants.joinToString("") { it.hanja }))
     }
 
     /** 한자를 그대로 넣었을 때 — 글자마다 訓音만 돌려준다. */
     private fun ofHanja(text: String): Found {
         val only = text.filter(::isHan)
-        return Found(text, listOf(only), glyphs(only), null)
+        return Found(text, listOf(Variant(only, null)), glyphs(only))
     }
 
     /** 글자마다 訓音과 급수를. 같은 글자는 한 번만. */
-    private fun glyphs(source: String): List<Glyph> {
+    private fun glyphs(source: String): Map<String, Glyph> {
         val seen = LinkedHashSet<Char>()
         source.filter(::isHan).forEach { seen.add(it) }
-        return seen.mapNotNull { ch ->
-            db.rawQuery("SELECT hun, eum, grade FROM chars WHERE han=?", arrayOf(ch.toString()))
-                .use { c ->
-                    if (c.moveToNext()) {
-                        Glyph(
-                            ch.toString(),
-                            c.getString(0) ?: "",
-                            c.getString(1) ?: "",
-                            if (c.isNull(2)) null else c.getInt(2),
-                        )
-                    } else {
-                        Glyph(ch.toString(), "", "", null)
-                    }
+        return seen.associate { ch ->
+            ch.toString() to db.rawQuery(
+                "SELECT hun, eum, grade FROM chars WHERE han=?", arrayOf(ch.toString())
+            ).use { c ->
+                if (c.moveToNext()) {
+                    Glyph(
+                        ch.toString(),
+                        c.getString(0) ?: "",
+                        c.getString(1) ?: "",
+                        if (c.isNull(2)) null else c.getInt(2),
+                    )
+                } else {
+                    Glyph(ch.toString(), "", "", null)
                 }
+            }
         }
     }
 
@@ -117,12 +123,22 @@ class Dict private constructor(private val db: SQLiteDatabase) {
 
         private fun isHangul(c: Char) = c in '가'..'힣'
 
+        /**
+         * SQLite 는 실제 파일이어야 열리므로 앱 안으로 한 번 베껴 둔다.
+         * 판이 바뀌면 사전도 바뀌었을 수 있으니 그때는 다시 베낀다 — 안 그러면
+         * 예전 사본이 남아 새 자료를 못 읽는다.
+         */
         fun open(context: Context): Dict? = try {
             val out = File(context.filesDir, "dict.db")
-            if (!out.exists() || out.length() == 0L) {
+            val stamp = File(context.filesDir, "dict.stamp")
+            val now = BuildConfig.VERSION_CODE.toString()
+            if (!out.exists() || out.length() == 0L ||
+                !stamp.exists() || stamp.readText() != now
+            ) {
                 context.assets.open("dict.db").use { input ->
                     out.outputStream().use { input.copyTo(it) }
                 }
+                stamp.writeText(now)
             }
             Dict(SQLiteDatabase.openDatabase(out.path, null, SQLiteDatabase.OPEN_READONLY))
         } catch (_: Exception) {

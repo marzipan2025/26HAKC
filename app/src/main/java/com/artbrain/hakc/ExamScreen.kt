@@ -418,7 +418,7 @@ private fun Deck(
  * 적는 말은 영어로 둔다 — 짧고, 줄바꿈에 흔들리지 않는다.
  */
 @Composable
-private fun SettingsPanel(
+fun SettingsPanel(
     built: String?,
     markOnLeft: Boolean,
     onMarkSide: (Boolean) -> Unit,
