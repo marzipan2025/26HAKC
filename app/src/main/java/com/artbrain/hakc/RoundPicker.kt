@@ -67,7 +67,8 @@ fun RoundPicker(
         // 01HAKA 자리 — 사전은 늘 맨 위에 떠 있다
         if (dict != null) {
             Spacer(Modifier.height(8.dp))
-            DictPanel(dict)
+            DictPanel(dict, radius)
+            Spacer(Modifier.height(5.dp))     // 회차 칸 사이와 같은 간격
         }
         LazyVerticalGrid(
             columns = GridCells.Adaptive(112.dp),
