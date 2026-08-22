@@ -18,6 +18,7 @@
 """
 import bz2
 import pathlib
+import html
 import re
 import sqlite3
 import sys
@@ -34,6 +35,11 @@ HANJA = re.compile(r"^[㐀-鿿豈-﫿]+$")
 
 def clean(s):
     """위키 표시를 걷어내고 사람이 읽는 글만 남긴다."""
+    # &quot; 따위가 그대로 나가지 않게. 덤프가 & 를 한 번 더 감싸 두어서
+    # (&amp;nbsp;) 표시가 남아 있으면 한 번 더 푼다.
+    s = html.unescape(s)
+    if re.search(r"&(?:[a-zA-Z]+|#\d+);", s):
+        s = html.unescape(s)
     s = re.sub(r"\{\{라벨\|[^}]*\}\}", "", s)
     s = re.sub(r"\{\{[^}]*\}\}", "", s)
     s = re.sub(r"\[\[([^\]|]*)\|([^\]]*)\]\]", r"\2", s)

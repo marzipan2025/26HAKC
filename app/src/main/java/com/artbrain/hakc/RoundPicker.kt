@@ -21,7 +21,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -181,7 +183,12 @@ fun RoundPicker(
                     Modifier.size(40.dp).clickable { },     // 아직 열 것이 없다. 자리만.
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("☰", fontSize = 20.sp, color = Hak3.TextDim)
+                    Icon(
+                        painterResource(R.drawable.ic_user),
+                        contentDescription = null,
+                        tint = Hak3.TextDim,
+                        modifier = Modifier.size(21.dp),
+                    )
                 }
                 Box(
                     Modifier
@@ -212,7 +219,12 @@ fun RoundPicker(
                     Modifier.size(40.dp).clickable { settings = true },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("⚙", fontSize = 22.sp, color = Hak3.TextDim)
+                    Icon(
+                        painterResource(R.drawable.ic_settings),
+                        contentDescription = null,
+                        tint = Hak3.TextDim,
+                        modifier = Modifier.size(21.dp),
+                    )
                 }
             }
 

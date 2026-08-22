@@ -23,7 +23,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,6 +49,11 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.withStyle
@@ -71,9 +80,16 @@ private val FLUSH = TextStyle(
  * 급수인지 되레 안 보인다. 기호는 빈 원으로 통일했다. 채운 원과 빈 원을 섞으면
  * 무게가 달라 급수와 상관없이 몇 개만 튀어 보인다.
  */
-private val GRADE_MARK = listOf("◉", "①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧")
+private val GRADE_ICON = listOf(
+    R.drawable.ic_grade_0, R.drawable.ic_grade_1, R.drawable.ic_grade_2,
+    R.drawable.ic_grade_3, R.drawable.ic_grade_4, R.drawable.ic_grade_5,
+    R.drawable.ic_grade_6, R.drawable.ic_grade_7, R.drawable.ic_grade_8,
+)
 
-private fun gradeMark(grade: Int?) = GRADE_MARK[(grade ?: 0).coerceIn(0, 8)]
+private fun gradeIcon(grade: Int?) = GRADE_ICON[(grade ?: 0).coerceIn(0, 8)]
+
+/** 訓 앞에 끼워 넣는 급수 표시의 이름. 글 흐름을 타야 해서 인라인으로 둔다. */
+private const val GRADE_SLOT = "grade"
 
 private fun gradeColor(grade: Int?) = when (grade) {
     0 -> Color.White
@@ -126,6 +142,8 @@ private class Slot(val word: Found, val index: Int, val variant: Variant, val ma
  */
 @Composable
 fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    val focus = LocalFocusManager.current
+    val ime = LocalSoftwareKeyboardController.current
     var text by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<List<Found>>(emptyList()) }
     LaunchedEffect(text) { found = dict.search(text) }
@@ -251,17 +269,29 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                     textStyle = TextStyle(color = Hak3.Text, fontSize = 19.sp),
                     cursorBrush = SolidColor(Hak3.Amber),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    // 키보드의 찾기 단추도 엔터와 같은 일을 한다
+                    keyboardActions = KeyboardActions(onSearch = {
+                        focus.clearFocus()
+                        ime?.hide()
+                    }),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(end = 52.dp)
                         .onFocusChanged { onFocus(it.isFocused) },
                 )
-                Box(
-                    Modifier
+                // 오른쪽 끝 — 엔터. 찾기는 글자마다 이미 돌고 있으니 여기서 할 일은
+                // 키보드를 접는 것뿐이다. 판은 그만큼 제자리로 돌아간다.
+                Icon(
+                    painterResource(R.drawable.ic_enter),
+                    contentDescription = null,
+                    tint = if (text.isEmpty()) Hak3.Rule else Hak3.Text,
+                    modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .size(foot * 0.25f)
-                        .background(if (text.isEmpty()) Hak3.Rule else Hak3.Text, CircleShape)
-                        .clickable { text = "" },
+                        .size(foot * 0.42f)
+                        .clickable {
+                            focus.clearFocus()
+                            ime?.hide()
+                        },
                 )
             }
         }
@@ -301,9 +331,7 @@ private fun VariantBlock(s: Slot) {
                 Spacer(Modifier.width(4.dp))
                 Text(
                     buildAnnotatedString {
-                        withStyle(SpanStyle(color = gradeColor(g.grade))) {
-                            append(gradeMark(g.grade))
-                        }
+                        appendInlineContent(GRADE_SLOT)
                         append(" ")
                         append(if (g.hun.isEmpty()) "訓 없음" else g.hun)
                         // 여러 표기가 있을 때, 첫 글자에 어느 표기인지 표시를 단다
@@ -316,6 +344,17 @@ private fun VariantBlock(s: Slot) {
                     fontSize = 16.sp,
                     lineHeight = 23.sp,
                     color = Hak3.Text,
+                    inlineContent = mapOf(
+                        GRADE_SLOT to InlineTextContent(
+                            Placeholder(16.sp, 16.sp, PlaceholderVerticalAlign.TextCenter)
+                        ) {
+                            Icon(
+                                painterResource(gradeIcon(g.grade)),
+                                contentDescription = null,
+                                tint = gradeColor(g.grade),
+                            )
+                        }
+                    ),
                 )
             }
         }

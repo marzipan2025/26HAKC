@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HAKC_asset 에서 옮긴 것. 색은 쓰는 자리에서 tint 로 입힌다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2ZM8.40039 7.00391V9.37695H13.0732V9.4873L8.90527 17.002H12.1357L16.127 9.40625V7.00391H8.40039Z"
+        android:fillColor="#FFFFFFFF" />
+</vector>
