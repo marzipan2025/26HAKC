@@ -22,13 +22,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.Icon
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.GraphicsLayerScope
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.compose.material3.Text
 import androidx.compose.ui.res.painterResource
@@ -176,12 +178,10 @@ fun RoundPicker(
         // 오른쪽 것에는 설정이 든다. 남는 판 1/3 은 돌아가는 길로만 쓴다.
         val open = drawer != Drawer.NONE
         val wide = maxWidth                                 // 안쪽 Box 에서는 가려진다
-        val roomDp = wide * 2 / 3
+        val roomDp = wide * (1f - STRIP)
         val room = with(density) { roomDp.toPx() }
         val shift = remember { Animatable(0f) }
-        LaunchedEffect(drawer, room) {
-            shift.animateTo(anchor(drawer, room), tween(320, easing = FastOutSlowInEasing))
-        }
+        LaunchedEffect(drawer, room) { shift.animateTo(anchor(drawer, room), SNAP) }
         if (open) BackHandler { drawer = Drawer.NONE }
 
         // 단추를 누르지 않고 끌어서도 연다. 손짓은 화면 전체에서 받되, 가로로 넘기는
@@ -195,21 +195,28 @@ fun RoundPicker(
                 .draggable(
                     orientation = Orientation.Horizontal,
                     state = drag,
+                    // 사전에 무언가 적는 중에는 서랍이 끌려 나오지 않는다
+                    enabled = !typing,
                     onDragStopped = { v ->
                         val s = shift.value
                         val next = when {
                             v > FLING -> if (s > 0f) Drawer.USER else Drawer.NONE
                             v < -FLING -> if (s < 0f) Drawer.SETTINGS else Drawer.NONE
-                            s > room * 0.4f -> Drawer.USER
-                            s < -room * 0.4f -> Drawer.SETTINGS
+                            s > room * COMMIT -> Drawer.USER
+                            s < -room * COMMIT -> Drawer.SETTINGS
                             else -> Drawer.NONE
                         }
                         // 서랍이 그대로면 LaunchedEffect 가 돌지 않는다. 여기서 앉힌다.
                         if (next != drawer) drawer = next
-                        else shift.animateTo(anchor(next, room), tween(240))
+                        else shift.animateTo(anchor(next, room), SNAP)
                     },
                 )
         ) {
+        // 밀려난 만큼 어두워진다 — 남은 자락이 지금 쓸 수 없는 것임을 그렇게 알린다.
+        // 손잡이 줄의 화살표만 이 층을 벗어나 제 밝기로 선다.
+        val dim: GraphicsLayerScope.() -> Unit = {
+            alpha = 1f - (1f - DIM) * (abs(shift.value) / room).coerceIn(0f, 1f)
+        }
         Box(Modifier.fillMaxSize().offset { IntOffset(shift.value.roundToInt(), 0) }) {
             // 서랍 둘은 판의 양옆에 붙어 함께 밀린다. 제자리에 두면 판이 그 위를
             // 덮고 지나가는데, 덮는 것이 아니라 밀려나야 한다.
@@ -232,6 +239,7 @@ fun RoundPicker(
                     radius = radius,
                     onFocus = { typing = it },
                     modifier = Modifier
+                        .graphicsLayer(dim)
                         .padding(horizontal = 8.dp)
                         .height(with(density) { height.toDp() }),
                 )
@@ -244,6 +252,8 @@ fun RoundPicker(
             ) {
                 Box(
                     Modifier.size(40.dp).clickable {
+                        // 적는 중이었으면 키보드가 내려가며 함께 움직인다
+                        if (typing) { focus.clearFocus(); ime?.hide() }
                         drawer = if (drawer == Drawer.USER) Drawer.NONE else Drawer.USER
                     },
                     contentAlignment = Alignment.Center,
@@ -280,6 +290,7 @@ fun RoundPicker(
                 ) {
                     Box(
                         Modifier
+                            .graphicsLayer(dim)
                             .width(38.dp)
                             .height(4.dp)
                             .background(Hak3.Rule, RoundedCornerShape(2.dp))
@@ -287,6 +298,7 @@ fun RoundPicker(
                 }
                 Box(
                     Modifier.size(40.dp).clickable {
+                        if (typing) { focus.clearFocus(); ime?.hide() }
                         drawer = if (drawer == Drawer.SETTINGS) Drawer.NONE else Drawer.SETTINGS
                     },
                     contentAlignment = Alignment.Center,
@@ -305,7 +317,7 @@ fun RoundPicker(
 
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(112.dp),
-                modifier = Modifier.nestedScroll(nested),
+                modifier = Modifier.graphicsLayer(dim).nestedScroll(nested),
                 contentPadding = PaddingValues(8.dp, 0.dp, 8.dp, 32.dp),
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
                 verticalArrangement = Arrangement.spacedBy(5.dp),
@@ -377,8 +389,20 @@ private fun anchor(drawer: Drawer, room: Float) = when (drawer) {
     Drawer.NONE -> 0f
 }
 
+/** 서랍이 열렸을 때 남는 판의 자락. */
+private const val STRIP = 0.30f
+
+/** 여기까지 끌면 놓아도 그쪽으로 앉는다. */
+private const val COMMIT = 0.35f
+
 /** 이만큼 빠르게 튕기면 끌린 거리와 상관없이 그쪽으로 앉힌다. (px/s) */
-private const val FLING = 900f
+private const val FLING = 650f
+
+/** 밀려난 판의 밝기. */
+private const val DIM = 0.32f
+
+/** 서랍이 앉는 결. 튕기지 않으면서 짧게 끊어 붙는다. */
+private val SNAP = spring<Float>(dampingRatio = 0.92f, stiffness = 2000f)
 
 /** 서랍이 문 자리. 왼쪽은 아직 비었다. */
 enum class Drawer { NONE, USER, SETTINGS }
