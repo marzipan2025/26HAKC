@@ -21,7 +21,16 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.Icon
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import androidx.compose.material3.Text
 import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
@@ -100,7 +109,7 @@ fun RoundPicker(
     LaunchedEffect(Unit) { status = Updater.check(BuildConfig.VERSION_NAME) }
     val fresh = (status as? Updater.Status.Available)?.release
 
-    var settings by remember { mutableStateOf(false) }
+    var drawer by remember { mutableStateOf(Drawer.NONE) }
     var markOnLeft by remember { mutableStateOf(Settings.markOnLeft(context)) }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -164,6 +173,38 @@ fun RoundPicker(
             }
         }
 
+        // 서랍은 판을 통째로 밀어내고 그 자리에 선다. 왼쪽 것은 아직 비었고,
+        // 오른쪽 것에는 설정이 든다. 남는 판 1/3 은 돌아가는 길로만 쓴다.
+        val open = drawer != Drawer.NONE
+        val room = with(density) { (maxWidth * 2 / 3).toPx() }
+        val shift = remember { Animatable(0f) }
+        LaunchedEffect(drawer, room) {
+            shift.animateTo(
+                when (drawer) {
+                    Drawer.USER -> room
+                    Drawer.SETTINGS -> -room
+                    Drawer.NONE -> 0f
+                },
+                tween(320, easing = FastOutSlowInEasing),
+            )
+        }
+        if (open) BackHandler { drawer = Drawer.NONE }
+
+        // 닫히는 동안에도 세워 둔다 — 판이 아직 덜 돌아왔는데 먼저 치우면 검게 번쩍인다
+        if (drawer == Drawer.SETTINGS || shift.value < -0.5f) {
+            Box(Modifier.align(Alignment.CenterEnd).fillMaxWidth(2f / 3f).fillMaxHeight()) {
+                SettingsPanel(
+                    built = built,
+                    markOnLeft = markOnLeft,
+                    onMarkSide = { left ->
+                        markOnLeft = left
+                        Settings.setMarkOnLeft(context, left)
+                    },
+                )
+            }
+        }
+
+        Box(Modifier.fillMaxSize().offset { IntOffset(shift.value.roundToInt(), 0) }) {
         Column(Modifier.fillMaxSize()) {
             if (dict != null) {
                 Spacer(Modifier.height(4.dp))
@@ -183,11 +224,17 @@ fun RoundPicker(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
-                    Modifier.size(40.dp).clickable { },     // 아직 열 것이 없다. 자리만.
+                    Modifier.size(40.dp).clickable {
+                        drawer = if (drawer == Drawer.USER) Drawer.NONE else Drawer.USER
+                    },
                     contentAlignment = Alignment.Center,
                 ) {
+                    // 서랍이 열려 있으면 돌아가는 화살표가 그 자리에 선다
                     Icon(
-                        painterResource(R.drawable.ic_user),
+                        painterResource(
+                            if (drawer == Drawer.USER) R.drawable.ic_arrow_left
+                            else R.drawable.ic_user
+                        ),
                         contentDescription = null,
                         tint = Hak3.TextDim,
                         modifier = Modifier.size(21.dp),
@@ -219,11 +266,16 @@ fun RoundPicker(
                     )
                 }
                 Box(
-                    Modifier.size(40.dp).clickable { settings = true },
+                    Modifier.size(40.dp).clickable {
+                        drawer = if (drawer == Drawer.SETTINGS) Drawer.NONE else Drawer.SETTINGS
+                    },
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        painterResource(R.drawable.ic_settings),
+                        painterResource(
+                            if (drawer == Drawer.SETTINGS) R.drawable.ic_arrow_right
+                            else R.drawable.ic_settings
+                        ),
                         contentDescription = null,
                         tint = Hak3.TextDim,
                         modifier = Modifier.size(21.dp),
@@ -285,28 +337,67 @@ fun RoundPicker(
             }
         }
 
-        if (settings) {
-            BackHandler { settings = false }
-            SettingsPanel(
-                built = built,
-                markOnLeft = markOnLeft,
-                onMarkSide = { left ->
-                    markOnLeft = left
-                    Settings.setMarkOnLeft(context, left)
-                },
-            )
-            Box(
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(18.dp)
-                    .size(40.dp)
-                    .clickable { settings = false },
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("✕", fontSize = 18.sp, color = Hak3.Text)
-            }
+        // 밀려나 있는 동안 판은 손짓을 받지 않는다. 손잡이 줄만 비워 두어 화살표로
+        // 돌아갈 수 있게 하고, 나머지는 이 층이 다 삼킨다. 옆으로 쓸면 닫힌다.
+        if (open) Column(Modifier.matchParentSize()) {
+            val band = if (dict != null) 4.dp + with(density) { height.toDp() } else 0.dp
+            Deaf(Modifier.fillMaxWidth().height(band), drawer, room, shift) { drawer = it }
+            Spacer(Modifier.height(HANDLE))
+            Deaf(Modifier.fillMaxWidth().weight(1f), drawer, room, shift) { drawer = it }
+        }
         }
     }
+}
+
+/** 서랍이 문 자리. 왼쪽은 아직 비었다. */
+enum class Drawer { NONE, USER, SETTINGS }
+
+/**
+ * 밀려난 판을 덮어 손짓을 삼키는 층. 옆으로 쓸어 닫는 길만 남긴다.
+ * 반쯤 끌다 놓으면 원래 자리로 돌아가고, 2/3 의 6할을 넘겨 끌면 닫힌다.
+ */
+@Composable
+private fun Deaf(
+    modifier: Modifier,
+    drawer: Drawer,
+    room: Float,
+    shift: Animatable<Float, *>,
+    onDrawer: (Drawer) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    Box(
+        modifier
+            .pointerInput(drawer) { detectTapGestures { } }
+            .pointerInput(drawer, room) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        val stay = when (drawer) {
+                            Drawer.USER -> shift.value > room * 0.6f
+                            Drawer.SETTINGS -> shift.value < -room * 0.6f
+                            Drawer.NONE -> false
+                        }
+                        if (!stay) onDrawer(Drawer.NONE)
+                        else scope.launch {
+                            shift.animateTo(
+                                if (drawer == Drawer.USER) room else -room,
+                                tween(220),
+                            )
+                        }
+                    },
+                ) { _, dx ->
+                    scope.launch {
+                        val v = shift.value + dx
+                        shift.snapTo(
+                            when (drawer) {
+                                Drawer.USER -> v.coerceIn(0f, room)
+                                Drawer.SETTINGS -> v.coerceIn(-room, 0f)
+                                Drawer.NONE -> 0f
+                            }
+                        )
+                    }
+                }
+            }
+    )
 }
 
 /** 기출 데이터를 아직 못 읽었을 때 목록 자리에 서는 카드. 사전은 그동안에도 쓴다. */
