@@ -53,21 +53,28 @@ def wav(path, samples):
 
 def nope():
     """
-    아니라는 소리. 딱 소리를 낮추고 둔하게 만든 것이다 — 같은 몸에서 나온
-    소리라야 한 벌로 들린다.
+    아니라는 소리.
 
-    낮은 두 겹이 천천히 잦아들고, 앞의 잡음은 뺀다. 밝은 끝이 없어야 '아니'로
-    들린다. 길이는 딱의 두 배 남짓이되 크기는 같은 자리에 둔다.
+    처음에는 딱을 그냥 낮춰(220·158Hz) 두었는데 폰에서 들리지 않았다. 폰 스피커는
+    500Hz 아래를 거의 내지 못한다. 그래서 낮추는 대신 **떨어뜨린다** — 높은 소리
+    하나 뒤에 낮은 소리 하나. 두 소리 다 스피커가 낼 수 있는 자리에 있으면서,
+    내려가는 결이 '아니' 로 들린다.
     """
-    n = int(RATE * 0.030)
+    n = int(RATE * 0.055)
     out = []
     for i in range(n):
         t = i / RATE
-        low = math.sin(2 * math.pi * 220 * t) * math.exp(-t / 0.0075)
-        under = math.sin(2 * math.pi * 158 * t) * math.exp(-t / 0.0120) * 0.7
-        v = low + under
-        if t < 0.0012:                      # 여는 데 시간을 조금 더 준다 — 둔한 맛
-            v *= (1 - math.cos(math.pi * t / 0.0012)) / 2
+        # 앞의 한 톨은 짧고 높게, 뒤의 한 톨은 조금 낮고 길게
+        first = math.sin(2 * math.pi * 760 * t) * math.exp(-t / 0.0055)
+        at = t - 0.020
+        second = 0.0
+        if at >= 0:
+            second = math.sin(2 * math.pi * 520 * at) * math.exp(-at / 0.0110) * 1.1
+            if at < 0.0008:                 # 뒤엣것도 살며시 연다
+                second *= (1 - math.cos(math.pi * at / 0.0008)) / 2
+        v = first + second
+        if t < 0.0008:
+            v *= (1 - math.cos(math.pi * t / 0.0008)) / 2
         out.append(v)
     top = max(abs(v) for v in out)
     return [v / top * PEAK for v in out]
