@@ -95,8 +95,8 @@ private val LOUD = listOf("略字", "部首")
  * 문제 한 줄. 略字·部首 만 흰색으로 도드라지게 하고 나머지는 흐린 색 그대로 둔다.
  * 이음쇠는 토막마다 넣는다 — 다 붙인 뒤에 찾으면 글자 사이가 벌어져 안 잡힌다.
  */
-private fun instruction(s: String): AnnotatedString = buildAnnotatedString {
-    val loud = SpanStyle(color = Hak3.Text)
+private fun instruction(s: String, tone: Color): AnnotatedString = buildAnnotatedString {
+    val loud = SpanStyle(color = tone)
     var i = 0
     var prev = ' '
     while (i < s.length) {
@@ -638,6 +638,10 @@ private fun QuestionPage(
     onTap: () -> Unit,
 ) {
     val item = page.item
+    // 앞면이 통째로 색면인 단어장 카드에서는 그 위의 모든 글과 부호를 검정으로
+    // 뒤집는다. 제 짙기(알파)는 지킨다 — 흐리게 둔 것은 흐린 채로 흐리다.
+    val onFace = face && mark != null
+    fun ink(c: Color) = if (onFace) Color.Black.copy(alpha = c.alpha) else c
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     /*
@@ -731,10 +735,10 @@ private fun QuestionPage(
         // 무엇을 묻는 문제인지는 카드 맨 위 한가운데 따로 세운다.
         // 아래 것들과 한 흐름으로 두지 않는다 — 자리도 정렬도 따로 간다.
         Text(
-            instruction(page.section.instruction),
+            instruction(page.section.instruction, ink(Hak3.Text)),
             fontSize = 16.sp,
             lineHeight = 22.sp,
-            color = Hak3.TextDim,
+            color = ink(Hak3.TextDim),
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -758,11 +762,7 @@ private fun QuestionPage(
             Text(
                 item.label,
                 fontSize = 17.sp,
-                color = when {
-                    face && mark != null -> Color.Black
-                    mark != null -> borderColor(mark)
-                    else -> Hak3.TextDim
-                },
+                color = ink(if (mark != null) borderColor(mark) else Hak3.TextDim),
                 modifier = Modifier.padding(start = SHIFT),
             )
             Spacer(Modifier.height(6.dp))
@@ -778,10 +778,10 @@ private fun QuestionPage(
                     // 이쪽이 곧 묻는 것이라 예문보다 밝게 두고, 밑줄 친 말만
                     // 한 겹 더 밝다.
                     Text(
-                        underlined(item.html ?: head, Hak3.Text),
+                        underlined(item.html ?: head, ink(Hak3.Text)),
                         fontSize = 22.sp,
                         lineHeight = 36.sp,
-                        color = Hak3.Hanja,
+                        color = ink(Hak3.Hanja),
                         modifier = Modifier.padding(start = SHIFT),
                     )
                 } else Text(
@@ -790,30 +790,30 @@ private fun QuestionPage(
                     fontWeight = FontWeight.ExtraLight,
                     fontSize = HEAD,
                     lineHeight = HEAD * 1.18f,
-                    color = Hak3.Hanja,
+                    color = ink(Hak3.Hanja),
                 )
                 if (tail != null) {
                     // 지문만 위로 당긴다. 아래 정답 자리는 그만큼 도로 벌려 두어
                     // 점과 정답의 좌표는 그대로 있게 한다.
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        underlined(tail, Hak3.Hanja),
+                        underlined(tail, ink(Hak3.Hanja)),
                         fontSize = 22.sp,
                         lineHeight = 36.sp,
-                        color = Hak3.TextDim,
+                        color = ink(Hak3.TextDim),
                         modifier = Modifier.padding(start = SHIFT),
                     )
                 }
 
                 Spacer(Modifier.height(if (tail != null) 38.dp else 26.dp))
-                Box(Modifier.padding(start = SHIFT)) { AnswerSlot(item, revealed) }
+                Box(Modifier.padding(start = SHIFT)) { AnswerSlot(item, revealed, ::ink) }
             }
         }
     }
 }
 
 @Composable
-private fun AnswerSlot(item: Item, revealed: Boolean) {
+private fun AnswerSlot(item: Item, revealed: Boolean, ink: (Color) -> Color) {
     val a = item.answer
     val hanja = a != null && HANJA.containsMatchIn(a)
     // 답이 없다는 말도 한자 자리에 서는 글이니 같은 얇기로 적는다
@@ -831,7 +831,7 @@ private fun AnswerSlot(item: Item, revealed: Boolean) {
     Box(
         Modifier
             .size(DOT)
-            .background(if (revealed) Hak3.Neon else Hak3.Rule, CircleShape)
+            .background(ink(if (revealed) Hak3.Neon else Hak3.Rule), CircleShape)
     ) {
         if (!revealed) return@Box
         // 폭도 높이도 없는 자리를 하나 두고, 그 안에서만 제 크기를 갖게 한다.
@@ -852,12 +852,17 @@ private fun AnswerSlot(item: Item, revealed: Boolean) {
                 fontWeight = if (hanja || notice) FontWeight.ExtraLight else FontWeight.Normal,
                 fontSize = if (hanja) 56.sp else 30.sp,
                 lineHeight = if (hanja) 70.sp else 40.sp,
-                color = if (a != null) Hak3.Neon else Hak3.TextDim,
+                color = ink(if (a != null) Hak3.Neon else Hak3.TextDim),
                 style = FLUSH_TOP,
             )
             item.gloss?.let { g ->
                 Spacer(Modifier.height(6.dp))
-                Text(g, fontSize = 17.sp, lineHeight = 27.sp, color = Hak3.Neon.copy(alpha = 0.66f))
+                Text(
+                    g,
+                    fontSize = 17.sp,
+                    lineHeight = 27.sp,
+                    color = ink(Hak3.Neon.copy(alpha = 0.66f)),
+                )
             }
         }
         }
