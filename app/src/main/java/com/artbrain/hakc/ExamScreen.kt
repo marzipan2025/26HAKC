@@ -697,12 +697,15 @@ private fun QuestionPage(
                 // 흔들린다. 글을 통째로 묻는 유형만 예문과 같은 크기로 낮추고,
                 // 밑줄 친 말을 밝게 그어 어디를 묻는지 보인다.
                 if (prose) {
+                    // 예문 문단과 같은 틀로 세운다 — 크기도 행간도 시작점도.
+                    // 이쪽이 곧 묻는 것이라 예문보다 밝게 두고, 밑줄 친 말만
+                    // 한 겹 더 밝다.
                     Text(
                         underlined(item.html ?: head, Hak3.Text),
-                        fontFamily = Korail,
                         fontSize = 22.sp,
-                        lineHeight = 25.sp,
+                        lineHeight = 36.sp,
                         color = Hak3.Hanja,
+                        modifier = Modifier.padding(start = SHIFT),
                     )
                 } else Text(
                     head,
