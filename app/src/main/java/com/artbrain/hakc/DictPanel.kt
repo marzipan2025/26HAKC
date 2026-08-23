@@ -70,7 +70,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
-import kotlinx.coroutines.delay
 
 /** 글자 위아래에 붙는 서체 여백을 걷어낸다 — 칸을 꽉 채워 보이게. */
 private val FLUSH = TextStyle(
@@ -155,12 +154,6 @@ private class Slot(val word: Found, val index: Int, val variant: Variant, val ma
 /** 단어장 묶음의 색. */
 private fun binColor(m: Mark) = if (m == Mark.AMBER) Hak3.Amber else Hak3.Green
 
-/** 손이 멎었다고 볼 참. (ms) */
-private const val SETTLE = 700L
-
-/** 아직 여물지 않은 글자로 끝나는가 — 홀로 선 자모는 치는 중이라는 뜻이다. */
-private fun half(s: String) = s.last() in '\u3131'..'\u3163'
-
 @Composable
 fun DictPanel(
     dict: Dict,
@@ -177,15 +170,10 @@ fun DictPanel(
     var seen by remember { mutableStateOf(Seen.all(context)) }
     var text by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<List<Found>>(emptyList()) }
-    LaunchedEffect(text) { found = dict.search(text) }
-    // 없다는 말은 손이 멎은 뒤에. '가호' 를 적자면 'ㄱ' 과 '갛' 을 지나가는데,
-    // 그 참마다 없다고 하면 글자가 여물기도 전에 타박하는 꼴이다.
-    var settled by remember { mutableStateOf(true) }
-    LaunchedEffect(text) {
-        settled = false
-        delay(SETTLE)
-        settled = true
-    }
+    // 엔터를 누를 때마다 하나씩 오른다. 같은 글을 그대로 두고 다시 눌러도
+    // 찾기가 새로 돌게 하려는 것이다 — 판을 처음부터 다시 세운다.
+    var again by remember { mutableIntStateOf(0) }
+    LaunchedEffect(text, again) { found = dict.search(text) }
 
     val slots = remember(found) {
         found.flatMap { w ->
@@ -246,15 +234,15 @@ fun DictPanel(
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     if (slots.isEmpty()) {
-                        // 한자와 같은 크기로 세운다. 넘치면 좌우로 훑어 읽는다 —
-                        // 찾아낸 한자를 훑는 것과 같은 몸짓이다.
+                        // 못 찾았다고 따로 말하지 않는다. 빈 자리에 선 이 두 글자가
+                        // 아무것도 걸리지 않았다는 뜻이다 — 치는 동안 이 자리에서
+                        // 글자가 나타났다 사라지는 것만으로 넉넉하다.
                         Row(
                             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                if (text.isBlank() || !settled || half(text)) "漢字"
-                                else "Nope, not here.",
+                                "漢字",
                                 // 한자 자리에 서는 글이니 서체도 얇기도 한자와 같이
                                 fontFamily = ThinHanja,
                                 fontWeight = FontWeight.ExtraLight,
@@ -353,6 +341,8 @@ fun DictPanel(
                     keyboardActions = KeyboardActions(onSearch = {
                         Seen.record(context, found.flatMap { w -> w.variants.map { it.hanja } })
                         seen = Seen.all(context)
+                        again++
+                        active = 0
                         focus.clearFocus()
                         ime?.hide()
                     }),
@@ -361,8 +351,8 @@ fun DictPanel(
                         .padding(end = 52.dp)
                         .onFocusChanged { onFocus(it.isFocused) },
                 )
-                // 오른쪽 끝 — 엔터. 찾기는 글자마다 이미 돌고 있으니 여기서 할 일은
-                // 키보드를 접는 것뿐이다. 판은 그만큼 제자리로 돌아간다.
+                // 오른쪽 끝 — 엔터. 첫 번째 누름은 키보드를 접고, 그다음부터는
+                // 찾기를 다시 돌린다. 데스크톱에서 엔터가 하던 일이 그것이다.
                 Icon(
                     painterResource(R.drawable.ic_enter),
                     contentDescription = null,
@@ -373,6 +363,8 @@ fun DictPanel(
                         .clickable {
                             Seen.record(context, found.flatMap { w -> w.variants.map { it.hanja } })
                             seen = Seen.all(context)
+                            again++
+                            active = 0
                             focus.clearFocus()
                             ime?.hide()
                         },
