@@ -221,7 +221,6 @@ fun ExamScreen(
             book.set(p.item.no, m)
             if (m == null) marks.remove(p.id) else marks[p.id] = m
             // 노랑으로 담은 문항의 한자는 단어장에 쌓는다. 이미 있는 글자는 그냥 넘어간다.
-            if (m == Mark.AMBER) Collect.register(context, db.hanjaOf(p.item))
         },
         onSeen = { p -> Marks.setLastSeen(context, round, p.item.no) },
         onBack = onBack,
@@ -239,7 +238,7 @@ fun ExamScreen(
 fun WordScreen(db: ExamDb, bin: Mark, onBack: () -> Unit) {
     val context = LocalContext.current
     val all = remember(bin) {
-        Collect.list(context, bin).mapIndexedNotNull { i, han ->
+        Collect.list(context, db, bin).mapIndexedNotNull { i, han ->
             val meaning = db.hunmeum(han) ?: return@mapIndexedNotNull null
             val section = Section(0, 0, 0, "다음 漢字의 訓과 音을 쓰시오.", emptyList())
             val item = Item(
@@ -253,10 +252,10 @@ fun WordScreen(db: ExamDb, bin: Mark, onBack: () -> Unit) {
             Page(0, section, item, han)
         }
     }
+    // 묶음에 든 글자는 모두 그 묶음의 색이다. 여기서 표시를 푸는 것은 곧
+    // 묶음에서 빼는 것이고, 한 번 더 밀면 도로 들어온다.
     val marks = remember(bin) {
-        mutableStateMapOf<String, Mark>().apply {
-            all.forEach { put(it.id, Collect.mark(context, it.id)) }
-        }
+        mutableStateMapOf<String, Mark>().apply { all.forEach { put(it.id, bin) } }
     }
     Deck(
         all = all,
@@ -270,8 +269,8 @@ fun WordScreen(db: ExamDb, bin: Mark, onBack: () -> Unit) {
         morphLit = { 0f },
         face = true,
         onMark = { p, m ->
-            Collect.set(context, p.id, m)
-            if (m == null) marks.remove(p.id) else marks[p.id] = m
+            Collect.keep(context, p.id, bin, m != null)
+            if (m == null) marks.remove(p.id) else marks[p.id] = bin
         },
         onSeen = {},
         onBack = onBack,
@@ -428,7 +427,10 @@ fun SettingsPanel(
     built: String?,
     markOnLeft: Boolean,
     onMarkSide: (Boolean) -> Unit,
+    onWipe: () -> Unit,
 ) {
+    // 한 번에 지워지지 않는다. 물음이 그 자리에 서고, 대답해야 지운다.
+    var asking by remember { mutableStateOf(false) }
     Box(
         Modifier
             .fillMaxSize()
@@ -466,6 +468,54 @@ fun SettingsPanel(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Side("Left", markOnLeft) { onMarkSide(true) }
                 Side("Right", !markOnLeft) { onMarkSide(false) }
+            }
+
+            Spacer(Modifier.height(40.dp))
+            Text(
+                "RESET",
+                fontSize = 11.sp,
+                letterSpacing = 1.2.sp,
+                color = Hak3.TextDim,
+            )
+            Spacer(Modifier.height(12.dp))
+            if (!asking) {
+                Text(
+                    "Erase everything",
+                    fontSize = 15.sp,
+                    color = Hak3.TextDim,
+                    modifier = Modifier
+                        .border(1.dp, Hak3.Rule, RoundedCornerShape(10.dp))
+                        .clickable { asking = true }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                )
+            } else {
+                Text(
+                    "Marks, wordbook and search history\nwill be gone for good.",
+                    fontSize = 13.sp,
+                    lineHeight = 19.sp,
+                    color = Hak3.TextSoft,
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Erase",
+                        fontSize = 15.sp,
+                        color = Hak3.Red,
+                        modifier = Modifier
+                            .border(1.dp, Hak3.Red, RoundedCornerShape(10.dp))
+                            .clickable { asking = false; onWipe() }
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                    )
+                    Text(
+                        "Cancel",
+                        fontSize = 15.sp,
+                        color = Hak3.TextDim,
+                        modifier = Modifier
+                            .border(1.dp, Hak3.Rule, RoundedCornerShape(10.dp))
+                            .clickable { asking = false }
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                    )
+                }
             }
         }
     }
@@ -632,14 +682,11 @@ private fun QuestionPage(
                 rotationZ = spin
             }
             .background(Hak3.Surface, RoundedCornerShape(radius))
-            // 단어장에서는 테두리만이 아니라 앞면까지 그 색을 띤다 — 한 묶음을
-            // 넘기는 동안 어느 묶음에 있는지가 늘 보이게. 글이 묻히지 않을 만큼만 얹는다.
+            // 단어장에서는 테두리만이 아니라 앞면까지 그 색이다 — 테두리와 같은
+            // 색, 같은 짙기로. 그 위에 놓이는 색 글씨는 검정으로 뒤집는다.
             .then(
                 if (face && mark != null)
-                    Modifier.background(
-                        borderColor(mark).copy(alpha = FACE),
-                        RoundedCornerShape(radius),
-                    )
+                    Modifier.background(borderColor(mark), RoundedCornerShape(radius))
                 else Modifier
             )
             // 표시가 없으면 1픽셀, 담긴 카드는 1dp. 어느 쪽이든 카드 경계 안쪽에 붙는다.
@@ -705,12 +752,17 @@ private fun QuestionPage(
                 .offset(y = if (prose) 0.dp else -LEAD)
                 .padding(horizontal = 24.dp, vertical = 26.dp),
         ) {
-            // 어느 목록에 담겼는지는 번호에 입힌 색으로 알린다
+            // 어느 목록에 담겼는지는 번호에 입힌 색으로 알린다. 앞면이 이미 그
+            // 색인 단어장에서는 뒤집어 검정으로 적는다.
             // 큰 한자만 제자리에 두고 나머지는 조금 안쪽에서 시작한다
             Text(
                 item.label,
                 fontSize = 17.sp,
-                color = if (mark != null) borderColor(mark) else Hak3.TextDim,
+                color = when {
+                    face && mark != null -> Color.Black
+                    mark != null -> borderColor(mark)
+                    else -> Hak3.TextDim
+                },
                 modifier = Modifier.padding(start = SHIFT),
             )
             Spacer(Modifier.height(6.dp))
@@ -852,9 +904,6 @@ private val INK_HANGUL = 6.7.dp
 
 /** 윗선을 맞춘 뒤 눈에 맞게 조금 내려 앉히는 만큼. */
 private val DROP = 6.dp
-
-/** 단어장 카드 앞면에 얹는 색의 짙기. */
-private const val FACE = 0.16f
 
 /** 펼친 정답이 쓰이는 폭. 원 아래에 겹쳐 그리므로 제 폭을 스스로 정한다. */
 private val ANSWER = 260.dp

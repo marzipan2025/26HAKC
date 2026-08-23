@@ -28,4 +28,19 @@ object Settings {
         c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putInt(KEY_LAST_ROUND, round).apply()
     }
+
+    /**
+     * 그간 쌓인 사용 기록을 통으로 지운다 — 회차의 표시, 단어장에서 뺀 글자,
+     * 사전에서 자주 찾은 횟수, 마지막으로 열어 본 회차까지.
+     *
+     * 데이터 파일을 어디서 읽는지와 노랑 단추의 좌우는 쓰임새의 기록이 아니라
+     * 이 기기의 채비라 그대로 둔다.
+     */
+    fun wipe(c: Context) {
+        listOf("marks", "collect", "seen").forEach {
+            c.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().apply()
+        }
+        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .remove(KEY_LAST_ROUND).apply()
+    }
 }

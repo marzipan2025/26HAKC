@@ -152,6 +152,9 @@ private class Slot(val word: Found, val index: Int, val variant: Variant, val ma
  * 캡슐로 떼어 판 위에 얹는다. 동음이의어는 위 캡슐에서 좌우로 훑고, 훑는 대로 아래
  * 訓音과 뜻이 따라온다 — 한자를 고르면 그 표기의 풀이가 바로 아래 서 있게.
  */
+/** 단어장 묶음의 색. */
+private fun binColor(m: Mark) = if (m == Mark.AMBER) Hak3.Amber else Hak3.Green
+
 /** 손이 멎었다고 볼 참. (ms) */
 private const val SETTLE = 700L
 
@@ -159,16 +162,19 @@ private const val SETTLE = 700L
 private fun half(s: String) = s.last() in '\u3131'..'\u3163'
 
 @Composable
-fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+fun DictPanel(
+    dict: Dict,
+    kept: Map<String, Mark>,
+    radius: Dp,
+    onFocus: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val focus = LocalFocusManager.current
     val ime = LocalSoftwareKeyboardController.current
     // 자주 찾은 글자일수록 환하게. 세는 것은 엔터를 눌렀을 때뿐이다 —
     // 글자마다 도는 찾기까지 세면 한 낱말 적는 사이에 열 번이 지나간다.
     var seen by remember { mutableStateOf(Seen.all(context)) }
-    // 단어장의 노랑 묶음. 사전에서 만나면 노랑으로 알린다 — 기출에서 걸렸는데
-    // 아직 애매한 글자라는 뜻이다. 초록은 외운 글자이므로 알릴 까닭이 없다.
-    val kept = remember { Collect.list(context, Mark.AMBER).toSet() }
     var text by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<List<Found>>(emptyList()) }
     LaunchedEffect(text) { found = dict.search(text) }
@@ -279,12 +285,13 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                                                 // 담아 둔 글자는 노랑으로. 훑고 지나가는
                                                 // 표기에서는 흐리게 두어 지금 보는 것이
                                                 // 어느 표기인지는 그대로 알아보게 한다.
-                                                val mine = ch.toString() in kept
+                                                val bin = kept[ch.toString()]
                                                 withStyle(
                                                     SpanStyle(
                                                         color = when {
-                                                            mine && i == active -> Hak3.Amber
-                                                            mine -> Hak3.Amber.copy(alpha = 0.45f)
+                                                            bin != null && i == active -> binColor(bin)
+                                                            bin != null ->
+                                                                binColor(bin).copy(alpha = 0.45f)
                                                             i != active -> Hak3.HanjaDim
                                                             else -> hanjaLit(seen[ch.toString()] ?: 0)
                                                         }
@@ -393,10 +400,10 @@ private fun Rule() {
 
 /**
  * 표기 하나의 풀이 — 글자마다 `음 : 급수 훈`, 그 아래 뜻.
- * [kept] 는 노랑으로 담아 둔 문항에서 쌓인 글자들이다.
+ * [kept] 는 단어장에 든 글자와 그 묶음이다.
  */
 @Composable
-private fun VariantBlock(s: Slot, kept: Set<String>) {
+private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
     Column(Modifier.padding(bottom = 12.dp)) {
         s.variant.hanja.forEachIndexed { i, ch ->
             val g = s.word.chars[ch.toString()] ?: return@forEachIndexed
@@ -410,7 +417,7 @@ private fun VariantBlock(s: Slot, kept: Set<String>) {
                     // 흰 글씨는 판에서 가장 밝아 한자보다 앞으로 나온다.
                     // 訓音은 한자에 딸린 말이니 한자와 같은 색을 쓴다.
                     // 담아 둔 글자만 노랑으로 도드라진다.
-                    color = if (ch.toString() in kept) Hak3.Amber else Hak3.Hanja,
+                    color = kept[ch.toString()]?.let(::binColor) ?: Hak3.Hanja,
                     modifier = Modifier.width(EUM).alignByBaseline(),
                 )
                 Text(

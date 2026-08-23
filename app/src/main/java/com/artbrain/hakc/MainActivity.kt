@@ -94,7 +94,6 @@ private fun Root() {
         db?.close()
         db = (r as? DataFile.Result.Ok)?.let { ExamDb.open(it.file) }
         // 단어장을 만들기 전에 찍어 둔 노랑도 살려 둔다
-        db?.let { Collect.seed(context, it) }
     }
 
     val ready = db
@@ -163,6 +162,7 @@ private fun Picker(
     RoundPicker(
         // 사전은 기출 데이터가 없어도 선다 — 앱 안에 든 자료라 남을 기다릴 것이 없다
         exams = ready?.exams() ?: emptyList(),
+        db = ready,
         dict = book,
         built = ready?.meta()?.get("built"),
         trouble = if (ready == null) trouble(state) else null,

@@ -92,6 +92,7 @@ private val HANDLE = 58.5.dp
 @Composable
 fun RoundPicker(
     exams: List<ExamRow>,
+    db: ExamDb?,
     dict: Dict?,
     built: String?,
     trouble: String?,
@@ -108,8 +109,12 @@ fun RoundPicker(
     val ime = LocalSoftwareKeyboardController.current
     // 상세 화면 카드와 같은 곡률
     val radius = (screenCornerRadius() - 8.dp).coerceAtLeast(0.dp)
-    val yellow = remember { Collect.count(context, Mark.AMBER) }
-    val green = remember { Collect.count(context, Mark.KNOWN) }
+    // 묶음은 회차의 표시에서 그때그때 모아 낸다. 쌓아 두지 않으므로 표시를
+    // 바꾸고 돌아오면 수도 따라 바뀌어 있다.
+    val yellow = remember(db) { db?.let { Collect.list(context, it, Mark.AMBER) } ?: emptyList() }
+    val green = remember(db) { db?.let { Collect.list(context, it, Mark.KNOWN) } ?: emptyList() }
+    // 사전에서 알릴 글자 — 어느 묶음의 글자인지까지 함께 본다
+    val bins = remember(db) { db?.let { Collect.bins(context, it) } ?: emptyMap() }
 
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf<Updater.Status>(Updater.Status.Checking) }
@@ -233,11 +238,11 @@ fun RoundPicker(
                 // 단어장은 두 묶음이다. 아직 애매한 것과 외운 것.
                 Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                     Spacer(Modifier.height(4.dp))
-                    Cell(radius, "$yellow", "yellow", Hak3.Amber, yellow > 0) {
+                    Cell(radius, "${yellow.size}", "yellow", Hak3.Amber, yellow.isNotEmpty()) {
                         onWords(Mark.AMBER)
                     }
                     Spacer(Modifier.height(10.dp))
-                    Cell(radius, "$green", "green", Hak3.Green, green > 0) {
+                    Cell(radius, "${green.size}", "green", Hak3.Green, green.isNotEmpty()) {
                         onWords(Mark.KNOWN)
                     }
                 }
@@ -250,6 +255,12 @@ fun RoundPicker(
                         markOnLeft = left
                         Settings.setMarkOnLeft(context, left)
                     },
+                    // 지운 뒤에는 화면을 처음부터 다시 짓는다 — 여기저기 붙잡아 둔
+                    // 수와 표시를 하나씩 되돌리는 것보다 이 편이 틀림없다.
+                    onWipe = {
+                        Settings.wipe(context)
+                        (context as? android.app.Activity)?.recreate()
+                    },
                 )
             }
         Column(Modifier.fillMaxSize()) {
@@ -257,6 +268,7 @@ fun RoundPicker(
                 Spacer(Modifier.height(4.dp))
                 DictPanel(
                     dict,
+                    kept = bins,
                     radius = radius,
                     onFocus = { typing = it },
                     modifier = Modifier
