@@ -308,6 +308,7 @@ private fun Deck(
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
+    val click = rememberClick()
     var filter by remember(all) { mutableStateOf<Mark?>(null) }
     val open = remember(all) { mutableStateMapOf<String, Boolean>() }
 
@@ -363,7 +364,11 @@ private fun Deck(
                             mark = marks[p.id],
                             radius = radius,
                             onLifted = { lifted = it },
-                            onMark = { m -> onMark(p, m) },
+                            onMark = { m ->
+                                // 담기는 순간에만 딸깍. 풀 때는 소리를 내지 않는다.
+                                if (m != null) click()
+                                onMark(p, m)
+                            },
                             // 표시가 실제로 바뀌었을 때만 넘어간다. 양 끝에서 더 민
                             // 경우(초록을 또 위로)는 바뀐 게 없으니 그 자리에 머문다.
                             onAdvance = {
@@ -407,6 +412,7 @@ private fun Deck(
             onBack = onBack,
         ) {
             val p = page ?: return@BottomBar
+            click()
             onMark(p, Mark.AMBER)
             if (index < pages.size - 1) {
                 scope.launch { pager.animateScrollToPage(index + 1) }
@@ -504,7 +510,11 @@ private fun TopBar(
             Modifier.align(Alignment.CenterStart),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FilterDot(Hak3.Amber, filter == Mark.AMBER, amber) { onFilter(Mark.AMBER) }
+            FilterDot(
+                if (amber > 0) Hak3.Amber else Hak3.Knob,
+                filter == Mark.AMBER,
+                amber,
+            ) { onFilter(Mark.AMBER) }
         }
         // 제목과 곁줄은 한 덩이로 캡슐 한가운데
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -519,7 +529,12 @@ private fun TopBar(
             Modifier.align(Alignment.CenterEnd),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FilterDot(Hak3.Green, filter == Mark.KNOWN, known) { onFilter(Mark.KNOWN) }
+            // 담긴 것이 없으면 바닥 줄의 손잡이와 같은 색으로 물러나 있는다
+            FilterDot(
+                if (known > 0) Hak3.Green else Hak3.Knob,
+                filter == Mark.KNOWN,
+                known,
+            ) { onFilter(Mark.KNOWN) }
         }
     }
 }
