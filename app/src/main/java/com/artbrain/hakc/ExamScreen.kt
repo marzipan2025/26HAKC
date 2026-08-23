@@ -678,10 +678,12 @@ private fun QuestionPage(
                 .padding(horizontal = 24.dp, vertical = 26.dp),
         ) {
             // 어느 목록에 담겼는지는 번호에 입힌 색으로 알린다
+            // 큰 한자만 제자리에 두고 나머지는 조금 안쪽에서 시작한다
             Text(
                 item.label,
                 fontSize = 17.sp,
                 color = if (mark != null) borderColor(mark) else Hak3.TextDim,
+                modifier = Modifier.padding(start = SHIFT),
             )
             Spacer(Modifier.height(6.dp))
 
@@ -706,11 +708,12 @@ private fun QuestionPage(
                         fontSize = 22.sp,
                         lineHeight = 36.sp,
                         color = Hak3.TextDim,
+                        modifier = Modifier.padding(start = SHIFT),
                     )
                 }
 
                 Spacer(Modifier.height(if (tail != null) 38.dp else 26.dp))
-                AnswerSlot(item, revealed)
+                Box(Modifier.padding(start = SHIFT)) { AnswerSlot(item, revealed) }
             }
         }
     }
@@ -720,6 +723,8 @@ private fun QuestionPage(
 private fun AnswerSlot(item: Item, revealed: Boolean) {
     val a = item.answer
     val hanja = a != null && HANJA.containsMatchIn(a)
+    // 답이 없다는 말도 한자 자리에 서는 글이니 같은 얇기로 적는다
+    val notice = a == null
     // 원은 언제나 같은 크기로 자리를 지킨다. 정답은 그 아래에 겹쳐 그리므로
     // 펼쳐도 위의 한자와 지문이 밀리지 않는다.
     Box(
@@ -739,8 +744,8 @@ private fun AnswerSlot(item: Item, revealed: Boolean) {
         Column(Modifier.width(ANSWER)) {
             Text(
                 a ?: "no answer",
-                fontFamily = if (hanja) ThinHanja else Korail,
-                fontWeight = if (hanja) FontWeight.ExtraLight else FontWeight.Normal,
+                fontFamily = if (hanja || notice) ThinHanja else Korail,
+                fontWeight = if (hanja || notice) FontWeight.ExtraLight else FontWeight.Normal,
                 fontSize = if (hanja) 56.sp else 30.sp,
                 lineHeight = if (hanja) 70.sp else 40.sp,
                 color = if (a != null) Hak3.Neon else Hak3.TextDim,
@@ -781,8 +786,11 @@ private val FLUSH_TOP = TextStyle(
  * 글자 상자의 윗변과 글자의 실제 윗선 사이에 남는 만큼. 서체가 글자 위에 두는
  * 여백이라 크기마다 다르다. 화면에서 재어 맞춘 값이다.
  */
-private val INK_HANJA = 19.dp
-private val INK_HANGUL = 10.dp
+/** 큰 한자를 뺀 나머지가 안쪽으로 물러나는 만큼. */
+private val SHIFT = 4.dp
+
+private val INK_HANJA = 23.dp
+private val INK_HANGUL = 6.7.dp
 
 /** 윗선을 맞춘 뒤 눈에 맞게 조금 내려 앉히는 만큼. */
 private val DROP = 4.dp
@@ -880,7 +888,8 @@ private fun Scrubber(
     text: String,
     onSeek: (Int) -> Unit,
 ) {
-    val inset = 4.dp                       // 아래 트랙이 이만큼 테두리로 보인다
+    // 채워진 부분이 노랑 단추와 같은 크기라야 한 줄로 읽힌다. 테두리는 두지 않는다.
+    val inset = 0.dp
     BoxWithConstraints(
         modifier
             .height(BAR)

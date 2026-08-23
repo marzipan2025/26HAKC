@@ -230,8 +230,9 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                         ) {
                             Text(
                                 if (text.isBlank()) "漢字" else "Nope, not here.",
-                                fontFamily = if (text.isBlank()) ThinHanja else Korail,
-                                fontWeight = if (text.isBlank()) FontWeight.ExtraLight else FontWeight.Light,
+                                // 한자 자리에 서는 글이니 서체도 얇기도 한자와 같이
+                                fontFamily = ThinHanja,
+                                fontWeight = FontWeight.ExtraLight,
                                 fontSize = glyph,
                                 color = Hak3.HanjaDim,
                                 maxLines = 1,
@@ -293,7 +294,7 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                     LazyColumn(
                         state = mid,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(TEXT_WALL, RULE_GAP, TEXT_WALL, RULE_GAP),
+                        contentPadding = PaddingValues(TEXT_WALL + 6.dp, RULE_GAP, TEXT_WALL, RULE_GAP),
                     ) {
                         itemsIndexed(slots) { _, s -> VariantBlock(s) }
                     }
