@@ -5,7 +5,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,7 +35,6 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -47,7 +48,9 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -164,7 +167,12 @@ private fun step(m: Mark?, up: Boolean): Mark? = if (up) when (m) {
 private fun split(item: Item): Pair<String, String?> {
     val body = item.html ?: item.question
     val plain = body.replace(Regex("</?u>"), "")
-    val target = item.target
+    // 묻는 것으로 세울 만한 말인가. 데이터에 '만둠' 같은 토막이 섞여 들어오는데,
+    // 그대로 세우면 카드 한가운데에 뜻 없는 말이 크게 걸린다. 묻는 것은 한자이거나
+    // 채워 넣을 괄호가 있는 꼴이다.
+    val target = item.target?.takeIf { s ->
+        s.any { it in '\u3400'..'\u9FFF' || it in '\uF900'..'\uFAFF' } || '(' in s
+    }
     // 지문 안의 한 낱말을 묻는 문항 — 낱말이 머리, 지문이 꼬리
     if (target != null && plain != target) return target to body
     // '식 : 뜻풀이' / '식 - 뜻풀이' 로 적힌 문항
@@ -174,33 +182,8 @@ private fun split(item: Item): Pair<String, String?> {
     return plain to null
 }
 
-/**
- * 묻는 말이 차지하는 폭을 어림한다. 한자와 한글은 한 칸, 괄호·기호는 반 칸,
- * 빈칸은 그보다 좁게 친다. `( )却` 처럼 괄호가 절반인 문항이 글자 수만으로는
- * 길어 보여 쓸데없이 작아지던 것을 막는다.
- */
-private fun span(s: String): Float {
-    var w = 0f
-    for (c in s) {
-        w += when {
-            c.isWhitespace() -> 0.35f
-            c in '\uAC00'..'\uD7A3' -> 1f          // 한글
-            c in '\u3400'..'\u9FFF' -> 1f          // 한자
-            c in '\uF900'..'\uFAFF' -> 1f          // 호환 한자
-            else -> 0.5f                           // 괄호·기호·숫자
-        }
-    }
-    return w
-}
-
-private fun headSize(w: Float) = when {
-    w <= 2.2f -> 98.sp
-    w <= 3.2f -> 88.sp
-    w <= 4.4f -> 66.sp
-    w <= 6.2f -> 52.sp
-    w <= 8.5f -> 42.sp
-    else -> 34.sp
-}
+/** 묻는 것이 서는 크기. 유형을 가리지 않고 하나다. */
+private val HEAD = 98.sp
 
 
 /** 한 회차를 넘긴다. 표시는 그 회차에 남는다. */
@@ -710,14 +693,21 @@ private fun QuestionPage(
             // 한자부터 아래로는 한 덩이로 끌어올린다 — 번호와의 사이를 좁히기 위해서다.
             val (head, tail) = split(item)
             Column(Modifier.offset(y = -TIGHTEN)) {
-                Text(
-                    head,
-                    fontFamily = ThinHanja,
-                    fontWeight = FontWeight.ExtraLight,
-                    fontSize = headSize(span(head)),
-                    lineHeight = headSize(span(head)) * 1.18f,
-                    color = Hak3.Hanja,
-                )
+                // 묻는 것은 언제나 같은 크기로 선다. 유형에 따라 글자 수가 널뛰는데
+                // 크기로 맞추면 첫인상이 유형마다 달라진다. 길면 줄을 바꾸는 대신
+                // 그 줄에서 좌우로 훑는다.
+                Row(Modifier.horizontalScroll(rememberScrollState())) {
+                    Text(
+                        head,
+                        fontFamily = ThinHanja,
+                        fontWeight = FontWeight.ExtraLight,
+                        fontSize = HEAD,
+                        lineHeight = HEAD * 1.18f,
+                        color = Hak3.Hanja,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                }
                 if (tail != null) {
                     // 지문만 위로 당긴다. 아래 정답 자리는 그만큼 도로 벌려 두어
                     // 점과 정답의 좌표는 그대로 있게 한다.
@@ -744,6 +734,14 @@ private fun AnswerSlot(item: Item, revealed: Boolean) {
     val hanja = a != null && HANJA.containsMatchIn(a)
     // 답이 없다는 말도 한자 자리에 서는 글이니 같은 얇기로 적는다
     val notice = a == null
+    // 동그라미 숫자(①②③)는 잉크가 한자·한글과 다른 자리에 앉는다. 큰 자리에서는
+    // 위로 솟고, 작은 자리에 홀로 있으면 되레 낮게 앉는다. 재어 잡은 값이다.
+    val ring = a != null && a.first() in '①'..'⑳'
+    val nudge = when {
+        ring && hanja -> RING_BIG
+        ring -> RING_SMALL
+        else -> 0.dp
+    }
     // 원은 언제나 같은 크기로 자리를 지킨다. 정답은 그 아래에 겹쳐 그리므로
     // 펼쳐도 위의 한자와 지문이 밀리지 않는다.
     Box(
@@ -756,7 +754,10 @@ private fun AnswerSlot(item: Item, revealed: Boolean) {
         // 원의 28dp 제약에 갇히면 큰 글자가 잘린다.
         Box(
             Modifier
-                .offset(x = DOT + 18.dp, y = DROP - (if (hanja) INK_HANJA else INK_HANGUL))
+                .offset(
+                    x = DOT + 18.dp,
+                    y = DROP - (if (hanja) INK_HANJA else INK_HANGUL) + nudge,
+                )
                 .size(0.dp)
                 .wrapContentSize(align = Alignment.TopStart, unbounded = true)
         ) {
@@ -807,6 +808,12 @@ private val FLUSH_TOP = TextStyle(
  */
 /** 큰 한자를 뺀 나머지가 안쪽으로 물러나는 만큼. */
 private val SHIFT = 4.dp
+
+/** 동그라미 숫자가 큰 자리(한자와 함께)에서 더 솟는 만큼. */
+private val RING_BIG = 1.4.dp
+
+/** 작은 자리에 동그라미 숫자만 있을 때는 되레 낮게 앉는다. */
+private val RING_SMALL = (-2.2).dp
 
 private val INK_HANJA = 23.dp
 private val INK_HANGUL = 6.7.dp
