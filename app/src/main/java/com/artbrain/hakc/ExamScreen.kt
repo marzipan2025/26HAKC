@@ -75,6 +75,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.res.painterResource
+import androidx.compose.material3.Icon
 
 private val HANJA = Regex("[\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uF900-\\uFAFF]")
 
@@ -419,8 +422,12 @@ private fun Deck(
 }
 
 /**
- * 설정. 바닥의 남색 단추 하나만 남기고 화면을 덮는다.
- * 적는 말은 영어로 둔다 — 짧고, 줄바꿈에 흔들리지 않는다.
+ * 설정. 왼쪽 서랍의 단어장 칸과 같은 자리에서 시작한다 — 같은 16dp 벽, 같은 4dp
+ * 어깨, 같은 폭이다. 두 서랍이 한 자에서 재어진 것처럼 보이게 하려는 것이다.
+ *
+ * 맨 위에 앱의 사인을 폭 절반으로 걸고, 그 아래 이름의 내력을 작게 적는다.
+ * 나머지는 그 아래로 왼쪽에 붙여 세운다. 적는 말은 영어로 둔다 — 짧고,
+ * 줄바꿈에 흔들리지 않는다.
  */
 @Composable
 fun SettingsPanel(
@@ -431,7 +438,7 @@ fun SettingsPanel(
 ) {
     // 한 번에 지워지지 않는다. 물음이 그 자리에 서고, 대답해야 지운다.
     var asking by remember { mutableStateOf(false) }
-    Box(
+    Column(
         Modifier
             .fillMaxSize()
             .background(Hak3.Ground)
@@ -440,85 +447,88 @@ fun SettingsPanel(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
             ) {}
-            .padding(horizontal = 28.dp),
-        contentAlignment = Alignment.Center,
+            .padding(horizontal = 16.dp),
     ) {
-        Column {
-            Text("26HAKC", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Hak3.Text)
-            Spacer(Modifier.height(10.dp))
-            Text(
-                "Data ${built ?: "unknown"}",
-                fontSize = 15.sp,
-                color = Hak3.TextDim,
-            )
-            Text(
-                "Version ${BuildConfig.VERSION_NAME}",
-                fontSize = 15.sp,
-                color = Hak3.TextDim,
-            )
+        Spacer(Modifier.height(4.dp))
+        Icon(
+            painterResource(R.drawable.ic_sign),
+            contentDescription = "26HAKC",
+            tint = Hak3.Text,
+            modifier = Modifier.fillMaxWidth(0.5f).aspectRatio(SIGN),
+        )
+        Spacer(Modifier.height(10.dp))
+        // 이름의 내력
+        Text(
+            "Haka Android Kichul Combined",
+            fontSize = 11.sp,
+            letterSpacing = 0.4.sp,
+            color = Hak3.TextDim,
+        )
 
-            Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(40.dp))
+        Text("Data ${built ?: "unknown"}", fontSize = 15.sp, color = Hak3.TextDim)
+        Text("Version ${BuildConfig.VERSION_NAME}", fontSize = 15.sp, color = Hak3.TextDim)
+
+        Spacer(Modifier.height(36.dp))
+        Label("MARK BUTTON")
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Side("Left", markOnLeft) { onMarkSide(true) }
+            Side("Right", !markOnLeft) { onMarkSide(false) }
+        }
+
+        Spacer(Modifier.height(36.dp))
+        Label("RESET")
+        Spacer(Modifier.height(12.dp))
+        if (!asking) {
             Text(
-                "MARK BUTTON",
-                fontSize = 11.sp,
-                letterSpacing = 1.2.sp,
+                "Erase everything",
+                fontSize = 15.sp,
                 color = Hak3.TextDim,
+                modifier = Modifier
+                    .border(1.dp, Hak3.Rule, RoundedCornerShape(10.dp))
+                    .clickable { asking = true }
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            )
+        } else {
+            Text(
+                "Marks, wordbook and search history\nwill be gone for good.",
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                color = Hak3.TextSoft,
             )
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Side("Left", markOnLeft) { onMarkSide(true) }
-                Side("Right", !markOnLeft) { onMarkSide(false) }
-            }
-
-            Spacer(Modifier.height(40.dp))
-            Text(
-                "RESET",
-                fontSize = 11.sp,
-                letterSpacing = 1.2.sp,
-                color = Hak3.TextDim,
-            )
-            Spacer(Modifier.height(12.dp))
-            if (!asking) {
                 Text(
-                    "Erase everything",
+                    "Erase",
+                    fontSize = 15.sp,
+                    color = Hak3.Red,
+                    modifier = Modifier
+                        .border(1.dp, Hak3.Red, RoundedCornerShape(10.dp))
+                        .clickable { asking = false; onWipe() }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                )
+                Text(
+                    "Cancel",
                     fontSize = 15.sp,
                     color = Hak3.TextDim,
                     modifier = Modifier
                         .border(1.dp, Hak3.Rule, RoundedCornerShape(10.dp))
-                        .clickable { asking = true }
+                        .clickable { asking = false }
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                 )
-            } else {
-                Text(
-                    "Marks, wordbook and search history\nwill be gone for good.",
-                    fontSize = 13.sp,
-                    lineHeight = 19.sp,
-                    color = Hak3.TextSoft,
-                )
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "Erase",
-                        fontSize = 15.sp,
-                        color = Hak3.Red,
-                        modifier = Modifier
-                            .border(1.dp, Hak3.Red, RoundedCornerShape(10.dp))
-                            .clickable { asking = false; onWipe() }
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                    )
-                    Text(
-                        "Cancel",
-                        fontSize = 15.sp,
-                        color = Hak3.TextDim,
-                        modifier = Modifier
-                            .border(1.dp, Hak3.Rule, RoundedCornerShape(10.dp))
-                            .clickable { asking = false }
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                    )
-                }
             }
         }
     }
+}
+
+/** 사인의 가로세로 비 — 원본 그대로다. */
+private const val SIGN = 830f / 170f
+
+/** 묶음의 이름. 작고 성기게 적어 아래 것들과 층을 가른다. */
+@Composable
+private fun Label(text: String) {
+    Text(text, fontSize = 11.sp, letterSpacing = 1.2.sp, color = Hak3.TextDim)
 }
 
 /** 고른 쪽은 앰버로 테를 두른다. */
