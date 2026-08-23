@@ -260,10 +260,18 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                                     Text(
                                         buildAnnotatedString {
                                             s.variant.hanja.forEach { ch ->
+                                                // 담아 둔 글자는 노랑으로. 훑고 지나가는
+                                                // 표기에서는 흐리게 두어 지금 보는 것이
+                                                // 어느 표기인지는 그대로 알아보게 한다.
+                                                val mine = ch.toString() in kept
                                                 withStyle(
                                                     SpanStyle(
-                                                        color = if (i != active) Hak3.HanjaDim
-                                                        else hanjaLit(seen[ch.toString()] ?: 0)
+                                                        color = when {
+                                                            mine && i == active -> Hak3.Amber
+                                                            mine -> Hak3.Amber.copy(alpha = 0.45f)
+                                                            i != active -> Hak3.HanjaDim
+                                                            else -> hanjaLit(seen[ch.toString()] ?: 0)
+                                                        }
                                                     )
                                                 ) { append(ch) }
                                             }
@@ -274,15 +282,10 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                                         maxLines = 1,
                                     )
                                     if (s.many) {
-                                        val mine = s.variant.hanja.any { it.toString() in kept }
                                         Text(
                                             if (s.index == 0) "●" else "${s.index}",
                                             fontSize = glyph * 0.16f,
-                                            color = when {
-                                                mine -> Hak3.Amber
-                                                s.index == 0 -> Hak3.Red
-                                                else -> Hak3.HanjaDim
-                                            },
+                                            color = if (s.index == 0) Hak3.Red else Hak3.HanjaDim,
                                             modifier = Modifier
                                                 .align(Alignment.Top)
                                                 .padding(start = 2.dp, top = (head.value * 0.15f).dp),
