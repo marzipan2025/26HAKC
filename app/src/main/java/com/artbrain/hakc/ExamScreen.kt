@@ -364,13 +364,13 @@ private fun Deck(
             sub = page?.let(subOf),
             filter = filter,
             amber = marks.count { it.value == Mark.AMBER },
+            known = marks.count { it.value == Mark.KNOWN },
             onFilter = { f ->
                 val next = if (filter == f) null else f
                 filter = next
                 listed = next?.let { m -> all.filter { marks[it.id] == m } }
                 scope.launch { pager.scrollToPage(0) }
             },
-            onBack = onBack,
         )
 
 
@@ -383,6 +383,7 @@ private fun Deck(
             index = index,
             total = pages.size,
             onSeek = { scope.launch { pager.scrollToPage(it) } },
+            onBack = onBack,
         ) {
             val p = page ?: return@BottomBar
             onMark(p, Mark.AMBER)
@@ -467,8 +468,8 @@ private fun TopBar(
     sub: String?,
     filter: Mark?,
     amber: Int,
+    known: Int,
     onFilter: (Mark) -> Unit,
-    onBack: () -> Unit,
 ) {
     Box(
         modifier
@@ -492,15 +493,12 @@ private fun TopBar(
                 Text(sub, fontSize = 15.sp, color = Hak3.Hanja)
             }
         }
-        Box(
-            Modifier
-                .align(Alignment.CenterEnd)
-                .size(DOT)
-                .background(Hak3.Rule, CircleShape)
-                .clickable(onClick = onBack),
-            contentAlignment = Alignment.Center,
+        // 오른쪽은 초록. 왼쪽 노랑과 같은 단추이고 모아 보이는 것만 다르다.
+        Row(
+            Modifier.align(Alignment.CenterEnd),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("✕", fontSize = 13.sp, color = Hak3.Text)
+            FilterDot(Hak3.Green, filter == Mark.KNOWN, known) { onFilter(Mark.KNOWN) }
         }
     }
 }
@@ -802,6 +800,7 @@ private fun BottomBar(
     index: Int,
     total: Int,
     onSeek: (Int) -> Unit,
+    onBack: () -> Unit,
     onAmber: () -> Unit,
 ) {
     Row(
@@ -811,9 +810,8 @@ private fun BottomBar(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 남색 단추가 빠진 자리는 슬라이더가 먹는다. 노랑 단추 하나와 둘이서
-        // 줄을 채운다.
-        if (markOnLeft) AmberDot(enabled, onAmber)
+        // 노랑 단추 건너편이 닫기다. 남색 설정 단추가 있던 자리를 도로 쓴다.
+        if (markOnLeft) AmberDot(enabled, onAmber) else CloseDot(onBack)
         Scrubber(
             Modifier.weight(1f),
             index = index,
@@ -821,7 +819,21 @@ private fun BottomBar(
             text = if (lastNo != null) "$label / $lastNo" else "$label · ${index + 1} / $total",
             onSeek = onSeek,
         )
-        if (!markOnLeft) AmberDot(enabled, onAmber)
+        if (markOnLeft) CloseDot(onBack) else AmberDot(enabled, onAmber)
+    }
+}
+
+/** 회차를 닫는다. 노랑 단추 건너편에 같은 크기로 선다. */
+@Composable
+private fun CloseDot(onClick: () -> Unit) {
+    Box(
+        Modifier
+            .size(BAR)
+            .background(Hak3.Rule, CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("✕", fontSize = 17.sp, color = Hak3.Text)
     }
 }
 
