@@ -99,7 +99,8 @@ fun RoundPicker(
     onFolder: () -> Unit,
     onFile: () -> Unit,
     onPick: (Int) -> Unit,
-    onWords: (Mark) -> Unit,
+    onWords: (Mark, Collect.Kind) -> Unit,
+    startDrawer: Drawer = Drawer.NONE,
     morph: Modifier = Modifier,
     veil: Modifier = Modifier,
 ) {
@@ -110,9 +111,14 @@ fun RoundPicker(
     // 상세 화면 카드와 같은 곡률
     val radius = (screenCornerRadius() - 8.dp).coerceAtLeast(0.dp)
     // 묶음은 회차의 표시에서 그때그때 모아 낸다. 쌓아 두지 않으므로 표시를
-    // 바꾸고 돌아오면 수도 따라 바뀌어 있다.
-    val yellow = remember(db) { db?.let { Collect.list(context, it, Mark.AMBER) } ?: emptyList() }
-    val green = remember(db) { db?.let { Collect.list(context, it, Mark.KNOWN) } ?: emptyList() }
+    // 바꾸고 돌아오면 수도 따라 바뀌어 있다. 넷 — 낱글자 둘, 문제 둘.
+    val counts = remember(db) {
+        Mark.entries.associateWith { bin ->
+            Collect.Kind.entries.associateWith { kind ->
+                db?.let { Collect.count(context, it, bin, kind) } ?: 0
+            }
+        }
+    }
     // 사전에서 알릴 글자 — 어느 묶음의 글자인지까지 함께 본다
     val bins = remember(db) { db?.let { Collect.bins(context, it) } ?: emptyMap() }
 
@@ -122,7 +128,8 @@ fun RoundPicker(
     LaunchedEffect(Unit) { status = Updater.check(BuildConfig.VERSION_NAME) }
     val fresh = (status as? Updater.Status.Available)?.release
 
-    var drawer by remember { mutableStateOf(Drawer.NONE) }
+    // 묶음을 열었다 닫고 돌아오면 서랍이 열린 채로 다시 선다 — 방금 있던 자리다
+    var drawer by remember { mutableStateOf(startDrawer) }
     var last by remember { mutableIntStateOf(Settings.lastRound(context)) }
     var markOnLeft by remember { mutableStateOf(Settings.markOnLeft(context)) }
 
@@ -235,15 +242,25 @@ fun RoundPicker(
             // 덮고 지나가는데, 덮는 것이 아니라 밀려나야 한다.
             // 왼쪽 서랍 — 단어장이 여기 산다
             Box(Modifier.offset(x = -roomDp).width(roomDp).fillMaxHeight()) {
-                // 단어장은 두 묶음이다. 아직 애매한 것과 외운 것.
+                // 단어장은 넷이다. 좌우로 색이 갈리고, 위아래로 갈래가 갈린다 —
+                // 윗줄은 낱글자, 아랫줄은 문제.
                 Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                     Spacer(Modifier.height(4.dp))
-                    Cell(radius, "${yellow.size}", "yellow", Hak3.Amber, yellow.isNotEmpty()) {
-                        onWords(Mark.AMBER)
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    Cell(radius, "${green.size}", "green", Hak3.Green, green.isNotEmpty()) {
-                        onWords(Mark.KNOWN)
+                    for (kind in Collect.Kind.entries) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            for (bin in Mark.entries) {
+                                val n = counts[bin]?.get(kind) ?: 0
+                                Cell(
+                                    radius = radius,
+                                    big = "$n",
+                                    small = if (kind == Collect.Kind.CHARS) "letters" else "cards",
+                                    color = if (bin == Mark.AMBER) Hak3.Amber else Hak3.Green,
+                                    enabled = n > 0,
+                                    modifier = Modifier.weight(1f),
+                                ) { onWords(bin, kind) }
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
                     }
                 }
             }
@@ -544,13 +561,17 @@ private fun Cell(
     small: String,
     color: Color,
     enabled: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    // 묶음 안의 카드와 같이 앞면이 통째로 그 색이고, 그 위의 글은 검정이다.
+    // 비어 있는 묶음은 색을 죽여 지금 열 것이 없음을 알린다.
+    val face = if (enabled) color else Hak3.Knob
+    val ink = if (enabled) Color.Black else Hak3.TextDim
     Column(
-        Modifier
+        modifier
             .fillMaxWidth()
-            .border(1.dp, color.copy(alpha = 0.4f), RoundedCornerShape(radius))
-            .background(Hak3.Surface, RoundedCornerShape(radius))
+            .background(face, RoundedCornerShape(radius))
             .clickable(enabled = enabled, onClick = onClick)
             .padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -561,11 +582,16 @@ private fun Cell(
             fontFamily = Korail,
             fontWeight = FontWeight.Light,
             fontSize = 40.sp,
-            color = color,
+            color = ink,
             maxLines = 1,
         )
         Spacer(Modifier.height(6.dp))
-        Text(small, fontSize = 13.sp, color = Hak3.TextDim, textAlign = TextAlign.Center)
+        Text(
+            small,
+            fontSize = 13.sp,
+            color = ink.copy(alpha = if (enabled) 0.55f else 1f),
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

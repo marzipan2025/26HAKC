@@ -231,39 +231,48 @@ fun ExamScreen(
 }
 
 /**
- * 단어장. 노랑으로 담은 문항에서 모은 한자를 한 글자씩 넘긴다.
- * 여기의 표시는 회차의 표시와 따로 논다.
+ * 단어장. 담은 문항을 두 갈래로 넘긴다.
  *
- * 묶음은 둘 — 노랑과 초록이고, 한 번에 한 묶음만 넘긴다. 카드를 밀어 다른 색으로
- * 넘기면 그쪽 묶음으로 건너가고, 표시를 풀면 단어장에서 아주 빠진다.
+ *   낱글자   문항에 나온 한자를 한 글자씩. 여기서 표시를 풀면 그 묶음에서 빠지고,
+ *            **제 글자가 모두 빠진 문항은 그때 표시가 해제된다.**
+ *   문제     문항을 통째로. 회차가 달라도 글이 같으면 한 장이고, 여기서 표시를
+ *            바꾸면 **같은 글의 모든 회차분이 함께 간다.**
  */
 @Composable
-fun WordScreen(db: ExamDb, bin: Mark, onBack: () -> Unit) {
+fun WordScreen(db: ExamDb, bin: Mark, kind: Collect.Kind, onBack: () -> Unit) {
     val context = LocalContext.current
-    val all = remember(bin) {
-        Collect.list(context, db, bin).mapIndexedNotNull { i, han ->
-            val meaning = db.hunmeum(han) ?: return@mapIndexedNotNull null
-            val section = Section(0, 0, 0, "다음 漢字의 訓과 音을 쓰시오.", emptyList())
-            val item = Item(
-                no = i + 1,
-                spanEnd = 0,
-                question = han,
-                html = null,
-                target = han,
-                answer = meaning,
-            )
-            Page(0, section, item, han)
+    val chars = kind == Collect.Kind.CHARS
+    val all = remember(bin, kind) {
+        if (chars) {
+            Collect.list(context, db, bin).mapIndexedNotNull { i, han ->
+                val meaning = db.hunmeum(han) ?: return@mapIndexedNotNull null
+                val section = Section(0, 0, 0, "다음 漢字의 訓과 音을 쓰시오.", emptyList())
+                val item = Item(
+                    no = i + 1,
+                    spanEnd = 0,
+                    question = han,
+                    html = null,
+                    target = han,
+                    answer = meaning,
+                )
+                Page(0, section, item, han)
+            }
+        } else {
+            Collect.cards(context, db, bin).mapNotNull { (round, no) ->
+                val (section, item) = db.pick(round, no) ?: return@mapNotNull null
+                Page(round, section, item, "$round-$no")
+            }
         }
     }
-    // 묶음에 든 글자는 모두 그 묶음의 색이다. 여기서 표시를 푸는 것은 곧
-    // 묶음에서 빼는 것이고, 한 번 더 밀면 도로 들어온다.
-    val marks = remember(bin) {
+    // 묶음에 든 것은 모두 그 묶음의 색이다.
+    val marks = remember(bin, kind) {
         mutableStateMapOf<String, Mark>().apply { all.forEach { put(it.id, bin) } }
     }
     Deck(
         all = all,
-        title = if (bin == Mark.AMBER) "Yellow" else "Green",
-        subOf = { null },
+        title = (if (bin == Mark.AMBER) "Yellow " else "Green ") + if (chars) "letters" else "cards",
+        // 문제 묶음의 카드는 제 회차에서 온 것이라 어느 회차인지 밝혀 둔다
+        subOf = { p -> if (chars) null else "第 ${p.round} 回" },
         marks = marks,
         numbered = false,
         start = 0,
@@ -272,8 +281,13 @@ fun WordScreen(db: ExamDb, bin: Mark, onBack: () -> Unit) {
         morphLit = { 0f },
         face = true,
         onMark = { p, m ->
-            Collect.keep(context, p.id, bin, m != null)
-            if (m == null) marks.remove(p.id) else marks[p.id] = bin
+            if (chars) {
+                Collect.keep(context, db, p.id, bin, m != null)
+                if (m == null) marks.remove(p.id) else marks[p.id] = bin
+            } else {
+                Collect.markCards(context, db, p.round, p.item.no, m)
+                if (m == null) marks.remove(p.id) else marks[p.id] = m
+            }
         },
         onSeen = {},
         onBack = onBack,

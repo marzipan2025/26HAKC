@@ -79,7 +79,9 @@ class Marks(context: Context, round: Int) {
                 val key = keyOf(round)
                 val m = read(prefs, key).toMutableMap()
                 nos.forEach { no -> if (mark == null) m.remove(no) else m[no] = mark }
-                edit.putString(key, write(m))
+                // 빈 회차는 아예 지운다 — 남겨 두면 표시가 하나도 없는 회차가
+                // rounds() 에 끼어 단어장을 모을 때마다 헛걸음을 시킨다.
+                if (m.isEmpty()) edit.remove(key) else edit.putString(key, write(m))
             }
             edit.apply()
         }

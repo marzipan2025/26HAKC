@@ -142,6 +142,19 @@ class ExamDb private constructor(private val db: SQLiteDatabase) {
         section to withGloss(item)
     }
 
+    /**
+     * 이 문항과 글이 같은 것들 — 회차를 가리지 않고. `(회차, 번호)` 로 돌려준다.
+     *
+     * 기출은 같은 문제를 여러 해에 걸쳐 다시 내기도 한다(11,540 문항이 8,290 가지다).
+     * 한 문제를 풀었으면 어느 회차에 실렸든 푼 것이므로, 표시도 함께 움직여야 한다.
+     */
+    fun twins(item: Item): List<Pair<Int, Int>> = db.rawQuery(
+        "SELECT round, no FROM items WHERE question=? AND ifnull(target,'')=?",
+        arrayOf(item.question, item.target.orEmpty())
+    ).use { c ->
+        buildList { while (c.moveToNext()) add(c.getInt(0) to c.getInt(1)) }
+    }
+
     fun meta(): Map<String, String> = db.rawQuery("SELECT key, value FROM meta", null).use { c ->
         buildMap { while (c.moveToNext()) put(c.getString(0), c.getString(1)) }
     }

@@ -68,7 +68,10 @@ private fun Root() {
     var state by remember { mutableStateOf<DataFile.Result?>(null) }
     var reload by remember { mutableStateOf(0) }
     var open by remember { mutableStateOf<Int?>(null) }
-    var words by remember { mutableStateOf<Mark?>(null) }
+    var words by remember { mutableStateOf<Pair<Mark, Collect.Kind>?>(null) }
+    // 묶음을 닫고 돌아오면 왼쪽 서랍이 열린 채로 선다 — 방금 있던 자리다.
+    // 한 번 쓰고 잊는다. 그러지 않으면 회차를 보고 돌아올 때도 서랍이 열린다.
+    var back by remember { mutableStateOf(Drawer.NONE) }
     val book = remember { Dict.open(context) }
 
     val pickFolder = rememberLauncherForActivityResult(
@@ -100,8 +103,11 @@ private fun Root() {
     val round = open
     when {
         words != null && ready != null -> {
-            BackHandler { words = null }
-            WordScreen(ready, words!!) { words = null }
+            BackHandler { words = null; back = Drawer.USER }
+            WordScreen(ready, words!!.first, words!!.second) {
+                words = null
+                back = Drawer.USER
+            }
         }
         // 목록과 상세는 판 하나를 나눠 갖는다. 회차를 누르면 목록의 판이 상세의
         // 카드 자리까지 늘어나고, 나머지는 그동안 지워졌다가 뒤이어 떠오른다.
@@ -128,7 +134,9 @@ private fun Root() {
                 )
                 if (r == null || ready == null) {
                     Picker(state, reload, ready, book, pickFolder, pickFile, morph, veil,
-                        onPick = { open = it }, onWords = { words = it })
+                        onPick = { open = it }, onWords = { bin, kind -> words = bin to kind },
+                        startDrawer = back)
+                    LaunchedEffect(Unit) { back = Drawer.NONE }
                 } else {
                     BackHandler { open = null }
                     // 판은 넘어오는 동안에만 그린다. 뒤에 남겨 두면 카드를
@@ -157,7 +165,8 @@ private fun Picker(
     morph: Modifier,
     veil: Modifier,
     onPick: (Int) -> Unit,
-    onWords: (Mark) -> Unit,
+    onWords: (Mark, Collect.Kind) -> Unit,
+    startDrawer: Drawer,
 ) {
     RoundPicker(
         // 사전은 기출 데이터가 없어도 선다 — 앱 안에 든 자료라 남을 기다릴 것이 없다
@@ -170,6 +179,7 @@ private fun Picker(
         onFile = { pickFile.launch(arrayOf("*/*")) },
         onPick = onPick,
         onWords = onWords,
+        startDrawer = startDrawer,
         morph = morph,
         veil = veil,
     )
