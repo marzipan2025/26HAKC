@@ -43,14 +43,26 @@ object Collect {
         }
     }
 
-    /** 낱글자 묶음. 여러 문항에 나온 글자는 처음 만난 자리에 한 번만 선다. */
+    /**
+     * 낱글자 묶음. 여러 문항에 나온 글자는 처음 만난 자리에 한 번만 선다.
+     *
+     * 지나는 길에 **죽은 기록을 치운다.** 문항이 표시를 잃으면 그 글자는 여기서
+     * 저절로 빠지는데(모아 내는 자리가 회차의 표시라서), 그때 푼 글자 목록에 남아
+     * 있던 자국까지 걷어야 그 문항을 다시 담았을 때 글자가 온전히 돌아온다.
+     * 다른 문항이 아직 그 글자를 내고 있으면 푼 것은 푼 대로 둔다.
+     */
     fun list(c: Context, db: ExamDb, bin: Mark): List<String> {
         val out = LinkedHashSet<String>()
         for ((round, no) in marked(c, bin)) {
             val (_, item) = db.pick(round, no) ?: continue
             out += db.hanjaOf(item)
         }
-        return out.toList() - gone(c, bin)
+        val out2 = gone(c, bin)
+        val live = out2.filterTo(HashSet()) { it in out }
+        if (live.size != out2.size) {
+            prefs(c).edit().putString(goneKey(bin), live.joinToString(",")).apply()
+        }
+        return out.toList() - live
     }
 
     /**
