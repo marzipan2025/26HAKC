@@ -166,9 +166,9 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
     // 자주 찾은 글자일수록 환하게. 세는 것은 엔터를 눌렀을 때뿐이다 —
     // 글자마다 도는 찾기까지 세면 한 낱말 적는 사이에 열 번이 지나간다.
     var seen by remember { mutableStateOf(Seen.all(context)) }
-    // 노랑으로 담아 둔 문항에서 쌓인 글자. 사전에서 만나면 노랑으로 알린다 —
-    // 기출에서 걸렸던 글자가 여기 또 나왔다는 뜻이다.
-    val kept = remember { Collect.order(context).toSet() }
+    // 단어장의 노랑 묶음. 사전에서 만나면 노랑으로 알린다 — 기출에서 걸렸는데
+    // 아직 애매한 글자라는 뜻이다. 초록은 외운 글자이므로 알릴 까닭이 없다.
+    val kept = remember { Collect.list(context, Mark.AMBER).toSet() }
     var text by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<List<Found>>(emptyList()) }
     LaunchedEffect(text) { found = dict.search(text) }
