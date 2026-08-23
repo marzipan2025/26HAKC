@@ -449,7 +449,8 @@ fun SettingsPanel(
             ) {}
             .padding(horizontal = 16.dp),
     ) {
-        Spacer(Modifier.height(4.dp))
+        // 왼쪽 서랍의 첫 칸과 같은 어깨에서, 눈에 맞게 2dp 더 내려 앉힌다
+        Spacer(Modifier.height(6.dp))
         Icon(
             painterResource(R.drawable.ic_sign),
             contentDescription = "26HAKC",
@@ -465,7 +466,8 @@ fun SettingsPanel(
             color = Hak3.TextDim,
         )
 
-        Spacer(Modifier.height(40.dp))
+        // 판 번호와 자료 날짜는 사인에 딸린 말이라 바짝 붙인다
+        Spacer(Modifier.height(13.dp))
         Text("Data ${built ?: "unknown"}", fontSize = 15.sp, color = Hak3.TextDim)
         Text("Version ${BuildConfig.VERSION_NAME}", fontSize = 15.sp, color = Hak3.TextDim)
 

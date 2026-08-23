@@ -12,7 +12,7 @@ from PIL import Image
 
 SRC = os.path.expanduser('~/Downloads/HAKC_asset/AppIcon_26HAKC.png')
 RES = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'app', 'src', 'main', 'res')
-GROUND = (54, 61, 71, 255)      # 원본의 바탕색 #363D47
+GROUND = (166, 182, 192, 255)   # 원본의 바탕색 #A6B6C0
 
 # mdpi 기준 배수 — 런처 아이콘 48dp, 적응형 레이어 108dp
 DENSITY = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}
