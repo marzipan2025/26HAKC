@@ -51,14 +51,38 @@ def nfc(s):
     return unicodedata.normalize("NFC", s)
 
 
+OPEN = "([{（≪〈《"
+SHUT = ")]}）≫〉》"
+
+
+def whole(m):
+    """문장으로 온전한가 — 마침표로 끝나고, 열어 둔 괄호나 따옴표가 없어야 한다."""
+    if not m.endswith("."):
+        return False
+    depth = 0
+    for ch in m:
+        if ch in OPEN:
+            depth += 1
+        elif ch in SHUT:
+            depth -= 1
+        if depth < 0:
+            return False
+    if depth:
+        return False
+    return m.count("‘") == m.count("’") and m.count("“") == m.count("”")
+
+
 def trim(d):
-    """판에 한 줄로 앉을 만큼만. 문장 경계에서 끊고, 그래도 길면 자른다."""
+    """
+    판에 한 줄로 앉을 만큼만. 문장 경계까지 물러나고, 그 안에 문장이 하나도
+    없으면 아예 버린다 — 말이 중간에서 끊긴 풀이는 없느니만 못하다.
+    """
     d = re.sub(r"\s+", " ", d).strip()
-    if len(d) <= LIMIT:
-        return d
-    cut = d[:LIMIT]
-    dot = cut.rfind(". ")
-    return (cut[: dot + 1] if dot > 40 else cut).strip()
+    if len(d) > LIMIT:
+        cut = d[:LIMIT]
+        dot = cut.rfind(". ")
+        d = cut[: dot + 1].strip() if dot > 0 else cut.strip()
+    return d if whole(d) else None
 
 
 def read(path):
@@ -80,7 +104,9 @@ def read(path):
         for han, kind in LANG.findall(wi.group(1)):
             han = nfc(han)
             if kind == "한자" and HANJA.match(han):
-                out.setdefault((ko, han), trim(d))
+                body = trim(d)
+                if body:
+                    out.setdefault((ko, han), body)
     return out
 
 
