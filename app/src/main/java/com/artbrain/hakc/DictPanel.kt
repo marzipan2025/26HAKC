@@ -159,6 +159,9 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
     // 자주 찾은 글자일수록 환하게. 세는 것은 엔터를 눌렀을 때뿐이다 —
     // 글자마다 도는 찾기까지 세면 한 낱말 적는 사이에 열 번이 지나간다.
     var seen by remember { mutableStateOf(Seen.all(context)) }
+    // 노랑으로 담아 둔 문항에서 쌓인 글자. 사전에서 만나면 노랑으로 알린다 —
+    // 기출에서 걸렸던 글자가 여기 또 나왔다는 뜻이다.
+    val kept = remember { Collect.order(context).toSet() }
     var text by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<List<Found>>(emptyList()) }
     LaunchedEffect(text) { found = dict.search(text) }
@@ -271,10 +274,15 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                                         maxLines = 1,
                                     )
                                     if (s.many) {
+                                        val mine = s.variant.hanja.any { it.toString() in kept }
                                         Text(
                                             if (s.index == 0) "●" else "${s.index}",
                                             fontSize = glyph * 0.16f,
-                                            color = if (s.index == 0) Hak3.Red else Hak3.HanjaDim,
+                                            color = when {
+                                                mine -> Hak3.Amber
+                                                s.index == 0 -> Hak3.Red
+                                                else -> Hak3.HanjaDim
+                                            },
                                             modifier = Modifier
                                                 .align(Alignment.Top)
                                                 .padding(start = 2.dp, top = (head.value * 0.15f).dp),
@@ -296,7 +304,7 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(TEXT_WALL + 6.dp, RULE_GAP, TEXT_WALL, RULE_GAP),
                     ) {
-                        itemsIndexed(slots) { _, s -> VariantBlock(s) }
+                        itemsIndexed(slots) { _, s -> VariantBlock(s, kept) }
                     }
                 }
             }
@@ -364,9 +372,12 @@ private fun Rule() {
     )
 }
 
-/** 표기 하나의 풀이 — 글자마다 `음 : 급수 훈`, 그 아래 뜻. */
+/**
+ * 표기 하나의 풀이 — 글자마다 `음 : 급수 훈`, 그 아래 뜻.
+ * [kept] 는 노랑으로 담아 둔 문항에서 쌓인 글자들이다.
+ */
 @Composable
-private fun VariantBlock(s: Slot) {
+private fun VariantBlock(s: Slot, kept: Set<String>) {
     Column(Modifier.padding(bottom = 12.dp)) {
         s.variant.hanja.forEachIndexed { i, ch ->
             val g = s.word.chars[ch.toString()] ?: return@forEachIndexed
@@ -379,7 +390,8 @@ private fun VariantBlock(s: Slot) {
                     lineHeight = 25.sp,
                     // 흰 글씨는 판에서 가장 밝아 한자보다 앞으로 나온다.
                     // 訓音은 한자에 딸린 말이니 한자와 같은 색을 쓴다.
-                    color = Hak3.Hanja,
+                    // 담아 둔 글자만 노랑으로 도드라진다.
+                    color = if (ch.toString() in kept) Hak3.Amber else Hak3.Hanja,
                     modifier = Modifier.width(EUM).alignByBaseline(),
                 )
                 Text(
