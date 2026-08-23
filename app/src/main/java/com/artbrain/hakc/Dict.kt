@@ -86,7 +86,7 @@ class Dict private constructor(private val db: SQLiteDatabase) {
             variants.add(Variant(c.getString(0), c.getString(1)?.takeIf { it.isNotBlank() }))
         }
         if (variants.isEmpty()) return@use null
-        Found(ko, variants, glyphs(variants.joinToString("") { it.hanja }))
+        Found(ko, variants, glyphsIn(ko, variants))
     }
 
     /**
@@ -113,7 +113,11 @@ class Dict private constructor(private val db: SQLiteDatabase) {
         "SELECT han, hun, eum, grade FROM chars WHERE eum=? " +
             "ORDER BY grade IS NULL, grade DESC",
         arrayOf(eum)
-    ).use { c -> buildList { while (c.moveToNext()) add(row(c)) } })
+    ).use { c -> buildList { while (c.moveToNext()) add(read(row(c), eum)) } })
+
+    /** 음을 알고 찾은 글자는 訓도 그 음의 것으로 갈아 끼운다. */
+    private fun read(g: Glyph, eum: String) =
+        hunFor(g.han, eum)?.let { g.copy(hun = it, eum = eum) } ?: g
 
     /**
      * 찾아낸 글자들을 한 낱말의 여러 표기처럼 담는다 — 위 줄에서 좌우로 훑으면
@@ -166,6 +170,72 @@ class Dict private constructor(private val db: SQLiteDatabase) {
     private fun ofHanja(text: String): Found {
         val only = text.filter(::isHan)
         return Found(text, listOf(Variant(only, null)), glyphs(only))
+    }
+
+    /**
+     * 낱말 안에서 글자마다 訓音을. **음은 낱말이 알려 준다** — 數學 의 數 는 '삭' 이
+     * 아니라 '수' 이고, 龜裂 의 龜 는 '구' 가 아니라 '균' 이다. 글자마다 음을 하나만
+     * 적어 둔 표를 그대로 믿으면 '삭학' 과 '구열' 이 된다.
+     *
+     * 글자 수가 맞을 때만 자리끼리 짝을 짓는다. 그 음으로 읽을 때의 訓 은 한 글자짜리
+     * 낱말이 들고 있다 — 數 는 '수' 로 헤아릴·몇 이고 '삭' 으로 자주다.
+     */
+    private fun glyphsIn(ko: String, variants: List<Variant>): Map<String, Glyph> {
+        val out = LinkedHashMap<String, Glyph>()
+        for (v in variants) {
+            val han = v.hanja
+            if (han.length != ko.length) continue
+            han.forEachIndexed { i, ch ->
+                val key = ch.toString()
+                if (key in out || !isHan(ch)) return@forEachIndexed
+                val eum = ko[i].toString()
+                val base = glyph(key)
+                out[key] = Glyph(key, hunFor(key, eum) ?: base.hun, eum, base.grade)
+            }
+        }
+        // 글자 수가 어긋나는 표기는 예전 길로 채운다
+        val rest = variants.joinToString("") { it.hanja }.filter { isHan(it) && it.toString() !in out }
+        return out + glyphs(rest)
+    }
+
+    /**
+     * 그 글자를 그 음으로 읽을 때의 訓. 한 글자짜리 낱말의 풀이가 곧 그것이다 —
+     * 數 는 '수' 로 '헤아릴 수, 몇 수' 이고 '삭' 으로 '자주 삭' 이다.
+     *
+     * 조각마다 뒤에 붙은 음을 뗀다. 떼는 자리는 마지막 한 음절이고, 조각이 두 도막
+     * 이상일 때만 뗀다 — 訓 이 한 도막뿐인 '찢을' 같은 것을 잘라 먹지 않으려는 것이다.
+     * 두음법칙으로 적힌 것(裂 을 '열' 로 찾았는데 풀이에는 '렬')도 이 길로 함께 떨어진다.
+     */
+    private fun hunFor(han: String, eum: String): String? = db.rawQuery(
+        "SELECT meaning FROM words WHERE ko=? AND hanja=? AND meaning IS NOT NULL LIMIT 1",
+        arrayOf(eum, han)
+    ).use { c ->
+        if (!c.moveToNext()) return@use null
+        c.getString(0)
+            ?.split(',')
+            ?.map { piece ->
+                val toks = piece.trim().split(' ').filter { it.isNotEmpty() }
+                if (toks.size >= 2 && toks.last().length == 1 && isHangul(toks.last()[0])) {
+                    toks.dropLast(1).joinToString(" ")
+                } else {
+                    toks.joinToString(" ")
+                }
+            }
+            ?.filter { it.isNotEmpty() }
+            ?.distinct()
+            ?.joinToString(", ")
+            ?.takeIf { it.isNotEmpty() }
+    }
+
+    /** 글자 하나의 訓音과 급수. */
+    private fun glyph(han: String): Glyph = db.rawQuery(
+        "SELECT hun, eum, grade FROM chars WHERE han=?", arrayOf(han)
+    ).use { c ->
+        if (c.moveToNext()) {
+            Glyph(han, c.getString(0) ?: "", c.getString(1) ?: "", if (c.isNull(2)) null else c.getInt(2))
+        } else {
+            Glyph(han, "", "", null)
+        }
     }
 
     /** 글자마다 訓音과 급수를. 같은 글자는 한 번만. */
