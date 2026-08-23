@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -322,7 +323,53 @@ fun RoundPicker(
                 }
             }
 
+            // 새 판 안내는 목록과 같은 얼굴로, 그러나 제 영역에 따로 선다
+            if (fresh != null) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
+                        .graphicsLayer(dim)
+                        .background(Hak3.Surface, RoundedCornerShape(radius))
+                ) {
+                    UpdateRow(
+                        label = when {
+                            progress == -2f -> "Update"
+                            progress < 0f -> "Fetching"
+                            progress < 1f -> "${(progress * 100).toInt()}%"
+                            else -> "Install"
+                        },
+                        note = if (progress == -2f) fresh.version else "tap to open",
+                        enabled = progress == -2f,
+                    ) {
+                        val url = fresh.apkUrl
+                        if (url == null) {
+                            Updater.openReleasesPage(context)
+                            return@UpdateRow
+                        }
+                        progress = -1f
+                        scope.launch {
+                            val apk = Updater.download(context, url, fresh.version) { progress = it }
+                            if (apk == null) {
+                                progress = -2f
+                                Updater.openReleasesPage(context)
+                            } else {
+                                progress = 1f
+                                Updater.install(context, apk)
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(5.dp))
+            }
+
             // 회차는 칸을 늘어놓지 않고 큰 판 하나 안에서 굴러간다
+            val rounds = rememberLazyListState()
+            LaunchedEffect(exams.size) {
+                // 마지막으로 열어 본 회차가 보이게. 맨 위에 붙이지 않고 두 줄쯤 내려서 앉힌다.
+                val i = exams.indexOfFirst { it.round == last }
+                if (i >= 0) rounds.scrollToItem((i - 2).coerceAtLeast(0))
+            }
             Box(
                 Modifier
                     .weight(1f)
@@ -333,46 +380,14 @@ fun RoundPicker(
             ) {
                 LazyColumn(
                     Modifier.fillMaxSize().nestedScroll(nested),
+                    state = rounds,
                     contentPadding = PaddingValues(vertical = 18.dp),
                 ) {
-                    if (fresh != null) {
-                        item(key = "update") {
-                            UpdateRow(
-                                label = when {
-                                    progress == -2f -> "Update"
-                                    progress < 0f -> "Fetching"
-                                    progress < 1f -> "${(progress * 100).toInt()}%"
-                                    else -> "Install"
-                                },
-                                note = if (progress == -2f) fresh.version else "tap to open",
-                                enabled = progress == -2f,
-                            ) {
-                                val url = fresh.apkUrl
-                                if (url == null) {
-                                    Updater.openReleasesPage(context)
-                                    return@UpdateRow
-                                }
-                                progress = -1f
-                                scope.launch {
-                                    val apk = Updater.download(context, url, fresh.version) {
-                                        progress = it
-                                    }
-                                    if (apk == null) {
-                                        progress = -2f
-                                        Updater.openReleasesPage(context)
-                                    } else {
-                                        progress = 1f
-                                        Updater.install(context, apk)
-                                    }
-                                }
-                            }
-                        }
-                    }
                     if (trouble != null) {
                         item(key = "setup") { Setup(radius, trouble, onFolder, onFile) }
                     }
                     items(exams, key = { it.round }) { e ->
-                        RoundRow(e, e.round == last) {
+                        RoundRow(e, e.round == last, wide / 3) {
                             last = it
                             Settings.setLastRound(context, it)
                             onPick(it)
@@ -513,67 +528,66 @@ private fun Cell(
  * 마지막으로 열어 본 줄에는 알약을 두른다.
  */
 @Composable
-private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
+private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, onPick: (Int) -> Unit) {
     val context = LocalContext.current
     val counts = remember(e.round) { Marks.counts(context, e.round) }
     val live = e.complete || e.items > 0
-    Row(
+    Box(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 1.dp)
-            .background(if (on) Hak3.Rule else Color.Transparent, CircleShape)
             .clickable(enabled = live) { onPick(e.round) }
-            .padding(start = 22.dp, end = 18.dp, top = 6.dp, bottom = 6.dp),
-        verticalAlignment = Alignment.Top,
+            .padding(vertical = 1.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(
-            "${e.round}",
-            fontFamily = ThinHanja,
-            fontWeight = FontWeight.Thin,
-            fontSize = 44.sp,
-            color = if (live) Hak3.Hanja else Hak3.HanjaDim,
-        )
-        Spacer(Modifier.width(7.dp))
-        // 갈라 둔 게 있으면 그 수를, 없으면 시험 날짜를 어깨에 적는다
-        Column(Modifier.padding(top = 9.dp)) {
-            if (counts.any) {
+        // 알약은 글자를 감싸는 것이 아니라 화면 가운데 1/3 을 차지한다
+        Row(
+            Modifier
+                .width(pill)
+                .background(if (on) Hak3.Rule else Color.Transparent, CircleShape)
+                .padding(vertical = 6.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.Top,
+        ) {
+            Text(
+                "${e.round}",
+                fontFamily = Korail,
+                fontSize = 44.sp,
+                color = if (live) Hak3.Hanja else Hak3.HanjaDim,
+            )
+            Spacer(Modifier.width(7.dp))
+            // 담아 둔 수를 번호의 어깨에 붙인다. 없으면 어깨는 비워 둔다.
+            Column(Modifier.padding(top = 9.dp)) {
                 if (counts.amber > 0) {
                     Text("${counts.amber}", fontSize = 13.sp, color = Hak3.Amber)
                 }
                 if (counts.known > 0) {
                     Text("${counts.known}", fontSize = 13.sp, color = Hak3.Green)
                 }
-            } else {
-                Text(
-                    if (live) e.date?.replace('-', '.') ?: "" else "no text",
-                    fontSize = 13.sp,
-                    color = Hak3.TextDim,
-                )
+                if (!live) Text("no text", fontSize = 13.sp, color = Hak3.TextDim)
             }
         }
     }
 }
 
-/** 새 판이 있을 때 목록 맨 위에 서는 줄. */
+/** 새 판 안내. 회차 줄과 같은 얼굴로 제 영역에 선다. */
 @Composable
 private fun UpdateRow(label: String, note: String, enabled: Boolean, onClick: () -> Unit) {
-    Row(
+    Box(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 1.dp)
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(start = 22.dp, end = 18.dp, top = 6.dp, bottom = 10.dp),
-        verticalAlignment = Alignment.Top,
+            .padding(vertical = 18.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(
-            label,
-            fontFamily = ThinHanja,
-            fontWeight = FontWeight.Thin,
-            fontSize = 44.sp,
-            color = Hak3.Amber,
-            maxLines = 1,
-        )
-        Spacer(Modifier.width(7.dp))
-        Text(note, fontSize = 13.sp, color = Hak3.Amber, modifier = Modifier.padding(top = 9.dp))
+        Row(verticalAlignment = Alignment.Top) {
+            Text(label, fontFamily = Korail, fontSize = 44.sp, color = Hak3.Amber, maxLines = 1)
+            Spacer(Modifier.width(7.dp))
+            Text(
+                note,
+                fontSize = 13.sp,
+                color = Hak3.Amber,
+                modifier = Modifier.padding(top = 9.dp),
+            )
+        }
     }
 }
