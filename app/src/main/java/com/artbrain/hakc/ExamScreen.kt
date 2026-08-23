@@ -760,7 +760,7 @@ private fun AnswerSlot(item: Item, revealed: Boolean) {
     }
 }
 
-private val BAR = 64.dp
+private val BAR = 58.dp
 private val DOT = 28.dp
 private val TOP = 52.dp
 
