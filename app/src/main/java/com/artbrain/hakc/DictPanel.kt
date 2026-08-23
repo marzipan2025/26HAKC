@@ -3,7 +3,9 @@ package com.artbrain.hakc
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -37,6 +39,7 @@ import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -115,6 +118,9 @@ private val WALL = 16.dp
 /** 글이 벽에서 물러나는 거리. 모서리가 둥그니 실선보다 더 안쪽에서 시작한다. */
 private val TEXT_WALL = 26.dp
 private val RULE_GAP = 10.dp
+
+/** 訓音 줄에서 음이 차지하는 너비. 음은 늘 한 글자라 이만큼이면 넉넉하다. */
+private val EUM = 27.dp
 
 /** 訓音 자리는 두 줄에 한 줄 남짓 여백까지는 있어야 읽을 만하다. */
 private val MID_MIN = 72.dp
@@ -216,14 +222,23 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     if (slots.isEmpty()) {
-                        Text(
-                            if (text.isBlank()) "漢字" else "Nope, not here.",
-                            fontFamily = if (text.isBlank()) ThinHanja else Korail,
-                            fontWeight = if (text.isBlank()) FontWeight.Thin else FontWeight.Normal,
-                            fontSize = if (text.isBlank()) glyph else glyph * 0.34f,
-                            color = Hak3.HanjaDim,
-                            modifier = Modifier.padding(start = TEXT_WALL),
-                        )
+                        // 한자와 같은 크기로 세운다. 넘치면 좌우로 훑어 읽는다 —
+                        // 찾아낸 한자를 훑는 것과 같은 몸짓이다.
+                        Row(
+                            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                if (text.isBlank()) "漢字" else "Nope, not here.",
+                                fontFamily = if (text.isBlank()) ThinHanja else Korail,
+                                fontWeight = if (text.isBlank()) FontWeight.Thin else FontWeight.Light,
+                                fontSize = glyph,
+                                color = Hak3.HanjaDim,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier.padding(horizontal = TEXT_WALL),
+                            )
+                        }
                     } else {
                         LazyRow(
                             state = top,
@@ -354,7 +369,9 @@ private fun VariantBlock(s: Slot) {
     Column(Modifier.padding(bottom = 12.dp)) {
         s.variant.hanja.forEachIndexed { i, ch ->
             val g = s.word.chars[ch.toString()] ?: return@forEachIndexed
-            Row(verticalAlignment = Alignment.Top) {
+            // 음과 훈은 밑선을 맞춘다. 위끝을 맞추면 오른쪽 글에 낀 급수 표시가
+            // 줄 상자를 부풀려 두 글이 어긋난다.
+            Row {
                 Text(
                     "${g.eum} :",
                     fontSize = 18.sp,
@@ -362,9 +379,8 @@ private fun VariantBlock(s: Slot) {
                     // 흰 글씨는 판에서 가장 밝아 한자보다 앞으로 나온다.
                     // 訓音은 한자에 딸린 말이니 한자와 같은 색을 쓴다.
                     color = Hak3.Hanja,
-                    modifier = Modifier.width(38.dp),
+                    modifier = Modifier.width(EUM).alignByBaseline(),
                 )
-                Spacer(Modifier.width(4.dp))
                 Text(
                     buildAnnotatedString {
                         appendInlineContent(GRADE_SLOT)
@@ -380,6 +396,7 @@ private fun VariantBlock(s: Slot) {
                     fontSize = 18.sp,
                     lineHeight = 25.sp,
                     color = Hak3.Hanja,
+                    modifier = Modifier.alignByBaseline(),
                     inlineContent = mapOf(
                         GRADE_SLOT to InlineTextContent(
                             Placeholder(18.sp, 18.sp, PlaceholderVerticalAlign.TextCenter)
@@ -401,7 +418,7 @@ private fun VariantBlock(s: Slot) {
             val long = body.length > 25
             Row(
                 Modifier
-                    .padding(start = 38.dp, top = 3.dp)
+                    .padding(start = EUM, top = 3.dp)
                     .clickable(enabled = long) { open = !open },
                 verticalAlignment = Alignment.Top,
             ) {
