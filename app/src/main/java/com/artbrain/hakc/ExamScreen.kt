@@ -852,13 +852,13 @@ private fun BottomBar(
     }
 }
 
-/** 회차를 닫는다. 노랑 단추 건너편에 같은 크기로 선다. */
+/** 회차를 닫는다. 노랑 단추 건너편에 같은 크기로, 슬라이더와 같은 바탕으로 선다. */
 @Composable
 private fun CloseDot(onClick: () -> Unit) {
     Box(
         Modifier
             .size(BAR)
-            .background(Hak3.Rule, CircleShape)
+            .background(Hak3.Surface, CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -917,7 +917,7 @@ private fun Scrubber(
                 Modifier
                     .width(knob + span * frac)
                     .height(knob)
-                    .background(Hak3.Hanja, CircleShape)
+                    .background(Hak3.Knob, CircleShape)
             )
         }
         Text(text, fontSize = 15.sp, color = Hak3.Text)

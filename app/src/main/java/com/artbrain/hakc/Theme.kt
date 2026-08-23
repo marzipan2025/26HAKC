@@ -33,6 +33,7 @@ object Hak3 {
     // 바탕
     val Ground = Color(0xFF000000)          // 기기 화면과 이어지는 검은 바탕
     val Surface = Color(0xFF21252D)         // 카드와 사전 판
+    val Knob = Color(0xFF2E323A)            // 그 위에 얹히는 것 — 바탕보다 6% 밝다
     val Rule = Color(0x24BAD0E2)            // 경계선·손잡이·꺼진 것 (#BAD0E2 @14%)
 
     // 글

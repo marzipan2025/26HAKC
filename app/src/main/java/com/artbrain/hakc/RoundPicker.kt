@@ -63,7 +63,10 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
@@ -419,7 +422,18 @@ fun RoundPicker(
 private val INK = 2.dp
 
 /** 번호의 글자 상자 위끝에서 잉크 위끝까지. 옆의 수를 그 선에 맞출 때 쓴다. */
-private val SHOULDER = 9.dp
+private val SHOULDER = 5.4.dp
+
+/** 번호 옆의 작은 수. 줄 상자를 글자에 바짝 붙여 위아래 여백을 없앤다. */
+private val COUNT = TextStyle(
+    fontSize = 13.sp,
+    lineHeight = 11.sp,
+    platformStyle = PlatformTextStyle(includeFontPadding = false),
+    lineHeightStyle = LineHeightStyle(
+        alignment = LineHeightStyle.Alignment.Center,
+        trim = LineHeightStyle.Trim.Both,
+    ),
+)
 
 /** 서랍이 저마다 앉는 자리. */
 private fun anchor(drawer: Drawer, room: Float) = when (drawer) {
@@ -575,17 +589,12 @@ private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, onPick: (Int) -> Unit) {
             // 담아 둔 수는 번호의 윗선에 맞춘다 — 한 개든 두 개든 같은 자리에서
             // 시작한다. 둘일 때는 아래 것을 3dp 끌어올려 한 덩이로 보이게 한다.
             Column(Modifier.offset(y = INK).padding(top = SHOULDER)) {
+                // 줄 상자를 글자에 바짝 붙여 둘이 한 덩이로 보이게 한다
                 if (counts.amber > 0) {
-                    Text("${counts.amber}", fontSize = 13.sp, color = Hak3.Amber)
+                    Text("${counts.amber}", style = COUNT, color = Hak3.Amber)
                 }
                 if (counts.known > 0) {
-                    Text(
-                        "${counts.known}",
-                        fontSize = 13.sp,
-                        color = Hak3.Green,
-                        modifier = if (counts.amber > 0) Modifier.offset(y = -3.dp)
-                        else Modifier,
-                    )
+                    Text("${counts.known}", style = COUNT, color = Hak3.Green)
                 }
                 if (!live) Text("no text", fontSize = 13.sp, color = Hak3.TextDim)
             }
