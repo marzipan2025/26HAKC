@@ -231,12 +231,15 @@ fun ExamScreen(
 /**
  * 단어장. 노랑으로 담은 문항에서 모은 한자를 한 글자씩 넘긴다.
  * 여기의 표시는 회차의 표시와 따로 논다.
+ *
+ * 묶음은 둘 — 노랑과 초록이고, 한 번에 한 묶음만 넘긴다. 카드를 밀어 다른 색으로
+ * 넘기면 그쪽 묶음으로 건너가고, 표시를 풀면 단어장에서 아주 빠진다.
  */
 @Composable
-fun WordScreen(db: ExamDb, onBack: () -> Unit) {
+fun WordScreen(db: ExamDb, bin: Mark, onBack: () -> Unit) {
     val context = LocalContext.current
-    val all = remember {
-        Collect.order(context).mapIndexedNotNull { i, han ->
+    val all = remember(bin) {
+        Collect.list(context, bin).mapIndexedNotNull { i, han ->
             val meaning = db.hunmeum(han) ?: return@mapIndexedNotNull null
             val section = Section(0, 0, 0, "다음 漢字의 訓과 音을 쓰시오.", emptyList())
             val item = Item(
@@ -250,12 +253,14 @@ fun WordScreen(db: ExamDb, onBack: () -> Unit) {
             Page(0, section, item, han)
         }
     }
-    val marks = remember {
-        mutableStateMapOf<String, Mark>().apply { putAll(Collect.marks(context)) }
+    val marks = remember(bin) {
+        mutableStateMapOf<String, Mark>().apply {
+            all.forEach { put(it.id, Collect.mark(context, it.id)) }
+        }
     }
     Deck(
         all = all,
-        title = "Words",
+        title = if (bin == Mark.AMBER) "Yellow" else "Green",
         subOf = { null },
         marks = marks,
         numbered = false,
@@ -263,6 +268,7 @@ fun WordScreen(db: ExamDb, onBack: () -> Unit) {
         morph = Modifier,
         veil = Modifier,
         morphLit = { 0f },
+        face = true,
         onMark = { p, m ->
             Collect.set(context, p.id, m)
             if (m == null) marks.remove(p.id) else marks[p.id] = m
@@ -287,6 +293,7 @@ private fun Deck(
     morph: Modifier,
     veil: Modifier,
     morphLit: () -> Float,
+    face: Boolean = false,
     onMark: (Page, Mark?) -> Unit,
     onSeen: (Page) -> Unit,
     onBack: () -> Unit,
@@ -348,6 +355,7 @@ private fun Deck(
                             page = p,
                             revealed = open[p.id] == true,
                             mark = marks[p.id],
+                            face = face,
                             radius = radius,
                             onLifted = { lifted = it },
                             // 담기든 풀리든 자리가 바뀌면 딸깍
@@ -571,6 +579,7 @@ private fun QuestionPage(
     page: Page,
     revealed: Boolean,
     mark: Mark?,
+    face: Boolean,
     radius: Dp,
     onLifted: (Boolean) -> Unit,
     onMark: (Mark?) -> Unit,
@@ -623,6 +632,16 @@ private fun QuestionPage(
                 rotationZ = spin
             }
             .background(Hak3.Surface, RoundedCornerShape(radius))
+            // 단어장에서는 테두리만이 아니라 앞면까지 그 색을 띤다 — 한 묶음을
+            // 넘기는 동안 어느 묶음에 있는지가 늘 보이게. 글이 묻히지 않을 만큼만 얹는다.
+            .then(
+                if (face && mark != null)
+                    Modifier.background(
+                        borderColor(mark).copy(alpha = FACE),
+                        RoundedCornerShape(radius),
+                    )
+                else Modifier
+            )
             // 표시가 없으면 1픽셀, 담긴 카드는 1dp. 어느 쪽이든 카드 경계 안쪽에 붙는다.
             .border(if (mark == null) Dp.Hairline else 1.dp, borderColor(mark), RoundedCornerShape(radius))
             .onSizeChanged { wide = it.width.toFloat() }
@@ -832,7 +851,10 @@ private val INK_HANJA = 23.dp
 private val INK_HANGUL = 6.7.dp
 
 /** 윗선을 맞춘 뒤 눈에 맞게 조금 내려 앉히는 만큼. */
-private val DROP = 4.dp
+private val DROP = 6.dp
+
+/** 단어장 카드 앞면에 얹는 색의 짙기. */
+private const val FACE = 0.16f
 
 /** 펼친 정답이 쓰이는 폭. 원 아래에 겹쳐 그리므로 제 폭을 스스로 정한다. */
 private val ANSWER = 260.dp

@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
+import kotlinx.coroutines.delay
 
 /** 글자 위아래에 붙는 서체 여백을 걷어낸다 — 칸을 꽉 채워 보이게. */
 private val FLUSH = TextStyle(
@@ -151,6 +152,12 @@ private class Slot(val word: Found, val index: Int, val variant: Variant, val ma
  * 캡슐로 떼어 판 위에 얹는다. 동음이의어는 위 캡슐에서 좌우로 훑고, 훑는 대로 아래
  * 訓音과 뜻이 따라온다 — 한자를 고르면 그 표기의 풀이가 바로 아래 서 있게.
  */
+/** 손이 멎었다고 볼 참. (ms) */
+private const val SETTLE = 700L
+
+/** 아직 여물지 않은 글자로 끝나는가 — 홀로 선 자모는 치는 중이라는 뜻이다. */
+private fun half(s: String) = s.last() in '\u3131'..'\u3163'
+
 @Composable
 fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -165,6 +172,14 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
     var text by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<List<Found>>(emptyList()) }
     LaunchedEffect(text) { found = dict.search(text) }
+    // 없다는 말은 손이 멎은 뒤에. '가호' 를 적자면 'ㄱ' 과 '갛' 을 지나가는데,
+    // 그 참마다 없다고 하면 글자가 여물기도 전에 타박하는 꼴이다.
+    var settled by remember { mutableStateOf(true) }
+    LaunchedEffect(text) {
+        settled = false
+        delay(SETTLE)
+        settled = true
+    }
 
     val slots = remember(found) {
         found.flatMap { w ->
@@ -232,7 +247,8 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                if (text.isBlank()) "漢字" else "Nope, not here.",
+                                if (text.isBlank() || !settled || half(text)) "漢字"
+                                else "Nope, not here.",
                                 // 한자 자리에 서는 글이니 서체도 얇기도 한자와 같이
                                 fontFamily = ThinHanja,
                                 fontWeight = FontWeight.ExtraLight,

@@ -16,6 +16,7 @@ object Collect {
     private const val PREFS = "collect"
     private const val KEY_ORDER = "order"
     private const val KEY_MARKS = "marks"
+    private const val KEY_GONE = "gone"
 
     private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -23,10 +24,15 @@ object Collect {
     fun order(c: Context): List<String> =
         prefs(c).getString(KEY_ORDER, "")!!.split(',').filter { it.isNotEmpty() }
 
+    /** 한 번 손으로 지운 글자. 회차를 다시 훑어도 이것들은 돌아오지 않는다. */
+    private fun gone(c: Context): Set<String> =
+        prefs(c).getString(KEY_GONE, "")!!.split(',').filter { it.isNotEmpty() }.toSet()
+
     /** 없던 글자만 앞에 붙인다. 여럿이면 넘겨준 순서를 지킨다. */
     fun register(c: Context, hanja: List<String>) {
         val had = order(c)
-        val fresh = hanja.filter { it.isNotEmpty() && it !in had }.distinct()
+        val out = gone(c)
+        val fresh = hanja.filter { it.isNotEmpty() && it !in had && it !in out }.distinct()
         if (fresh.isEmpty()) return
         prefs(c).edit().putString(KEY_ORDER, (fresh + had).joinToString(",")).apply()
     }
@@ -42,13 +48,53 @@ object Collect {
         }
     }
 
+    /**
+     * 어느 묶음에 든 글자인가. 표시가 없는 글자는 노랑으로 친다 —
+     * 여기 쌓인 글자는 모두 노랑으로 담은 문항에서 온 것이라 그 자리가 맞다.
+     */
+    fun mark(c: Context, han: String): Mark = marks(c)[han] ?: Mark.AMBER
+
+    /** 한 묶음에 든 글자만, 쌓인 차례대로. */
+    fun list(c: Context, mark: Mark): List<String> {
+        val m = marks(c)
+        return order(c).filter { (m[it] ?: Mark.AMBER) == mark }
+    }
+
+    fun count(c: Context, mark: Mark): Int = list(c, mark).size
+
+    /**
+     * 표시를 옮긴다. 푸는 것은 곧 단어장에서 빼는 것이다 — 어느 묶음에도 들지 않는
+     * 글자는 볼 자리가 없으니 남겨 둘 까닭이 없다. 다시 돌아오지 않도록 따로 적어 둔다.
+     */
     fun set(c: Context, han: String, mark: Mark?) {
-        val m = marks(c).toMutableMap()
-        if (mark == null) m.remove(han) else m[han] = mark
-        val text = m.entries.joinToString(",") {
-            "${it.key}:${if (it.value == Mark.AMBER) "A" else "K"}"
+        if (mark == null) {
+            drop(c, han)
+            return
         }
-        prefs(c).edit().putString(KEY_MARKS, text).apply()
+        val m = marks(c).toMutableMap()
+        m[han] = mark
+        // 축은 노랑 ← 일반 → 초록이라 묶음을 건너가는 길은 일반을 지난다. 지나는
+        // 참에 빠졌던 글자도 다시 색을 얻으면 돌아온다 — 지운 것으로 두지 않는다.
+        val had = order(c)
+        prefs(c).edit()
+            .putString(KEY_MARKS, write(m))
+            .putString(KEY_ORDER, (if (han in had) had else listOf(han) + had).joinToString(","))
+            .putString(KEY_GONE, (gone(c) - han).joinToString(","))
+            .apply()
+    }
+
+    private fun drop(c: Context, han: String) {
+        val m = marks(c).toMutableMap()
+        m.remove(han)
+        prefs(c).edit()
+            .putString(KEY_MARKS, write(m))
+            .putString(KEY_ORDER, order(c).filter { it != han }.joinToString(","))
+            .putString(KEY_GONE, (gone(c) + han).joinToString(","))
+            .apply()
+    }
+
+    private fun write(m: Map<String, Mark>) = m.entries.joinToString(",") {
+        "${it.key}:${if (it.value == Mark.AMBER) "A" else "K"}"
     }
 
     /**
@@ -67,7 +113,4 @@ object Collect {
         }
         register(c, found)
     }
-
-    /** 회차 목록의 모음 카드에 적을 수. */
-    fun size(c: Context): Int = order(c).size
 }

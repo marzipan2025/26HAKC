@@ -68,7 +68,7 @@ private fun Root() {
     var state by remember { mutableStateOf<DataFile.Result?>(null) }
     var reload by remember { mutableStateOf(0) }
     var open by remember { mutableStateOf<Int?>(null) }
-    var words by remember { mutableStateOf(false) }
+    var words by remember { mutableStateOf<Mark?>(null) }
     val book = remember { Dict.open(context) }
 
     val pickFolder = rememberLauncherForActivityResult(
@@ -100,9 +100,9 @@ private fun Root() {
     val ready = db
     val round = open
     when {
-        words && ready != null -> {
-            BackHandler { words = false }
-            WordScreen(ready) { words = false }
+        words != null && ready != null -> {
+            BackHandler { words = null }
+            WordScreen(ready, words!!) { words = null }
         }
         // 목록과 상세는 판 하나를 나눠 갖는다. 회차를 누르면 목록의 판이 상세의
         // 카드 자리까지 늘어나고, 나머지는 그동안 지워졌다가 뒤이어 떠오른다.
@@ -129,7 +129,7 @@ private fun Root() {
                 )
                 if (r == null || ready == null) {
                     Picker(state, reload, ready, book, pickFolder, pickFile, morph, veil,
-                        onPick = { open = it }, onWords = { words = true })
+                        onPick = { open = it }, onWords = { words = it })
                 } else {
                     BackHandler { open = null }
                     // 판은 넘어오는 동안에만 그린다. 뒤에 남겨 두면 카드를
@@ -158,7 +158,7 @@ private fun Picker(
     morph: Modifier,
     veil: Modifier,
     onPick: (Int) -> Unit,
-    onWords: () -> Unit,
+    onWords: (Mark) -> Unit,
 ) {
     RoundPicker(
         // 사전은 기출 데이터가 없어도 선다 — 앱 안에 든 자료라 남을 기다릴 것이 없다

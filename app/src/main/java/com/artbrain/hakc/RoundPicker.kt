@@ -98,7 +98,7 @@ fun RoundPicker(
     onFolder: () -> Unit,
     onFile: () -> Unit,
     onPick: (Int) -> Unit,
-    onWords: () -> Unit,
+    onWords: (Mark) -> Unit,
     morph: Modifier = Modifier,
     veil: Modifier = Modifier,
 ) {
@@ -108,7 +108,8 @@ fun RoundPicker(
     val ime = LocalSoftwareKeyboardController.current
     // 상세 화면 카드와 같은 곡률
     val radius = (screenCornerRadius() - 8.dp).coerceAtLeast(0.dp)
-    val words = remember { Collect.size(context) }
+    val yellow = remember { Collect.count(context, Mark.AMBER) }
+    val green = remember { Collect.count(context, Mark.KNOWN) }
 
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf<Updater.Status>(Updater.Status.Checking) }
@@ -229,9 +230,16 @@ fun RoundPicker(
             // 덮고 지나가는데, 덮는 것이 아니라 밀려나야 한다.
             // 왼쪽 서랍 — 단어장이 여기 산다
             Box(Modifier.offset(x = -roomDp).width(roomDp).fillMaxHeight()) {
+                // 단어장은 두 묶음이다. 아직 애매한 것과 외운 것.
                 Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                     Spacer(Modifier.height(4.dp))
-                    Cell(radius, "$words", "words", Hak3.Hanja, words > 0, onWords)
+                    Cell(radius, "$yellow", "yellow", Hak3.Amber, yellow > 0) {
+                        onWords(Mark.AMBER)
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Cell(radius, "$green", "green", Hak3.Green, green > 0) {
+                        onWords(Mark.KNOWN)
+                    }
                 }
             }
             Box(Modifier.offset(x = wide).width(roomDp).fillMaxHeight()) {
