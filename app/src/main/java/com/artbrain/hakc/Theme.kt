@@ -13,7 +13,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalDensity
@@ -94,8 +96,24 @@ private val LIT = listOf(
 /** 찾은 횟수에 맞는 한자 밝기. */
 fun hanjaLit(count: Int) = LIT[(count / 10).coerceIn(0, LIT.lastIndex)]
 
-/** 한자를 크고 얇게 띄우기 위한 Thin(w100) 서체. 시스템 CJK에는 이 굵기가 없다. */
-val ThinHanja = FontFamily(Font(R.font.noto_sans_kr_thin, FontWeight.Thin))
+/**
+ * 한자를 크게 띄우는 자리에만 쓰는 얇은 서체 — 굵기 100 의 Noto Sans KR.
+ *
+ * 앞서 쓰던 Thin 파일에는 글리프가 3,386 자뿐이라 우리 사전 7,374 자 중 5,507 자가
+ * 시스템 서체(보통 굵기)로 떨어졌다. 王·七·六·州 같은 흔한 글자도 없어서 한 줄에
+ * 얇은 글자와 두꺼운 글자가 섞였다. 굵기 축을 가진 통짜 파일로 바꾸면서 빠지는
+ * 글자가 5 자(급수 있는 글자 중에는 1 자)로 줄었다.
+ *
+ * 파일이 큰 값(약 5MB)을 치르므로 큰 한자 자리에만 쓴다. 나머지 글은 코레일체다.
+ */
+@OptIn(ExperimentalTextApi::class)
+val ThinHanja = FontFamily(
+    Font(
+        R.font.noto_kr,
+        weight = FontWeight.Thin,
+        variationSettings = FontVariation.Settings(FontVariation.weight(100)),
+    )
+)
 
 /**
  * 앱의 기본 글씨 — 코레일체.
