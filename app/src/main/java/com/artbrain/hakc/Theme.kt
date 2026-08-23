@@ -78,6 +78,22 @@ fun screenCornerRadius(fallback: Dp = 32.dp): Dp {
     return px?.let { with(density) { it.toDp() } } ?: fallback
 }
 
+/**
+ * 자주 찾은 한자가 오르는 밝기 계단. 열 번마다 한 단이고 넉 단이 끝이다.
+ * 01HAKA 는 같은 계단을 굵기로 올렸는데, 크게 띄운 한자는 얇은 맛으로 서 있는 것이라
+ * 굵기를 건드리면 그 맛이 사라진다.
+ */
+private val LIT = listOf(
+    Hak3.Hanja,             // 0 — 처음 만나는 글자
+    Color(0xE6BECCE2),      // 10회
+    Color(0xF2D5DEEE),      // 20회
+    Color(0xFFEAF0F9),      // 30회
+    Color(0xFFFFFFFF),      // 40회 넘게
+)
+
+/** 찾은 횟수에 맞는 한자 밝기. */
+fun hanjaLit(count: Int) = LIT[(count / 10).coerceIn(0, LIT.lastIndex)]
+
 /** 한자를 크고 얇게 띄우기 위한 Thin(w100) 서체. 시스템 CJK에는 이 굵기가 없다. */
 val ThinHanja = FontFamily(Font(R.font.noto_sans_kr_thin, FontWeight.Thin))
 

@@ -51,6 +51,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -146,8 +147,12 @@ private class Slot(val word: Found, val index: Int, val variant: Variant, val ma
  */
 @Composable
 fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
     val focus = LocalFocusManager.current
     val ime = LocalSoftwareKeyboardController.current
+    // 자주 찾은 글자일수록 환하게. 세는 것은 엔터를 눌렀을 때뿐이다 —
+    // 글자마다 도는 찾기까지 세면 한 낱말 적는 사이에 열 번이 지나간다.
+    var seen by remember { mutableStateOf(Seen.all(context)) }
     var text by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<List<Found>>(emptyList()) }
     LaunchedEffect(text) { found = dict.search(text) }
@@ -234,11 +239,19 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                                     modifier = Modifier.clickable { active = i },
                                 ) {
                                     Text(
-                                        s.variant.hanja,
+                                        buildAnnotatedString {
+                                            s.variant.hanja.forEach { ch ->
+                                                withStyle(
+                                                    SpanStyle(
+                                                        color = if (i != active) Hak3.HanjaDim
+                                                        else hanjaLit(seen[ch.toString()] ?: 0)
+                                                    )
+                                                ) { append(ch) }
+                                            }
+                                        },
                                         fontFamily = ThinHanja,
                                         fontWeight = FontWeight.Thin,
                                         fontSize = glyph,
-                                        color = if (i == active) Hak3.Hanja else Hak3.HanjaDim,
                                         maxLines = 1,
                                     )
                                     if (s.many) {
@@ -288,6 +301,8 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     // 키보드의 찾기 단추도 엔터와 같은 일을 한다
                     keyboardActions = KeyboardActions(onSearch = {
+                        Seen.record(context, found.flatMap { w -> w.variants.map { it.hanja } })
+                        seen = Seen.all(context)
                         focus.clearFocus()
                         ime?.hide()
                     }),
@@ -306,6 +321,8 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                         .align(Alignment.CenterEnd)
                         .size(foot * 0.42f)
                         .clickable {
+                            Seen.record(context, found.flatMap { w -> w.variants.map { it.hanja } })
+                            seen = Seen.all(context)
                             focus.clearFocus()
                             ime?.hide()
                         },
@@ -342,7 +359,9 @@ private fun VariantBlock(s: Slot) {
                     "${g.eum} :",
                     fontSize = 18.sp,
                     lineHeight = 25.sp,
-                    color = Hak3.Text,
+                    // 흰 글씨는 판에서 가장 밝아 한자보다 앞으로 나온다.
+                    // 訓音은 한자에 딸린 말이니 한자와 같은 색을 쓴다.
+                    color = Hak3.Hanja,
                     modifier = Modifier.width(38.dp),
                 )
                 Spacer(Modifier.width(4.dp))
@@ -360,7 +379,7 @@ private fun VariantBlock(s: Slot) {
                     },
                     fontSize = 18.sp,
                     lineHeight = 25.sp,
-                    color = Hak3.Text,
+                    color = Hak3.Hanja,
                     inlineContent = mapOf(
                         GRADE_SLOT to InlineTextContent(
                             Placeholder(18.sp, 18.sp, PlaceholderVerticalAlign.TextCenter)
