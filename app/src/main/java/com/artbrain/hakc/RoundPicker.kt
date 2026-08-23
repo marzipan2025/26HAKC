@@ -96,6 +96,8 @@ fun RoundPicker(
     onFile: () -> Unit,
     onPick: (Int) -> Unit,
     onWords: () -> Unit,
+    morph: Modifier = Modifier,
+    veil: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -248,6 +250,7 @@ fun RoundPicker(
                     onFocus = { typing = it },
                     modifier = Modifier
                         .graphicsLayer(dim)
+                        .then(veil)
                         .padding(horizontal = 8.dp)
                         .height(with(density) { height.toDp() }),
                 )
@@ -255,7 +258,7 @@ fun RoundPicker(
 
             // 손잡이 줄 — 왼쪽 차림표, 가운데 손잡이, 오른쪽 설정
             Row(
-                Modifier.fillMaxWidth().height(HANDLE).padding(horizontal = 12.dp),
+                Modifier.fillMaxWidth().height(HANDLE).then(veil).padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
@@ -328,6 +331,7 @@ fun RoundPicker(
                 Box(
                     Modifier
                         .fillMaxWidth()
+                        .then(veil)
                         .padding(horizontal = 8.dp)
                         .graphicsLayer(dim)
                         .background(Hak3.Surface, RoundedCornerShape(radius))
@@ -376,10 +380,11 @@ fun RoundPicker(
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp)
                     .graphicsLayer(dim)
+                    .then(morph)
                     .background(Hak3.Surface, RoundedCornerShape(radius))
             ) {
                 LazyColumn(
-                    Modifier.fillMaxSize().nestedScroll(nested),
+                    Modifier.fillMaxSize().then(veil).nestedScroll(nested),
                     state = rounds,
                     contentPadding = PaddingValues(vertical = 18.dp),
                 ) {
@@ -546,17 +551,20 @@ private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, onPick: (Int) -> Unit) {
                 .background(if (on) Hak3.Rule else Color.Transparent, CircleShape)
                 .padding(vertical = 6.dp),
             horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.Top,
+            // 수는 번호의 위아래를 벗어나지 않는다. 가운데를 맞춰 두면 알약의
+            // 한가운데에도 저절로 앉는다.
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 "${e.round}",
                 fontFamily = Korail,
+                fontWeight = FontWeight.Light,
                 fontSize = 44.sp,
                 color = if (live) Hak3.Hanja else Hak3.HanjaDim,
             )
             Spacer(Modifier.width(7.dp))
-            // 담아 둔 수를 번호의 어깨에 붙인다. 없으면 어깨는 비워 둔다.
-            Column(Modifier.padding(top = 9.dp)) {
+            // 담아 둔 수는 번호 옆에. 없으면 그 자리는 비워 둔다.
+            Column {
                 if (counts.amber > 0) {
                     Text("${counts.amber}", fontSize = 13.sp, color = Hak3.Amber)
                 }

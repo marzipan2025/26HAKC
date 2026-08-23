@@ -104,9 +104,10 @@ val ThinHanja = FontFamily(Font(R.font.noto_sans_kr_thin, FontWeight.Thin))
  * 안드로이드가 알아서 시스템 CJK 로 떨군다. 크게 띄우는 한자는 [ThinHanja] 를
  * 그대로 두는데, 코레일체에는 그만한 얇은 굵기(w100)도 없다.
  *
- * 굵기는 M(보통)과 B(굵게)만 담는다. L 은 부르는 데가 없어 넣지 않았다.
+ * 굵기는 L·M·B 셋. 회차 번호처럼 크게 앉는 글자는 L 로 얇게 세운다.
  */
 val Korail = FontFamily(
+    Font(R.font.korail_l, FontWeight.Light),
     Font(R.font.korail_m, FontWeight.Normal),
     Font(R.font.korail_b, FontWeight.Bold),
 )

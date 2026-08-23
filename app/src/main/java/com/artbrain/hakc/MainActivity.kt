@@ -3,6 +3,17 @@ package com.artbrain.hakc
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -49,6 +60,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun Root() {
     val context = LocalContext.current
@@ -92,22 +104,71 @@ private fun Root() {
             BackHandler { words = false }
             WordScreen(ready) { words = false }
         }
-        round != null && ready != null -> {
-            BackHandler { open = null }
-            ExamScreen(round, ready) { open = null }
+        // 목록과 상세는 판 하나를 나눠 갖는다. 회차를 누르면 목록의 판이 상세의
+        // 카드 자리까지 늘어나고, 나머지는 그동안 지워졌다가 뒤이어 떠오른다.
+        else -> SharedTransitionLayout {
+            AnimatedContent(
+                targetState = if (ready == null) null else round,
+                // 화면째 흐려지면 판까지 같이 흐려진다. 지우고 띄우는 일은
+                // 조각마다 따로 맡긴다.
+                transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
+                label = "round",
+            ) { r ->
+                val morph = Modifier.sharedBounds(
+                    rememberSharedContentState("card"),
+                    animatedVisibilityScope = this@AnimatedContent,
+                    enter = EnterTransition.None,
+                    exit = ExitTransition.None,
+                    boundsTransform = { _, _ -> tween(GROW, easing = FastOutSlowInEasing) },
+                    resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                )
+                // 나가는 것이 다 지워진 뒤에 들어오는 것이 뜬다
+                val veil = Modifier.animateEnterExit(
+                    enter = fadeIn(tween(WIPE, delayMillis = WIPE + 40)),
+                    exit = fadeOut(tween(WIPE)),
+                )
+                if (r == null || ready == null) {
+                    Picker(state, reload, ready, book, pickFolder, pickFile, morph, veil,
+                        onPick = { open = it }, onWords = { words = true })
+                } else {
+                    BackHandler { open = null }
+                    ExamScreen(r, ready, morph, veil) { open = null }
+                }
+            }
         }
-        else -> RoundPicker(
-            // 사전은 기출 데이터가 없어도 선다 — 앱 안에 든 자료라 남을 기다릴 것이 없다
-            exams = ready?.exams() ?: emptyList(),
-            dict = book,
-            built = ready?.meta()?.get("built"),
-            trouble = if (ready == null) trouble(state) else null,
-            onFolder = { pickFolder.launch(null) },
-            onFile = { pickFile.launch(arrayOf("*/*")) },
-            onPick = { open = it },
-            onWords = { words = true },
-        )
     }
+}
+
+/** 지우고 띄우는 데 걸리는 참, 그리고 판이 늘어나는 참. (ms) */
+private const val WIPE = 150
+private const val GROW = 340
+
+@Composable
+private fun Picker(
+    state: DataFile.Result?,
+    reload: Int,
+    ready: ExamDb?,
+    book: Dict?,
+    pickFolder: androidx.activity.result.ActivityResultLauncher<android.net.Uri?>,
+    pickFile: androidx.activity.result.ActivityResultLauncher<Array<String>>,
+    morph: Modifier,
+    veil: Modifier,
+    onPick: (Int) -> Unit,
+    onWords: () -> Unit,
+) {
+    RoundPicker(
+        // 사전은 기출 데이터가 없어도 선다 — 앱 안에 든 자료라 남을 기다릴 것이 없다
+        exams = ready?.exams() ?: emptyList(),
+        dict = book,
+        built = ready?.meta()?.get("built"),
+        trouble = if (ready == null) trouble(state) else null,
+        onFolder = { pickFolder.launch(null) },
+        onFile = { pickFile.launch(arrayOf("*/*")) },
+        onPick = onPick,
+        onWords = onWords,
+        morph = morph,
+        veil = veil,
+    )
 }
 
 /** 데이터 파일을 못 읽었을 때 무엇이 잘못됐는지. 아직 고르지 않았으면 null. */

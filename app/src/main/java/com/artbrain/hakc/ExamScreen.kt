@@ -205,7 +205,13 @@ private fun headSize(w: Float) = when {
 
 /** 한 회차를 넘긴다. 표시는 그 회차에 남는다. */
 @Composable
-fun ExamScreen(round: Int, db: ExamDb, onBack: () -> Unit) {
+fun ExamScreen(
+    round: Int,
+    db: ExamDb,
+    morph: Modifier = Modifier,
+    veil: Modifier = Modifier,
+    onBack: () -> Unit,
+) {
     val context = LocalContext.current
     val all = remember(round) {
         db.sections(round).flatMap { s -> s.items.map { Page(round, s, it, "$round:${it.no}") } }
@@ -227,6 +233,8 @@ fun ExamScreen(round: Int, db: ExamDb, onBack: () -> Unit) {
         marks = marks,
         numbered = true,
         start = start,
+        morph = morph,
+        veil = veil,
         onMark = { p, m ->
             book.set(p.item.no, m)
             if (m == null) marks.remove(p.id) else marks[p.id] = m
@@ -270,6 +278,8 @@ fun WordScreen(db: ExamDb, onBack: () -> Unit) {
         marks = marks,
         numbered = false,
         start = 0,
+        morph = Modifier,
+        veil = Modifier,
         onMark = { p, m ->
             Collect.set(context, p.id, m)
             if (m == null) marks.remove(p.id) else marks[p.id] = m
@@ -291,6 +301,8 @@ private fun Deck(
     marks: SnapshotStateMap<String, Mark>,
     numbered: Boolean,
     start: Int,
+    morph: Modifier,
+    veil: Modifier,
     onMark: (Page, Mark?) -> Unit,
     onSeen: (Page) -> Unit,
     onBack: () -> Unit,
@@ -326,12 +338,21 @@ private fun Deck(
             .background(Hak3.Ground)
             .padding(OUTER)
     ) {
+        // 목록의 판이 늘어나 앉는 자리. 카드와 똑같은 사각형이라 넘어오는 동안
+        // 이어져 보인다. 카드가 다 뜨고 나면 그 뒤에 가려 보이지 않는다.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(inset)
+                .then(morph)
+                .background(Hak3.Surface, RoundedCornerShape(radius))
+        )
         if (pages.isEmpty()) {
-            EmptyList(filter, Modifier.fillMaxSize().padding(inset), radius)
+            EmptyList(filter, Modifier.fillMaxSize().padding(inset).then(veil), radius)
         } else {
             HorizontalPager(
                 state = pager,
-                modifier = Modifier.fillMaxSize().zIndex(if (lifted) 1f else 0f),
+                modifier = Modifier.fillMaxSize().then(veil).zIndex(if (lifted) 1f else 0f),
                 pageSpacing = 6.dp,
             ) { i ->
                 pages.getOrNull(i)?.let { p ->
@@ -359,7 +380,7 @@ private fun Deck(
         // 캡슐과 바닥 줄은 pager 뒤에 둔다 — 앞에 두면 pager 가 눌림을 가로챈다.
         // pager 는 화면 전체를 차지하므로 카드는 잘리지 않고 이 줄들 아래로 미끄러져 나간다.
         TopBar(
-            modifier = Modifier.align(Alignment.TopStart),
+            modifier = Modifier.align(Alignment.TopStart).then(veil),
             title = title,
             sub = page?.let(subOf),
             filter = filter,
@@ -375,7 +396,7 @@ private fun Deck(
 
 
         BottomBar(
-            modifier = Modifier.align(Alignment.BottomStart),
+            modifier = Modifier.align(Alignment.BottomStart).then(veil),
             enabled = page != null,
             markOnLeft = markOnLeft,
             label = page?.item?.label ?: "",
