@@ -669,11 +669,15 @@ private fun QuestionPage(
                 .fillMaxWidth(0.7f)
                 .padding(top = 14.dp),
         )
+        val (head, tail) = split(item)
+        // 묻는 것이 한 낱말이 아니라 글인 유형. 크게 세울 것이 아니다.
+        val prose = head.count { it in '가'..'힣' } >= 5 && head.length > 14
         Column(
             Modifier
                 .fillMaxWidth()
                 // 기준점을 위로. 카드 한가운데가 아니라 그보다 60dp 높은 자리에 선다.
-                .offset(y = -LEAD)
+                // 글을 통째로 묻는 유형은 그럴 것 없이 한가운데 그대로 둔다.
+                .offset(y = if (prose) 0.dp else -LEAD)
                 .padding(horizontal = 24.dp, vertical = 26.dp),
         ) {
             // 어느 목록에 담겼는지는 번호에 입힌 색으로 알린다
@@ -688,18 +692,24 @@ private fun QuestionPage(
 
             // 묻는 것은 언제나 같은 자리, 같은 글꼴로 크게. 길이에 따라 크기만 준다.
             // 한자부터 아래로는 한 덩이로 끌어올린다 — 번호와의 사이를 좁히기 위해서다.
-            val (head, tail) = split(item)
-            Column(Modifier.offset(y = -TIGHTEN)) {
+            Column(Modifier.offset(y = if (prose) 0.dp else -TIGHTEN)) {
                 // 묻는 것은 한 크기로 선다 — 유형마다 크기가 달라지면 첫인상이
-                // 흔들린다. 다만 문장을 통째로 묻는 유형은 예문과 같은 크기로
-                // 낮춘다. 한 낱말이 아니라 글이라 크게 세울 것이 아니다.
-                val prose = head.count { it in '가'..'힣' } >= 5 && head.length > 14
-                Text(
+                // 흔들린다. 글을 통째로 묻는 유형만 예문과 같은 크기로 낮추고,
+                // 밑줄 친 말을 밝게 그어 어디를 묻는지 보인다.
+                if (prose) {
+                    Text(
+                        underlined(item.html ?: head, Hak3.Text),
+                        fontFamily = Korail,
+                        fontSize = 22.sp,
+                        lineHeight = 25.sp,
+                        color = Hak3.Hanja,
+                    )
+                } else Text(
                     head,
-                    fontFamily = if (prose) Korail else ThinHanja,
-                    fontWeight = if (prose) FontWeight.Normal else FontWeight.ExtraLight,
-                    fontSize = if (prose) 22.sp else HEAD,
-                    lineHeight = if (prose) 36.sp else HEAD * 1.18f,
+                    fontFamily = ThinHanja,
+                    fontWeight = FontWeight.ExtraLight,
+                    fontSize = HEAD,
+                    lineHeight = HEAD * 1.18f,
                     color = Hak3.Hanja,
                 )
                 if (tail != null) {
