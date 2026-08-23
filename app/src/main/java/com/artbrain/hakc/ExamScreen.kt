@@ -5,9 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,7 +48,6 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.remember
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -182,8 +179,8 @@ private fun split(item: Item): Pair<String, String?> {
     return plain to null
 }
 
-/** 묻는 것이 서는 크기. 유형을 가리지 않고 하나다. */
-private val HEAD = 98.sp
+/** 묻는 것이 서는 크기. 문장을 통째로 묻는 유형만 예문 크기로 내려간다. */
+private val HEAD = 80.sp
 
 
 /** 한 회차를 넘긴다. 표시는 그 회차에 남는다. */
@@ -693,21 +690,18 @@ private fun QuestionPage(
             // 한자부터 아래로는 한 덩이로 끌어올린다 — 번호와의 사이를 좁히기 위해서다.
             val (head, tail) = split(item)
             Column(Modifier.offset(y = -TIGHTEN)) {
-                // 묻는 것은 언제나 같은 크기로 선다. 유형에 따라 글자 수가 널뛰는데
-                // 크기로 맞추면 첫인상이 유형마다 달라진다. 길면 줄을 바꾸는 대신
-                // 그 줄에서 좌우로 훑는다.
-                Row(Modifier.horizontalScroll(rememberScrollState())) {
-                    Text(
-                        head,
-                        fontFamily = ThinHanja,
-                        fontWeight = FontWeight.ExtraLight,
-                        fontSize = HEAD,
-                        lineHeight = HEAD * 1.18f,
-                        color = Hak3.Hanja,
-                        maxLines = 1,
-                        softWrap = false,
-                    )
-                }
+                // 묻는 것은 한 크기로 선다 — 유형마다 크기가 달라지면 첫인상이
+                // 흔들린다. 다만 문장을 통째로 묻는 유형은 예문과 같은 크기로
+                // 낮춘다. 한 낱말이 아니라 글이라 크게 세울 것이 아니다.
+                val prose = head.count { it in '가'..'힣' } >= 5 && head.length > 14
+                Text(
+                    head,
+                    fontFamily = if (prose) Korail else ThinHanja,
+                    fontWeight = if (prose) FontWeight.Normal else FontWeight.ExtraLight,
+                    fontSize = if (prose) 22.sp else HEAD,
+                    lineHeight = if (prose) 36.sp else HEAD * 1.18f,
+                    color = Hak3.Hanja,
+                )
                 if (tail != null) {
                     // 지문만 위로 당긴다. 아래 정답 자리는 그만큼 도로 벌려 두어
                     // 점과 정답의 좌표는 그대로 있게 한다.
