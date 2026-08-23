@@ -308,7 +308,7 @@ private fun Deck(
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
-    val click = rememberClick()
+    val sound = rememberClicks()
     var filter by remember(all) { mutableStateOf<Mark?>(null) }
     val open = remember(all) { mutableStateMapOf<String, Boolean>() }
 
@@ -364,11 +364,13 @@ private fun Deck(
                             mark = marks[p.id],
                             radius = radius,
                             onLifted = { lifted = it },
+                            // 담기든 풀리든 자리가 바뀌면 딸깍
                             onMark = { m ->
-                                // 담기는 순간에만 딸깍. 풀 때는 소리를 내지 않는다.
-                                if (m != null) click()
+                                sound.yes()
                                 onMark(p, m)
                             },
+                            // 축의 끝에서 더 밀었다 — 갈 데가 없다고 알린다
+                            onEnd = sound::no,
                             // 표시가 실제로 바뀌었을 때만 넘어간다. 양 끝에서 더 민
                             // 경우(초록을 또 위로)는 바뀐 게 없으니 그 자리에 머문다.
                             onAdvance = {
@@ -412,7 +414,8 @@ private fun Deck(
             onBack = onBack,
         ) {
             val p = page ?: return@BottomBar
-            click()
+            // 이미 노랑이면 단추를 눌러도 자리가 바뀌지 않는다
+            if (marks[p.id] == Mark.AMBER) sound.no() else sound.yes()
             onMark(p, Mark.AMBER)
             if (index < pages.size - 1) {
                 scope.launch { pager.animateScrollToPage(index + 1) }
@@ -585,6 +588,7 @@ private fun QuestionPage(
     radius: Dp,
     onLifted: (Boolean) -> Unit,
     onMark: (Mark?) -> Unit,
+    onEnd: () -> Unit,
     onAdvance: () -> Unit,
     onTap: () -> Unit,
 ) {
@@ -645,7 +649,7 @@ private fun QuestionPage(
                     if (kotlin.math.abs(lift) > reach) {
                         settled = true
                         val turned = step(mark, lift < 0f)
-                        if (turned != mark) onMark(turned)
+                        if (turned != mark) onMark(turned) else onEnd()
                         home(RETURN) {
                             // 제자리에 앉는 것을 보고 나서 넘긴다
                             if (turned != mark) {
