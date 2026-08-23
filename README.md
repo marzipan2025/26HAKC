@@ -239,10 +239,11 @@ Kotlin + Jetpack Compose, minSdk 26.
 
 ```bash
 python3 tools/dict.py app/src/main/assets/dict.db          # 낱말·글자·급수
-python3 tools/gloss.py kowiktionary-latest.xml.bz2 app/src/main/assets/dict.db   # 뜻풀이
+python3 tools/gloss.py kowiktionary-latest.xml.bz2 app/src/main/assets/dict.db   # 뜻풀이 (1)
+python3 tools/saem.py <우리말샘 xml 폴더> app/src/main/assets/dict.db              # 뜻풀이 (2)
 ```
 
-뜻풀이는 위키낱말사전 덤프에서 가져온다. 우리가 가진 낱말로만 훑고, 문서가 한자를
+뜻풀이는 두 우물에서 긷는다. 먼저 위키낱말사전 덤프에서 가져온다. 우리가 가진 낱말로만 훑고, 문서가 한자를
 짚어 준 뜻만 받는다 — 표기가 하나뿐이라고 넘겨짚으면 '나무' 문서의 뜻이 南無 에
 붙는 식으로 어긋난다.
 
@@ -286,3 +287,24 @@ JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradle
 
 서명 키는 25HAK3 과 같은 것을 쓴다 — `keystore/` 와 `keystore.properties` 는 저장소에
 넣지 않는다. 백업은 `~/MyGit/_keys/` 에 있다.
+
+### 뜻풀이의 두 번째 우물 — 우리말샘
+
+위키낱말사전만으로는 두 글자 6%, 네 글자 1%밖에 채우지 못했다. 국립국어원 우리말샘이
+CC BY-SA 2.0 KR 로 풀려 있어 그쪽에서 마저 긷는다. 항목마다 원어(한자)가 적혀 있어
+한글과 한자를 둘 다 맞추는 같은 규칙을 그대로 쓸 수 있다.
+
+내려받기는 로그인을 요구하지만 [spellcheck-ko/korean-dict-nikl] 이 그 XML 을 그대로
+담아 두고 있다(`opendict/` 25개, 1.9GB). 받아서 `tools/saem.py` 에 폴더째 넘긴다.
+
+한 글자·두 글자·네 글자만 받는다 — 사전 판에 서는 것이 그것들이고, 세 글자까지
+받으면 앱에 실리는 파일만 부푼다. 뜻은 120자에서 문장 경계로 끊는다.
+
+| | 전 | 후 |
+|---|---|---|
+| 두 글자 | 6.1% | **89.1%** |
+| 네 글자 | 1.4% | **69.2%** |
+| dict.db | 16.1MB | 26.7MB |
+| APK | 12.6MB | 17.1MB |
+
+[spellcheck-ko/korean-dict-nikl]: https://github.com/spellcheck-ko/korean-dict-nikl
