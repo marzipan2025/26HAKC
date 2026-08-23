@@ -190,6 +190,7 @@ fun ExamScreen(
     db: ExamDb,
     morph: Modifier = Modifier,
     veil: Modifier = Modifier,
+    morphLit: () -> Float = { 0f },
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -215,6 +216,7 @@ fun ExamScreen(
         start = start,
         morph = morph,
         veil = veil,
+        morphLit = morphLit,
         onMark = { p, m ->
             book.set(p.item.no, m)
             if (m == null) marks.remove(p.id) else marks[p.id] = m
@@ -260,6 +262,7 @@ fun WordScreen(db: ExamDb, onBack: () -> Unit) {
         start = 0,
         morph = Modifier,
         veil = Modifier,
+        morphLit = { 0f },
         onMark = { p, m ->
             Collect.set(context, p.id, m)
             if (m == null) marks.remove(p.id) else marks[p.id] = m
@@ -283,6 +286,7 @@ private fun Deck(
     start: Int,
     morph: Modifier,
     veil: Modifier,
+    morphLit: () -> Float,
     onMark: (Page, Mark?) -> Unit,
     onSeen: (Page) -> Unit,
     onBack: () -> Unit,
@@ -320,12 +324,14 @@ private fun Deck(
             .padding(OUTER)
     ) {
         // 목록의 판이 늘어나 앉는 자리. 카드와 똑같은 사각형이라 넘어오는 동안
-        // 이어져 보인다. 카드가 다 뜨고 나면 그 뒤에 가려 보이지 않는다.
+        // 이어져 보인다. 넘어온 뒤에는 지운다 — 카드를 들추면 그 뒤로 이것이
+        // 비쳐 카드가 겹쳐 있는 것처럼 보인다.
         Box(
             Modifier
                 .fillMaxSize()
                 .padding(inset)
                 .then(morph)
+                .graphicsLayer { alpha = morphLit() }
                 .background(Hak3.Surface, RoundedCornerShape(radius))
         )
         if (pages.isEmpty()) {

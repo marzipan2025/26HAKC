@@ -132,7 +132,11 @@ private fun Root() {
                         onPick = { open = it }, onWords = { words = true })
                 } else {
                     BackHandler { open = null }
-                    ExamScreen(r, ready, morph, veil) { open = null }
+                    // 판은 넘어오는 동안에만 그린다. 뒤에 남겨 두면 카드를
+                    // 들췄을 때 그 뒤로 비쳐 카드가 겹쳐 있는 것처럼 보인다.
+                    ExamScreen(r, ready, morph, veil, { if (isTransitionActive) 1f else 0f }) {
+                        open = null
+                    }
                 }
             }
         }
