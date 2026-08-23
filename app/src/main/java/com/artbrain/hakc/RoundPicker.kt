@@ -415,6 +415,9 @@ fun RoundPicker(
     }
 }
 
+/** 회차 숫자를 알약 한가운데로 내리는 값. 잉크의 가운데를 재어 잡았다. */
+private val INK = 2.dp
+
 /** 서랍이 저마다 앉는 자리. */
 private fun anchor(drawer: Drawer, room: Float) = when (drawer) {
     Drawer.USER -> room
@@ -555,18 +558,29 @@ private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, onPick: (Int) -> Unit) {
             // 한가운데에도 저절로 앉는다.
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // 숫자는 글자 상자 안에서 위로 쏠려 앉는다(내림자가 없다). 잰 만큼
+            // 내려 잉크의 가운데를 알약의 가운데에 맞춘다. 자리는 그대로다 —
+            // offset 은 그리는 자리만 옮기므로 알약 높이가 흔들리지 않는다.
             Text(
                 "${e.round}",
                 fontFamily = Korail,
                 fontWeight = FontWeight.Light,
                 fontSize = 44.sp,
                 color = if (live) Hak3.Hanja else Hak3.HanjaDim,
+                modifier = Modifier.offset(y = INK),
             )
             Spacer(Modifier.width(7.dp))
             // 담아 둔 수는 번호 옆에. 없으면 그 자리는 비워 둔다.
             Column {
+                // 노랑은 번호를 따라 내려가고 초록은 제자리에 둔다. 그래야 둘이
+                // 번호를 사이에 두고 고르게 선다.
                 if (counts.amber > 0) {
-                    Text("${counts.amber}", fontSize = 13.sp, color = Hak3.Amber)
+                    Text(
+                        "${counts.amber}",
+                        fontSize = 13.sp,
+                        color = Hak3.Amber,
+                        modifier = Modifier.offset(y = INK),
+                    )
                 }
                 if (counts.known > 0) {
                     Text("${counts.known}", fontSize = 13.sp, color = Hak3.Green)
