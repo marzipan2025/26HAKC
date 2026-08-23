@@ -518,10 +518,11 @@ private fun Cell(
             .padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        // 한자가 아니므로 회차 줄과 같은 코레일체로. 얇은 한자 서체는 큰 한자에만 쓴다.
         Text(
             big,
-            fontFamily = ThinHanja,
-            fontWeight = FontWeight.Thin,
+            fontFamily = Korail,
+            fontWeight = FontWeight.Light,
             fontSize = 40.sp,
             color = color,
             maxLines = 1,

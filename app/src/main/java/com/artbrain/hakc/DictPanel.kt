@@ -231,7 +231,7 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                             Text(
                                 if (text.isBlank()) "漢字" else "Nope, not here.",
                                 fontFamily = if (text.isBlank()) ThinHanja else Korail,
-                                fontWeight = if (text.isBlank()) FontWeight.Thin else FontWeight.Light,
+                                fontWeight = if (text.isBlank()) FontWeight.ExtraLight else FontWeight.Light,
                                 fontSize = glyph,
                                 color = Hak3.HanjaDim,
                                 maxLines = 1,
@@ -265,7 +265,7 @@ fun DictPanel(dict: Dict, radius: Dp, onFocus: (Boolean) -> Unit, modifier: Modi
                                             }
                                         },
                                         fontFamily = ThinHanja,
-                                        fontWeight = FontWeight.Thin,
+                                        fontWeight = FontWeight.ExtraLight,
                                         fontSize = glyph,
                                         maxLines = 1,
                                     )

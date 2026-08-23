@@ -692,7 +692,7 @@ private fun QuestionPage(
                 Text(
                     head,
                     fontFamily = ThinHanja,
-                    fontWeight = FontWeight.Thin,
+                    fontWeight = FontWeight.ExtraLight,
                     fontSize = headSize(span(head)),
                     lineHeight = headSize(span(head)) * 1.18f,
                     color = Hak3.Hanja,
@@ -740,7 +740,7 @@ private fun AnswerSlot(item: Item, revealed: Boolean) {
             Text(
                 a ?: "no answer",
                 fontFamily = if (hanja) ThinHanja else Korail,
-                fontWeight = if (hanja) FontWeight.Thin else FontWeight.Normal,
+                fontWeight = if (hanja) FontWeight.ExtraLight else FontWeight.Normal,
                 fontSize = if (hanja) 56.sp else 30.sp,
                 lineHeight = if (hanja) 70.sp else 40.sp,
                 color = if (a != null) Hak3.Neon else Hak3.TextDim,
