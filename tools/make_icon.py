@@ -1,44 +1,29 @@
 #!/usr/bin/env python3
 """~/Downloads/HAKC_asset/AppIcon_26HAKC.png 을 안드로이드 런처 아이콘으로 굽는다.
 
-원본은 짙은 바탕(#363D47)에 옅은 그림이 놓인 1024px 정사각이고, 그림 둘레에
-이미 18% 여백이 있다. 적응형 아이콘은 108dp 중 안쪽 72dp만 보이므로 원본을
-통째로 줄여 넣으면 여백이 두 겹이 되어 그림만 작아진다. 그래서 **그림이 실제로
-놓인 자리만 잘라 내어** 안전 영역에 맞춘다. 바탕은 원본의 바탕색으로 깔고,
-구형 런처용 정사각/원형 아이콘은 원본 그대로 쓴다.
+원본은 검은 바탕에 그림이 놓인 1024px 정사각이고, **런처가 도려내는 원(72/108)에
+맞춰 그려져 있다** — 그림의 대각 반지름이 판의 33.6% 다. 그러니 여기서 다시 줄이지
+않는다. 원본을 108dp 층에 통째로 얹으면 런처가 제 모양대로 도려내도 그림이 온전하다.
+구형 런처용 정사각/원형 아이콘도 원본 그대로다.
+
+한때 그림 자리를 찾아 잘라 내고 안전 영역에 맞추던 적이 있는데, 그건 원본이 원을
+생각하지 않고 그려졌을 때의 이야기다. 원본이 이미 원에 맞으면 손대지 않는 편이 낫다.
 """
 import os
 from PIL import Image
 
 SRC = os.path.expanduser('~/Downloads/HAKC_asset/AppIcon_26HAKC.png')
 RES = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'app', 'src', 'main', 'res')
-GROUND = (166, 182, 192, 255)   # 원본의 바탕색 #A6B6C0
+GROUND = (0, 0, 0, 255)         # 원본의 바탕색 — 앱의 검은 바탕과 이어진다
 
 # mdpi 기준 배수 — 런처 아이콘 48dp, 적응형 레이어 108dp
 DENSITY = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}
-SAFE = 72 / 108          # 적응형 아이콘에서 실제로 보이는 비율
-FILL = 0.88              # 안전 영역을 이만큼 채운다
-
-
-def ink(im):
-    """그림이 실제로 놓인 네모. 바탕색과 다른 점만 센다."""
-    bg = im.getpixel((5, 5))[:3]
-    px = im.load()
-    w, h = im.size
-    x0, y0, x1, y1 = w, h, 0, 0
-    for y in range(h):
-        for x in range(w):
-            if sum(abs(a - b) for a, b in zip(px[x, y][:3], bg)) > 30:
-                x0, y0, x1, y1 = min(x0, x), min(y0, y), max(x1, x), max(y1, y)
-    # 네모난 자리로 맞춘다 — 가로세로 비를 지켜야 그림이 눌리지 않는다
-    side = max(x1 - x0, y1 - y0)
-    cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
-    return im.crop((cx - side // 2, cy - side // 2, cx + side // 2, cy + side // 2))
+# 첫 화면에 세울 그림. 288dp 판에 240dp 원으로 도려내진다.
+SPLASH = 864             # 288dp @3x
 
 
 def main():
     src = Image.open(SRC).convert('RGBA')
-    art_src = ink(src)
     for name, k in DENSITY.items():
         out = os.path.join(RES, 'mipmap-' + name)
         os.makedirs(out, exist_ok=True)
@@ -47,16 +32,25 @@ def main():
         src.resize((legacy, legacy), Image.LANCZOS).save(os.path.join(out, 'ic_launcher.png'))
         src.resize((legacy, legacy), Image.LANCZOS).save(os.path.join(out, 'ic_launcher_round.png'))
 
+        # 원본이 이미 원에 맞으니 108dp 층에 통째로 얹는다
         layer = int(108 * k)
-        art = int(layer * SAFE * FILL)
-        fg = Image.new('RGBA', (layer, layer), (0, 0, 0, 0))
-        fg.paste(art_src.resize((art, art), Image.LANCZOS), ((layer - art) // 2,) * 2)
-        fg.save(os.path.join(out, 'ic_launcher_foreground.png'))
+        src.resize((layer, layer), Image.LANCZOS).save(
+            os.path.join(out, 'ic_launcher_foreground.png'))
 
         Image.new('RGBA', (layer, layer), GROUND).save(
             os.path.join(out, 'ic_launcher_background.png'))
-        print(name, legacy, layer, art)
+        print(name, legacy, layer)
+
+
+def splash():
+    """첫 화면에 세울 사각 아이콘. 원본 그대로 줄이기만 한다."""
+    out = os.path.join(RES, 'drawable-xxhdpi')
+    os.makedirs(out, exist_ok=True)
+    Image.open(SRC).convert('RGBA').resize((SPLASH, SPLASH), Image.LANCZOS).save(
+        os.path.join(out, 'splash_icon.png'))
+    print('splash', SPLASH)
 
 
 if __name__ == '__main__':
     main()
+    splash()
