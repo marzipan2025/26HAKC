@@ -51,33 +51,39 @@ def wav(path, samples):
         f.write(head + body)
 
 
+def rms(s):
+    return math.sqrt(sum(v * v for v in s) / len(s))
+
+
 def nope():
     """
     아니라는 소리.
 
     처음에는 딱을 그냥 낮춰(220·158Hz) 두었는데 폰에서 들리지 않았다. 폰 스피커는
     500Hz 아래를 거의 내지 못한다. 그래서 낮추는 대신 **떨어뜨린다** — 높은 소리
-    하나 뒤에 낮은 소리 하나. 두 소리 다 스피커가 낼 수 있는 자리에 있으면서,
-    내려가는 결이 '아니' 로 들린다.
+    하나 뒤에 낮은 소리 하나.
+
+    크기는 봉우리가 아니라 **딱과 견주어** 맞춘다. 봉우리를 같이 두면 이쪽이 네 배
+    길어 귀에는 훨씬 크게 들린다. 딱의 7할이 되도록 낮춘다.
     """
-    n = int(RATE * 0.055)
+    n = int(RATE * 0.038)
     out = []
     for i in range(n):
         t = i / RATE
-        # 앞의 한 톨은 짧고 높게, 뒤의 한 톨은 조금 낮고 길게
-        first = math.sin(2 * math.pi * 760 * t) * math.exp(-t / 0.0055)
-        at = t - 0.020
+        first = math.sin(2 * math.pi * 660 * t) * math.exp(-t / 0.0045)
+        at = t - 0.014
         second = 0.0
         if at >= 0:
-            second = math.sin(2 * math.pi * 520 * at) * math.exp(-at / 0.0110) * 1.1
-            if at < 0.0008:                 # 뒤엣것도 살며시 연다
+            second = math.sin(2 * math.pi * 480 * at) * math.exp(-at / 0.0080) * 1.1
+            if at < 0.0008:
                 second *= (1 - math.cos(math.pi * at / 0.0008)) / 2
         v = first + second
         if t < 0.0008:
             v *= (1 - math.cos(math.pi * t / 0.0008)) / 2
         out.append(v)
-    top = max(abs(v) for v in out)
-    return [v / top * PEAK for v in out]
+    want = rms(click()) * 0.7
+    got = rms(out)
+    return [v * want / got for v in out]
 
 
 if __name__ == "__main__":
