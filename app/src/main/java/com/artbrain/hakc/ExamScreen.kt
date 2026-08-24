@@ -501,8 +501,8 @@ fun SettingsPanel(
         // 이름의 내력
         Text(
             "Haka Android Kichul Combined",
-            fontSize = 13.sp,
-            letterSpacing = 0.5.sp,
+            fontSize = 15.sp,
+            letterSpacing = 0.6.sp,
             color = Hak3.TextDim,
         )
 
@@ -523,42 +523,19 @@ fun SettingsPanel(
         Label("RESET")
         Spacer(Modifier.height(12.dp))
         if (!asking) {
-            Text(
-                "Erase everything",
-                fontSize = 15.sp,
-                color = Hak3.TextDim,
-                modifier = Modifier
-                    .border(1.dp, Hak3.Rule, RoundedCornerShape(10.dp))
-                    .clickable { asking = true }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-            )
+            Key("Erase everything", Hak3.Knob, Hak3.TextDim) { asking = true }
         } else {
             Text(
                 "Marks, wordbook and search history\nwill be gone for good.",
-                fontSize = 13.sp,
-                lineHeight = 19.sp,
+                fontSize = 15.sp,
+                lineHeight = 22.sp,
                 color = Hak3.TextSoft,
             )
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "Erase",
-                    fontSize = 15.sp,
-                    color = Hak3.Red,
-                    modifier = Modifier
-                        .border(1.dp, Hak3.Red, RoundedCornerShape(10.dp))
-                        .clickable { asking = false; onWipe() }
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                )
-                Text(
-                    "Cancel",
-                    fontSize = 15.sp,
-                    color = Hak3.TextDim,
-                    modifier = Modifier
-                        .border(1.dp, Hak3.Rule, RoundedCornerShape(10.dp))
-                        .clickable { asking = false }
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                )
+                // 되돌릴 수 없는 쪽만 붉은 면으로. 검정 글이 그 위에 앉는다.
+                Key("Erase", Hak3.Red, Color.Black) { asking = false; onWipe() }
+                Key("Cancel", Hak3.Knob, Hak3.TextDim) { asking = false }
             }
         }
     }
@@ -570,23 +547,37 @@ private fun day(s: String?): String = s?.replace('-', '.') ?: "unknown"
 /** 사인의 가로세로 비 — 원본 그대로다. */
 private const val SIGN = 830f / 170f
 
-/** 묶음의 이름. 작고 성기게 적어 아래 것들과 층을 가른다. */
+/** 묶음의 이름. 성기게 적고 흐리게 두어 아래 것들과 층을 가른다. */
 @Composable
 private fun Label(text: String) {
-    Text(text, fontSize = 13.sp, letterSpacing = 1.4.sp, color = Hak3.TextDim)
+    Text(text, fontSize = 15.sp, letterSpacing = 1.6.sp, color = Hak3.TextDim)
 }
 
-/** 고른 쪽은 앰버로 테를 두른다. */
+/**
+ * 서랍의 단추. 테가 아니라 면으로 서고 꼴은 알약이다 — 단어장 셀과 같은 결이다.
+ * 면이 색이면 글은 검정으로 앉는다.
+ */
 @Composable
-private fun Side(label: String, on: Boolean, onPick: () -> Unit) {
+private fun Key(label: String, face: Color, ink: Color, onPick: () -> Unit) {
     Text(
         label,
         fontSize = 15.sp,
-        color = if (on) Hak3.Amber else Hak3.TextDim,
+        color = ink,
         modifier = Modifier
-            .border(1.dp, if (on) Hak3.Amber else Hak3.Rule, RoundedCornerShape(10.dp))
+            .background(face, CircleShape)
             .clickable(onClick = onPick)
             .padding(horizontal = 20.dp, vertical = 12.dp),
+    )
+}
+
+/** 고른 쪽만 앰버로 채운다. */
+@Composable
+private fun Side(label: String, on: Boolean, onPick: () -> Unit) {
+    Key(
+        label,
+        face = if (on) Hak3.Amber else Hak3.Knob,
+        ink = if (on) Color.Black else Hak3.TextDim,
+        onPick = onPick,
     )
 }
 
