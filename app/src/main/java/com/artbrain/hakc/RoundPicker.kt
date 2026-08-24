@@ -676,7 +676,7 @@ private fun Cell(
         Spacer(Modifier.height(6.dp))
         Text(
             small,
-            fontSize = 15.sp,
+            fontSize = 20.sp,
             color = ink.copy(alpha = if (enabled) 0.55f else 1f),
             textAlign = TextAlign.Center,
         )

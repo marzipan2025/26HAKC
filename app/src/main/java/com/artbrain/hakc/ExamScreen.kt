@@ -501,15 +501,15 @@ fun SettingsPanel(
         // 이름의 내력
         Text(
             "Haka Android Kichul Combined",
-            fontSize = 15.sp,
-            letterSpacing = 0.6.sp,
+            fontSize = 20.sp,
+            letterSpacing = 0.8.sp,
             color = Hak3.TextDim,
         )
 
         // 판 번호와 자료 날짜는 사인에 딸린 말이라 바짝 붙인다
         Spacer(Modifier.height(13.dp))
-        Text("Data ${day(built)}", fontSize = 15.sp, color = Hak3.TextDim)
-        Text("Version ${BuildConfig.VERSION_NAME}", fontSize = 15.sp, color = Hak3.TextDim)
+        Text("Data ${day(built)}", fontSize = 20.sp, color = Hak3.TextDim)
+        Text("Version ${BuildConfig.VERSION_NAME}", fontSize = 20.sp, color = Hak3.TextDim)
 
         Spacer(Modifier.height(36.dp))
         Label("MARK BUTTON")
