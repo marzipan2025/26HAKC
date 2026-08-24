@@ -164,6 +164,9 @@ private fun step(m: Mark?, up: Boolean): Mark? = if (up) when (m) {
  *   漸入佳(  )       + 들어갈수록 점점 경치가 좋음.
  * 앞쪽은 크게 세우고 뒤쪽은 본문 크기로 붙인다.
  */
+/** 지문 속에 밑줄로 그어 둔 말. */
+private val MARKED = Regex("<u>(.*?)</u>", RegexOption.DOT_MATCHES_ALL)
+
 private fun split(item: Item): Pair<String, String?> {
     val body = item.html ?: item.question
     val plain = body.replace(Regex("</?u>"), "")
@@ -173,6 +176,10 @@ private fun split(item: Item): Pair<String, String?> {
     val target = item.target?.takeIf { s ->
         s.any { it in '\u3400'..'\u9FFF' || it in '\uF900'..'\uFAFF' } || '(' in s
     }
+    // target 칸이 비어도 지문에 밑줄이 그어져 있으면 그것이 곧 묻는 말이다.
+    // 正字로 쓰는 유형은 밑줄 친 말이 한글이라 target 칸에 담겨 오지 않는다.
+    // 낱글자로 토막 난 밑줄(<u>微</u><u>溫</u>)은 이어 붙여 한 말로 본다.
+        ?: MARKED.find(body.replace("</u><u>", ""))?.groupValues?.get(1)?.takeIf { it.isNotBlank() }
     // 지문 안의 한 낱말을 묻는 문항 — 낱말이 머리, 지문이 꼬리
     if (target != null && plain != target) return target to body
     // '식 : 뜻풀이' / '식 - 뜻풀이' 로 적힌 문항
@@ -181,6 +188,25 @@ private fun split(item: Item): Pair<String, String?> {
     }
     return plain to null
 }
+
+/** 마주 세우는 표. 앞뒤 여백까지 함께 집는다. */
+private val TURN = Regex("\\s*↔\\s*")
+
+/** 둘째 보기부터의 동그라미 숫자. 앞의 여백까지 함께 집는다. */
+private val PICK = Regex("\\s*([②-⑳])")
+
+/**
+ * 큰 자리에 설 글을 줄 나누기 좋게 손본다.
+ *
+ * **고르는 문제**(① 監督 ② 減毒)는 둘째 보기부터 줄을 바꾼다. 한 줄에 나란히
+ * 두면 어디까지가 첫 보기인지 눈으로 갈리지 않는다. 보기가 넷이면 넷 다 제 줄에
+ * 선다.
+ *
+ * **마주 세우는 문제**(( )奮 ↔ 鎭靜)는 화살표를 ⤶ 로 바꾸고 그 뒤에서 줄을
+ * 바꾼다 — 꺾여 내려가는 화살표가 곧 다음 줄로 넘어간다는 표다.
+ */
+private fun shape(text: String): String =
+    text.replace(TURN, " ⤶\n").replace(PICK, "\n$1").trim()
 
 /** 묻는 것이 서는 크기. 문장을 통째로 묻는 유형만 예문 크기로 내려간다. */
 private val HEAD = 80.sp
@@ -771,9 +797,11 @@ private fun QuestionPage(
                 .fillMaxWidth(0.7f)
                 .padding(top = 14.dp),
         )
-        val (head, tail) = split(item)
+        val (raw, tail) = split(item)
+        // 큰 자리에 설 글은 줄을 나눠 세운다 — 고르는 문제와 마주 세우는 문제.
+        val head = shape(raw)
         // 묻는 것이 한 낱말이 아니라 글인 유형. 크게 세울 것이 아니다.
-        val prose = head.count { it in '가'..'힣' } >= 5 && head.length > 14
+        val prose = raw.count { it in '가'..'힣' } >= 5 && raw.length > 14
         Column(
             Modifier
                 .fillMaxWidth()
@@ -804,7 +832,7 @@ private fun QuestionPage(
                     // 이쪽이 곧 묻는 것이라 예문보다 밝게 두고, 밑줄 친 말만
                     // 한 겹 더 밝다.
                     Text(
-                        underlined(item.html ?: head, ink(Hak3.Text)),
+                        underlined(shape(item.html ?: raw), ink(Hak3.Text)),
                         fontSize = 22.sp,
                         lineHeight = 36.sp,
                         color = ink(Hak3.Hanja),
