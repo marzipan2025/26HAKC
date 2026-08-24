@@ -226,8 +226,16 @@ fun DictPanel(
     }
 
     val slots = remember(found) {
+        // 한 벌로 줄지어 선 것에는 몇 번째인지를 붙인다. 한자로 찾으면 낱말이
+        // 잔뜩 서는데 그 사이에서 지금 어디를 보고 있는지는 번호가 알려 준다.
+        // 여기서는 1 부터 센다 — 한 낱말의 여러 표기가 아니라 저마다 다른 낱말이라
+        // 첫 자리를 ● 로 둘 까닭이 없다.
+        val many = found.size > 1 && found.all { it.series }
+        var n = 0
         found.flatMap { w ->
-            w.variants.mapIndexed { i, v -> Slot(w, i, v, w.variants.size > 1) }
+            w.variants.mapIndexed { i, v ->
+                if (many) Slot(w, ++n, v, true) else Slot(w, i, v, w.variants.size > 1)
+            }
         }
     }
     val top = rememberLazyListState()

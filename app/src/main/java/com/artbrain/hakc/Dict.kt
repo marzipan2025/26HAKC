@@ -10,11 +10,18 @@ data class Glyph(val han: String, val hun: String, val eum: String, val grade: I
 /** 같은 소리로 적히는 한자 표기 하나. */
 data class Variant(val hanja: String, val meaning: String?)
 
-/** 찾아낸 낱말 하나. 같은 소리에 여러 한자가 있으면 variants 에 모두 담긴다. */
+/**
+ * 찾아낸 낱말 하나. 같은 소리에 여러 한자가 있으면 variants 에 모두 담긴다.
+ *
+ * [series] 는 이 낱말이 한 벌로 줄지어 선 것 중 하나라는 표시다. 한자로 찾으면
+ * 낱말 하나하나가 저마다 Found 로 서는데, 그것들은 글 속에서 따로 집어낸 낱말이
+ * 아니라 한 물음에 딸린 한 벌이다. 그럴 때는 번호를 붙여 세운다.
+ */
 data class Found(
     val ko: String,
     val variants: List<Variant>,
     val chars: Map<String, Glyph>,
+    val series: Boolean = false,
 )
 
 /**
@@ -200,7 +207,7 @@ class Dict private constructor(private val db: SQLiteDatabase) {
                     val v = listOf(
                         Variant(c.getString(1), c.getString(2)?.takeIf { it.isNotBlank() })
                     )
-                    add(Found(ko, v, glyphsIn(ko, v)))
+                    add(Found(ko, v, glyphsIn(ko, v), series = true))
                 }
             }
         }
