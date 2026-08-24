@@ -526,7 +526,13 @@ fun RoundPicker(
 }
 
 /** 진행 눈금의 두께. */
-private val GAUGE = 4.dp
+private val GAUGE = 2.dp
+
+/** 눈금의 바탕. 경계선에서 한 겹 더 물러난다. */
+private val GAUGE_TRACK = Hak3.Rule.copy(alpha = Hak3.Rule.alpha / 2)
+
+/** 차오르는 쪽. 다 차기 전까지는 물러나 있다. */
+private val GAUGE_FILL = Hak3.HanjaDim.copy(alpha = Hak3.HanjaDim.alpha * 0.6f)
 
 /** 회차 숫자를 알약 한가운데로 내리는 값. 잉크의 가운데를 재어 잡았다. */
 private val INK = 2.dp
@@ -738,13 +744,15 @@ private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, onPick: (Int) -> Unit) {
                     .padding(end = room * 0.40f)
                     .width(room * 0.30f)
                     .height(GAUGE)
-                    .background(Hak3.Rule, CircleShape)
+                    .background(GAUGE_TRACK, CircleShape)
             ) {
+                // 끝까지 간 회차만 흰빛으로 선다 — 다 봤다는 말은 그만한 값이다
+                val done = seen >= e.items
                 Box(
                     Modifier
                         .fillMaxWidth((seen.toFloat() / e.items).coerceIn(0f, 1f))
                         .fillMaxHeight()
-                        .background(Hak3.HanjaDim, CircleShape)
+                        .background(if (done) Color.White else GAUGE_FILL, CircleShape)
                 )
             }
         }

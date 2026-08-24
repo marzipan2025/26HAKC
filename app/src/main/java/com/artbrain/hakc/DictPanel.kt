@@ -133,12 +133,12 @@ private const val HEAD = 84f / 244f
 private const val FOOT = 50f / 244f * 0.72f    // 입력 칸
 
 /**
- * 판 위쪽에 얹는 빛. 흰빛 8% 로 시작해 판 높이의 30% 에서 스러진다.
+ * 판 위쪽에 얹는 빛. 흰빛 5% 로 시작해 판 높이의 75% 에서 스러진다.
  * 있는 줄 모르고 지나칠 만큼만 — 판이 위에서 조금 들린 것처럼 보이게 하는 몫이다.
  */
 private val GLOW = Brush.verticalGradient(
-    0f to Color.White.copy(alpha = 0.08f),
-    0.30f to Color.Transparent,
+    0f to Color.White.copy(alpha = 0.05f),
+    0.75f to Color.Transparent,
 )
 
 /** 실선이 벽에서 물러나는 거리. */
