@@ -445,7 +445,12 @@ fun DictPanel(
                                     DictInput.clear()
                                     active = 0
                                 }
-                                .padding(7.dp)
+                                .padding(
+                                    start = 7.dp,
+                                    top = 7.dp,
+                                    bottom = 7.dp,
+                                    end = 7.dp + WIPE_SHIFT,
+                                )
                         ) { Wipe(foot * 0.34f) }
                     }
                     Icon(
@@ -473,7 +478,13 @@ fun DictPanel(
 }
 
 /** 지우개가 차지하는 폭 — 표와 그 둘레의 여백, 그리고 엔터와의 사이. */
-private val WIPE_ROOM = 34.dp
+private val WIPE_ROOM = 36.dp
+
+/** 지우개를 엔터에서 이만큼 더 떼어 놓는다. 폰에서 재어 6px 이다. */
+private val WIPE_SHIFT = 2.dp
+
+/** 지우개의 잉크. 곁들이는 글보다 한 겹 더 물러난다. */
+private val WIPE_INK = Hak3.TextDim.copy(alpha = Hak3.TextDim.alpha / 2)
 
 /**
  * 적은 것을 통째로 지우는 표. 면을 채우고 그 위에 ✕ 를 도려낸다 — 흔히 보는
@@ -486,7 +497,7 @@ private fun Wipe(size: Dp) {
             .size(size)
             .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
     ) {
-        drawCircle(Hak3.TextDim)
+        drawCircle(WIPE_INK)
         val arm = this.size.minDimension * 0.22f
         val c = center
         listOf(1f, -1f).forEach { way ->
