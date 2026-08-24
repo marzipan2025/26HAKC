@@ -39,7 +39,7 @@ class Dict private constructor(private val db: SQLiteDatabase) {
         if (clean.startsWith("(") && clean.endsWith(")"))
             return reverse(clean.drop(1).dropLast(1).trim(), clean)
         if (clean.length == 1 && isHangul(clean[0])) return byEum(clean)
-        if (clean.any(::isHan)) return listOf(ofHanja(clean))
+        if (clean.any(::isHan)) return byHanja(clean)
 
         val out = mutableListOf<Found>()
         var i = 0
@@ -166,6 +166,37 @@ class Dict private constructor(private val db: SQLiteDatabase) {
         if (c.isNull(3)) null else c.getInt(3),
     )
 
+    /**
+     * 한자를 넣었을 때 — 그 글자가 그 차례 그대로 붙어 있는 낱말을 모은다.
+     *
+     * 한 글자면 그 글자가 든 것을 모두, 두 글자 이상이면 그 짜임 그대로 이어진
+     * 것만 부른다 — 孫子 는 손자·손자병법을 부르고 子孫 이나 孫上子 는 부르지
+     * 않는다. LIKE '%孫子%' 가 곧 그 뜻이다.
+     *
+     * 짧은 것부터 세운다. 찾은 그대로인 낱말이 맨 앞에 오고 뒤로 갈수록 길어진다.
+     * 아무것도 안 걸리면 적어도 그 글자의 訓音은 보여 준다.
+     */
+    private fun byHanja(text: String): List<Found> {
+        val han = text.filter(::isHan)
+        if (han.isEmpty()) return emptyList()
+        val hits = db.rawQuery(
+            "SELECT ko, hanja, meaning FROM words WHERE hanja LIKE ? " +
+                "ORDER BY LENGTH(hanja), seq LIMIT $HAN_MAX",
+            arrayOf("%$han%")
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) {
+                    val ko = c.getString(0)
+                    val v = listOf(
+                        Variant(c.getString(1), c.getString(2)?.takeIf { it.isNotBlank() })
+                    )
+                    add(Found(ko, v, glyphsIn(ko, v)))
+                }
+            }
+        }
+        return hits.ifEmpty { listOf(ofHanja(han)) }
+    }
+
     /** 한자를 그대로 넣었을 때 — 글자마다 訓音만 돌려준다. */
     private fun ofHanja(text: String): Found {
         val only = text.filter(::isHan)
@@ -265,6 +296,12 @@ class Dict private constructor(private val db: SQLiteDatabase) {
 
         /** 한 글자짜리는 낱말로 치지 않는다 — '한' 같은 것이 잔뜩 걸린다. */
         private const val MIN_WORD = 2
+
+        /**
+         * 한자로 찾을 때 세워 두는 낱말의 수. 흔한 글자 하나면 수천이 걸리는데,
+         * 그만큼을 다 세우면 글자마다 訓音을 캐느라 판이 늦게 선다.
+         */
+        private const val HAN_MAX = 120
 
         private fun isHan(c: Char) =
             c in '㐀'..'䶿' || c in '一'..'鿿' || c in '豈'..'﫿'

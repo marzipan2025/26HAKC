@@ -111,6 +111,12 @@ private val TOUCH = 40.dp
  */
 private val TYPING = TOUCH + GAP
 
+/**
+ * 점의 한가운데가 앉는 자리. 점의 바깥선이 판의 바깥선과 나란히 만난다 —
+ * 선 위에 걸터앉히면 반쪽이 판 밖으로 나가 정렬이 아니라 어긋남으로 보인다.
+ */
+private val TUCK = CARD + DOT / 2
+
 /** 손잡이 막대. 키보드가 올라와 틈이 벌어졌을 때만 선다. */
 private val BAR = 38.dp
 
@@ -363,9 +369,9 @@ fun RoundPicker(
             }
 
             // 판과 목록 사이는 8dp 만 벌어진다. 점 둘은 그 틈 한가운데에 서되
-            // 판의 좌우 선에 맞춰 앉는다 — 판이 물러난 만큼(CARD) 안쪽이 곧 그
-            // 선이고, 틈의 높이에서는 둥근 모서리가 비켜나 있어 걸리지 않는다.
-            // 누르는 자리는 틈보다 크므로 층을 올려 판 위로 얹는다.
+            // 판의 좌우 선에 바깥선을 맞춰 앉는다. 틈의 높이에서는 둥근 모서리가
+            // 비켜나 있어 걸리지 않는다. 누르는 자리는 틈보다 크므로 층을 올려
+            // 판 위로 얹는다.
             Box(Modifier.fillMaxWidth().height(band).zIndex(1f).then(veil)) {
                 // 손잡이 막대는 걷었어도 잡는 자리는 남는다. 틈이 좁으니 잡히는
                 // 높이만 넉넉히 넓혀 두 판에 걸쳐 둔다. 점 둘은 이 뒤에 서므로
@@ -403,7 +409,7 @@ fun RoundPicker(
                     Modifier
                         .align(Alignment.CenterStart)
                         .requiredSize(TOUCH)
-                        .offset(x = CARD - TOUCH / 2)
+                        .offset(x = TUCK - TOUCH / 2)
                         .clickable {
                             // 적는 중이었으면 키보드가 내려가며 함께 움직인다
                             if (typing) { focus.clearFocus(); ime?.hide() }
@@ -415,7 +421,7 @@ fun RoundPicker(
                     Modifier
                         .align(Alignment.CenterEnd)
                         .requiredSize(TOUCH)
-                        .offset(x = TOUCH / 2 - CARD)
+                        .offset(x = TOUCH / 2 - TUCK)
                         .clickable {
                             if (typing) { focus.clearFocus(); ime?.hide() }
                             drawer = if (drawer == Drawer.SETTINGS) Drawer.NONE else Drawer.SETTINGS

@@ -29,6 +29,15 @@ import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.appendInlineContent
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.os.Build
+import android.widget.Toast
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,7 +54,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
@@ -58,6 +75,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.input.ImeAction
@@ -151,9 +170,33 @@ private class Slot(val word: Found, val index: Int, val variant: Variant, val ma
  * 캡슐로 떼어 판 위에 얹는다. 동음이의어는 위 캡슐에서 좌우로 훑고, 훑는 대로 아래
  * 訓音과 뜻이 따라온다 — 한자를 고르면 그 표기의 풀이가 바로 아래 서 있게.
  */
+/**
+ * 사전에 적어 둔 글과 그 결과. 회차를 열었다 돌아오면 판이 조합에서 빠졌다가 다시
+ * 서는데, remember 로 붙잡아 둔 것은 그때 함께 사라진다. 적은 것은 앱이 살아 있는
+ * 동안 남아야 하므로 여기에 둔다 — 앱을 다시 켜면 비어 있다.
+ */
+object DictInput {
+    var text by mutableStateOf("")
+    var found by mutableStateOf<List<Found>>(emptyList())
+
+    /** 엔터를 누른 횟수. 같은 글을 그대로 두고 눌러도 찾기가 새로 돌게 한다. */
+    var again by mutableIntStateOf(0)
+
+    /** 지금 담긴 결과가 어느 글의 몇 번째 찾기인지. 돌아왔을 때 헛돌지 않게. */
+    var done: Pair<String, Int>? = null
+
+    /** 지우개를 눌렀을 때. 적은 것도 결과도 함께 걷는다. */
+    fun clear() {
+        text = ""
+        found = emptyList()
+        done = null
+    }
+}
+
 /** 단어장 묶음의 색. */
 private fun binColor(m: Mark) = if (m == Mark.AMBER) Hak3.Amber else Hak3.Green
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DictPanel(
     dict: Dict,
@@ -168,12 +211,19 @@ fun DictPanel(
     // 자주 찾은 글자일수록 환하게. 세는 것은 엔터를 눌렀을 때뿐이다 —
     // 글자마다 도는 찾기까지 세면 한 낱말 적는 사이에 열 번이 지나간다.
     var seen by remember { mutableStateOf(Seen.all(context)) }
-    var text by remember { mutableStateOf("") }
-    var found by remember { mutableStateOf<List<Found>>(emptyList()) }
-    // 엔터를 누를 때마다 하나씩 오른다. 같은 글을 그대로 두고 다시 눌러도
-    // 찾기가 새로 돌게 하려는 것이다 — 판을 처음부터 다시 세운다.
-    var again by remember { mutableIntStateOf(0) }
-    LaunchedEffect(text, again) { found = dict.search(text) }
+    val haptic = LocalHapticFeedback.current
+    val text = DictInput.text
+    val found = DictInput.found
+    val again = DictInput.again
+    // 찾기는 곁줄에서 돈다. 한자로 찾으면 낱말 30만 줄을 훑으므로 화면을 붙잡고
+    // 있을 일이 아니다. 이미 그 글로 찾아 둔 것이면 다시 돌지 않는다 — 회차를
+    // 보고 돌아왔을 때 헛되이 한 번 더 캐지 않으려는 것이다.
+    LaunchedEffect(text, again) {
+        val key = text to again
+        if (DictInput.done == key) return@LaunchedEffect
+        DictInput.found = withContext(Dispatchers.IO) { dict.search(text) }
+        DictInput.done = key
+    }
 
     val slots = remember(found) {
         found.flatMap { w ->
@@ -265,7 +315,16 @@ fun DictPanel(
                                 // 올리면 줄 상자가 그만큼 부풀어 글자가 칸 밖으로 밀린다.
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.clickable { active = i },
+                                    // 길게 누르면 그 표기가 통째로 클립보드에 얹힌다
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = { active = i },
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(
+                                                HapticFeedbackType.LongPress
+                                            )
+                                            copy(context, s.variant.hanja)
+                                        },
+                                    ),
                                 ) {
                                     Text(
                                         buildAnnotatedString {
@@ -332,7 +391,7 @@ fun DictPanel(
             ) {
                 BasicTextField(
                     value = text,
-                    onValueChange = { text = it },
+                    onValueChange = { DictInput.text = it },
                     singleLine = true,
                     textStyle = TextStyle(color = Hak3.Text, fontSize = 20.sp, fontFamily = Korail),
                     cursorBrush = SolidColor(Hak3.Amber),
@@ -341,36 +400,98 @@ fun DictPanel(
                     keyboardActions = KeyboardActions(onSearch = {
                         Seen.record(context, found.flatMap { w -> w.variants.map { it.hanja } })
                         seen = Seen.all(context)
-                        again++
+                        DictInput.again++
                         active = 0
                         focus.clearFocus()
                         ime?.hide()
                     }),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(end = 52.dp)
+                        // 지우개가 서면 그만큼 글자가 설 자리를 물린다
+                        .padding(end = if (text.isEmpty()) 52.dp else 52.dp + WIPE_ROOM)
                         .onFocusChanged { onFocus(it.isFocused) },
                 )
-                // 오른쪽 끝 — 엔터. 첫 번째 누름은 키보드를 접고, 그다음부터는
-                // 찾기를 다시 돌린다. 데스크톱에서 엔터가 하던 일이 그것이다.
-                Icon(
-                    painterResource(R.drawable.ic_enter),
-                    contentDescription = null,
-                    tint = if (text.isEmpty()) Hak3.Rule else Hak3.Text,
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .size(foot * 0.42f)
-                        .clickable {
-                            Seen.record(context, found.flatMap { w -> w.variants.map { it.hanja } })
-                            seen = Seen.all(context)
-                            again++
-                            active = 0
-                            focus.clearFocus()
-                            ime?.hide()
-                        },
-                )
+                // 오른쪽 끝 — 지우개와 엔터. 엔터의 첫 번째 누름은 키보드를 접고,
+                // 그다음부터는 찾기를 다시 돌린다. 데스크톱에서 엔터가 하던 일이 그것이다.
+                Row(
+                    Modifier.align(Alignment.CenterEnd),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // 적기 시작해야 선다. 누르면 적은 것도 결과도 함께 걷힌다.
+                    if (text.isNotEmpty()) {
+                        Box(
+                            Modifier
+                                .clip(CircleShape)
+                                .clickable {
+                                    DictInput.clear()
+                                    active = 0
+                                }
+                                .padding(7.dp)
+                        ) { Wipe(foot * 0.34f) }
+                    }
+                    Icon(
+                        painterResource(R.drawable.ic_enter),
+                        contentDescription = null,
+                        tint = if (text.isEmpty()) Hak3.Rule else Hak3.Text,
+                        modifier = Modifier
+                            .size(foot * 0.42f)
+                            .clickable {
+                                Seen.record(
+                                    context,
+                                    found.flatMap { w -> w.variants.map { it.hanja } },
+                                )
+                                seen = Seen.all(context)
+                                DictInput.again++
+                                active = 0
+                                focus.clearFocus()
+                                ime?.hide()
+                            },
+                    )
+                }
             }
         }
+    }
+}
+
+/** 지우개가 차지하는 폭 — 표와 그 둘레의 여백, 그리고 엔터와의 사이. */
+private val WIPE_ROOM = 34.dp
+
+/**
+ * 적은 것을 통째로 지우는 표. 면을 채우고 그 위에 ✕ 를 도려낸다 — 흔히 보는
+ * 그 꼴이다. 도려내려면 제 층에서 그려야 하므로 층을 따로 판다.
+ */
+@Composable
+private fun Wipe(size: Dp) {
+    Canvas(
+        Modifier
+            .size(size)
+            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+    ) {
+        drawCircle(Hak3.TextDim)
+        val arm = this.size.minDimension * 0.22f
+        val c = center
+        listOf(1f, -1f).forEach { way ->
+            drawLine(
+                Color.Black,
+                Offset(c.x - arm, c.y - arm * way),
+                Offset(c.x + arm, c.y + arm * way),
+                strokeWidth = this.size.minDimension * 0.10f,
+                cap = StrokeCap.Round,
+                blendMode = BlendMode.Clear,
+            )
+        }
+    }
+}
+
+/**
+ * 한자를 클립보드에 얹는다. 안드로이드 13부터는 얹힌 것을 시스템이 제 손으로
+ * 알려 주므로 우리는 잠자코 있는다.
+ */
+private fun copy(c: Context, han: String) {
+    val clip = c.getSystemService(ClipboardManager::class.java) ?: return
+    clip.setPrimaryClip(ClipData.newPlainText("hanja", han))
+    if (Build.VERSION.SDK_INT < 33) {
+        Toast.makeText(c, han, Toast.LENGTH_SHORT).show()
     }
 }
 
