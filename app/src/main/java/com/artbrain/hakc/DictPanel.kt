@@ -374,7 +374,14 @@ fun DictPanel(
                                         Text(
                                             if (s.index == 0) "●" else "${s.index}",
                                             fontSize = glyph * 0.16f,
-                                            color = if (s.index == 0) Hak3.Red else Hak3.HanjaDim,
+                                            // 표시는 제 글자를 따라 밝아진다 — 훑고
+                                            // 지나가는 표기에서는 글자와 함께 물러난다
+                                            color = when {
+                                                s.index == 0 && i == active -> Hak3.Red
+                                                s.index == 0 -> Hak3.Red.copy(alpha = 0.45f)
+                                                i == active -> Hak3.Hanja
+                                                else -> Hak3.HanjaDim
+                                            },
                                             modifier = Modifier
                                                 .align(Alignment.Top)
                                                 .padding(start = 2.dp, top = (head.value * 0.15f).dp),
