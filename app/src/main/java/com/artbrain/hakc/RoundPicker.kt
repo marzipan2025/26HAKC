@@ -534,6 +534,9 @@ private val GAUGE_TRACK = Hak3.Rule.copy(alpha = Hak3.Rule.alpha / 2)
 /** 차오르는 쪽. 다 차기 전까지는 물러나 있다. */
 private val GAUGE_FILL = Hak3.HanjaDim.copy(alpha = Hak3.HanjaDim.alpha * 0.6f)
 
+/** 끝까지 간 것. 흰빛이되 반만 — 온전한 흰색은 이 자리에 너무 세다. */
+private val GAUGE_DONE = Color.White.copy(alpha = 0.5f)
+
 /** 회차 숫자를 알약 한가운데로 내리는 값. 잉크의 가운데를 재어 잡았다. */
 private val INK = 2.dp
 
@@ -752,7 +755,7 @@ private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, onPick: (Int) -> Unit) {
                     Modifier
                         .fillMaxWidth((seen.toFloat() / e.items).coerceIn(0f, 1f))
                         .fillMaxHeight()
-                        .background(if (done) Color.White else GAUGE_FILL, CircleShape)
+                        .background(if (done) GAUGE_DONE else GAUGE_FILL, CircleShape)
                 )
             }
         }
