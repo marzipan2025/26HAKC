@@ -167,20 +167,30 @@ class Dict private constructor(private val db: SQLiteDatabase) {
     )
 
     /**
-     * 한자를 넣었을 때 — 그 글자가 그 차례 그대로 붙어 있는 낱말을 모은다.
+     * 한자를 넣었을 때 — 그 글자가 든 낱말을 모은다.
      *
-     * 한 글자면 그 글자가 든 것을 모두, 두 글자 이상이면 그 짜임 그대로 이어진
-     * 것만 부른다 — 孫子 는 손자·손자병법을 부르고 子孫 이나 孫上子 는 부르지
-     * 않는다. LIKE '%孫子%' 가 곧 그 뜻이다.
+     * **한 글자면 두 글자짜리 한자말만** 부른다. 자리는 가리지 않는다 — 孫 은
+     * 孫子도 子孫도 부른다. 한 글자가 든 것을 다 세우면 서너 글자 성어까지 딸려
+     * 나와 위 줄이 끝없이 길어지는데, 글자 하나로 찾을 때 보고 싶은 것은 그
+     * 글자가 짝을 이룬 낱말이다. 한글이 섞인 것(첫孫)도 여기서는 뺀다.
      *
-     * 짧은 것부터 세운다. 찾은 그대로인 낱말이 맨 앞에 오고 뒤로 갈수록 길어진다.
-     * 아무것도 안 걸리면 적어도 그 글자의 訓音은 보여 준다.
+     * **두 글자 이상이면 그 짜임 그대로 이어진 것만** 부른다 — 孫子 는
+     * 손자·손자병법을 부르고 子孫 이나 孫上子 는 부르지 않는다. LIKE '%孫子%'
+     * 가 곧 그 뜻이다.
+     *
+     * 짧은 것부터 세운다. 아무것도 안 걸리면 적어도 그 글자의 訓音은 보여 준다.
      */
     private fun byHanja(text: String): List<Found> {
         val han = text.filter(::isHan)
         if (han.isEmpty()) return emptyList()
+        val onlyPairs = if (han.length == 1) {
+            "AND LENGTH(hanja)=2 AND hanja NOT GLOB '*[가-힣]*' "
+        } else {
+            ""
+        }
         val hits = db.rawQuery(
             "SELECT ko, hanja, meaning FROM words WHERE hanja LIKE ? " +
+                onlyPairs +
                 "ORDER BY LENGTH(hanja), seq LIMIT $HAN_MAX",
             arrayOf("%$han%")
         ).use { c ->
