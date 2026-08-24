@@ -585,10 +585,12 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
             }
         }
         s.variant.meaning?.let { body ->
-            // 01HAKA 의 더보기 규칙 그대로 — 길면 한 줄로 접고 +/− 로 여닫는다.
-            // 짧으면 표시를 두지 않되 그 자리는 비워 글 시작선이 흔들리지 않게 한다.
+            // 01HAKA 의 더보기 규칙 그대로 — 넘치면 한 줄로 접고 +/− 로 여닫는다.
+            // 넘치는지는 글자 수로 어림하지 않고 그려 본 뒤에 안다. 어림하면 스물몇
+            // 자짜리가 판 폭에 따라 한 줄을 넘길 때 말줄임만 남고 + 가 서지 않는다.
+            // 표시가 없어도 그 자리는 비워 둔다 — 글 시작선이 흔들리지 않게.
             var open by remember(s.variant.hanja) { mutableStateOf(false) }
-            val long = body.length > 25
+            var long by remember(body) { mutableStateOf(false) }
             Row(
                 Modifier
                     .padding(start = EUM, top = 3.dp)
@@ -610,6 +612,9 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                     color = Hak3.TextSoft,
                     maxLines = if (open) Int.MAX_VALUE else 1,
                     overflow = TextOverflow.Ellipsis,
+                    // 접힌 채로만 잰다. 펼치고 나면 넘칠 일이 없어 그때의 답은 늘
+                    // 거짓이고, 그것을 믿으면 펼친 순간 +/− 가 사라진다.
+                    onTextLayout = { if (!open) long = it.hasVisualOverflow },
                 )
             }
         }
