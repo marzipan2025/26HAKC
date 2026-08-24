@@ -40,7 +40,6 @@ import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import kotlin.math.abs
-import kotlin.math.sqrt
 import kotlin.math.roundToInt
 import androidx.compose.material3.Text
 import androidx.compose.ui.res.painterResource
@@ -115,48 +114,6 @@ private val TYPING = TOUCH + GAP
 /** 손잡이 막대. 키보드가 올라와 틈이 벌어졌을 때만 선다. */
 private val BAR = 38.dp
 
-/** 잉크와 판의 둥근 모서리 사이에 남겨 둘 숨. */
-private val CLEAR = 2.dp
-
-/** 점의 중심에서 모서리 원의 중심까지 — 이만큼이면 CLEAR 를 두고 스친다. */
-private fun far(r: Float) = r + DOT.value / 2 + CLEAR.value
-
-/** 점이 물러날 수 있는 가장 바깥. 잉크가 화면 밖으로 나가지 않는 선이다. */
-private val EDGE = DOT / 2 + CLEAR
-
-/**
- * 두 판 사이의 틈. 늘 서 있는 것은 점이니 점을 기준으로 잰다 — 웬만한 곡률이면
- * GAP 그대로고, 아주 얕은 폰에서만 점이 모서리를 스치지 않을 만큼 벌어진다.
- * 겹쳐 놓느니 조금 벌리는 편이 낫다.
- */
-private fun gap(radius: Dp): Dp {
-    val r = radius.value
-    val across = CARD.value + r - EDGE.value         // 가장자리에 붙였을 때의 가로 거리
-    val far = far(r)
-    val down = sqrt((far * far - across * across).coerceAtLeast(0f))
-    return ((down - r) * 2).dp.coerceAtLeast(GAP)
-}
-
-/**
- * 판의 둥근 모서리가 화면 가장자리에 비워 둔 자리 — 그 안에 점을 앉혔을 때의
- * 한가운데.
- *
- * 모서리는 반지름 R 인 원의 호고 점도 원이니, 두 중심이 far 만큼 떨어졌을 때
- * CLEAR 를 두고 스친다. 세로 거리는 틈의 절반과 R 을 더한 값으로 이미 정해져
- * 있으니, 남는 가로 거리를 피타고라스로 풀면 점이 들어갈 수 있는 가장 안쪽이 나온다.
- *
- * 다만 끝까지 밀어 넣지는 않는다. 곡률이 아주 크면 한참 안쪽까지 들어가는데,
- * 그러면 가장자리가 아니라 판 밑을 파고든 꼴이 된다. 누르는 자리가 화면 끝에
- * 맞닿는 선(TOUCH/2)에서 멈춘다.
- */
-private fun tuck(radius: Dp, gap: Dp): Dp {
-    val r = radius.value
-    val far = far(r)
-    val down = gap.value / 2 + r                     // 세로로 벌어진 만큼
-    val across = sqrt((far * far - down * down).coerceAtLeast(0f))
-    return (CARD.value + r - across).dp.coerceIn(EDGE, TOUCH / 2)
-}
-
 /** 틈에 박히는 점. 서랍이 나와 있든 아니든 늘 같은 얼굴이다. */
 @Composable
 private fun Dot() {
@@ -184,9 +141,6 @@ fun RoundPicker(
     val ime = LocalSoftwareKeyboardController.current
     // 상세 화면 카드와 같은 곡률
     val radius = (screenCornerRadius() - 8.dp).coerceAtLeast(0.dp)
-    // 곡률이 정해지면 두 판 사이의 틈도, 그 틈에 얹힌 아이콘의 자리도 함께 정해진다
-    val gap = gap(radius)
-    val tuck = tuck(radius, gap)
     // 묶음은 회차의 표시에서 그때그때 모아 낸다. 쌓아 두지 않으므로 표시를
     // 바꾸고 돌아오면 수도 따라 바뀌어 있다. 넷 — 낱글자 둘, 문제 둘.
     val counts = remember(db) {
@@ -225,6 +179,16 @@ fun RoundPicker(
         var screenPx by remember { mutableFloatStateOf(availPx) }
         LaunchedEffect(usable) { if (usable > screenPx) screenPx = usable }
 
+        // 키보드 높이는 기기와 자판이 정해지면 늘 같다. 여태 본 것 중 가장 큰
+        // 값을 적어 두었다가, 인셋이 오기 전에 판을 얼마나 키울지 미리 셈한다.
+        var kb by remember { mutableIntStateOf(Settings.keyboard(context)) }
+        LaunchedEffect(keyboard) {
+            if (keyboard > kb) {
+                kb = keyboard
+                Settings.setKeyboard(context, keyboard)
+            }
+        }
+
         val minH = dictMin(square)                          // 한자 한 줄과 訓音 두 줄은 남는다
         val maxH = dictMax(with(density) { screenPx.toDp() })
         val minPx = with(density) { minH.toPx() }
@@ -242,7 +206,7 @@ fun RoundPicker(
         var typing by remember { mutableStateOf(false) }
         // 키보드가 올라와 있는 동안만 틈이 벌어진다. 벌어지고 오므라드는 사이에
         // 아래 판이 따라 내려갔다 도로 올라붙는다 — 그 사이가 곧 이 모션이다.
-        val bandTo = if (typing) TYPING else gap
+        val bandTo = if (typing) TYPING else GAP
         val band by animateDpAsState(bandTo, QUICK_DP, "band")
         // 막대는 틈이 벌어질 때 배어 나오고, 오므라들 때 스러진다
         val bar by animateFloatAsState(
@@ -252,18 +216,22 @@ fun RoundPicker(
         )
         // 다시 걸릴 때 넘겨 줄 속도. 이것이 있어야 이어 달린다.
         var speed by remember { mutableFloatStateOf(0f) }
-        LaunchedEffect(typing, usable, bandTo) {
+        LaunchedEffect(typing, usable, bandTo, kb) {
             if (!typing) {
                 speed = 0f
                 return@LaunchedEffect
             }
-            if (usable < screenPx) {
-                val goal = (usable - with(density) { (bandTo + 4.dp).toPx() })
-                    .coerceAtLeast(minPx)
-                animate(height, goal, speed, QUICK) { v, dv ->
-                    height = v
-                    speed = dv
-                }
+            // 인셋은 손가락이 닿고 한 박자 뒤에 온다. 그때까지 기다리면 틈과 막대만
+            // 먼저 움직이고 판이 뒤늦게 따라와 뚝 끊겨 보인다. 여태 본 키보드
+            // 높이로 지레 셈해, 셋이 같은 순간에 함께 떠나게 한다. 인셋이 오면
+            // 그때의 참값으로 갈아타되 속도를 넘겨받아 이어 달린다.
+            val room = if (usable < screenPx) usable else screenPx - kb
+            if (room >= screenPx) return@LaunchedEffect     // 짐작할 값이 없다
+            val goal = (room - with(density) { (bandTo + 4.dp).toPx() })
+                .coerceAtLeast(minPx)
+            animate(height, goal, speed, QUICK) { v, dv ->
+                height = v
+                speed = dv
             }
         }
 
@@ -394,10 +362,10 @@ fun RoundPicker(
                 )
             }
 
-            // 판과 목록 사이는 8dp 만 벌어진다. 아이콘은 그 틈 한가운데에 서되,
-            // 둥근 모서리가 좌우에 비워 둔 자리로 물러나 앉는다 — 판이 없는
-            // 곳이라 틈이 좁아도 겹치지 않는다. 누르는 자리는 틈보다 크므로
-            // 층을 올려 판 위로 얹는다.
+            // 판과 목록 사이는 8dp 만 벌어진다. 점 둘은 그 틈 한가운데에 서되
+            // 판의 좌우 선에 맞춰 앉는다 — 판이 물러난 만큼(CARD) 안쪽이 곧 그
+            // 선이고, 틈의 높이에서는 둥근 모서리가 비켜나 있어 걸리지 않는다.
+            // 누르는 자리는 틈보다 크므로 층을 올려 판 위로 얹는다.
             Box(Modifier.fillMaxWidth().height(band).zIndex(1f).then(veil)) {
                 // 손잡이 막대는 걷었어도 잡는 자리는 남는다. 틈이 좁으니 잡히는
                 // 높이만 넉넉히 넓혀 두 판에 걸쳐 둔다. 점 둘은 이 뒤에 서므로
@@ -435,7 +403,7 @@ fun RoundPicker(
                     Modifier
                         .align(Alignment.CenterStart)
                         .requiredSize(TOUCH)
-                        .offset(x = tuck - TOUCH / 2)
+                        .offset(x = CARD - TOUCH / 2)
                         .clickable {
                             // 적는 중이었으면 키보드가 내려가며 함께 움직인다
                             if (typing) { focus.clearFocus(); ime?.hide() }
@@ -447,7 +415,7 @@ fun RoundPicker(
                     Modifier
                         .align(Alignment.CenterEnd)
                         .requiredSize(TOUCH)
-                        .offset(x = TOUCH / 2 - tuck)
+                        .offset(x = TOUCH / 2 - CARD)
                         .clickable {
                             if (typing) { focus.clearFocus(); ime?.hide() }
                             drawer = if (drawer == Drawer.SETTINGS) Drawer.NONE else Drawer.SETTINGS
@@ -494,7 +462,8 @@ fun RoundPicker(
                         }
                     }
                 }
-                Spacer(Modifier.height(5.dp))
+                // 위로 벌어진 틈과 같은 간격으로 아래도 띄운다
+                Spacer(Modifier.height(GAP))
             }
 
             // 회차는 칸을 늘어놓지 않고 큰 판 하나 안에서 굴러간다
@@ -616,7 +585,7 @@ private fun Setup(radius: Dp, trouble: String, onFolder: () -> Unit, onFile: () 
             .background(Hak3.Surface, RoundedCornerShape(radius))
             .padding(20.dp),
     ) {
-        Text("No exam data yet", fontSize = 17.sp, color = Hak3.Text)
+        Text("No exam data yet", fontSize = 20.sp, color = Hak3.Text)
         Spacer(Modifier.height(8.dp))
         Text(
             "Put hanja3.db in a 26HAKC folder inside Downloads, then point the app " +

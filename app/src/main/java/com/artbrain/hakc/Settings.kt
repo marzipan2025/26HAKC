@@ -10,6 +10,7 @@ object Settings {
     private const val PREFS = "settings"
     private const val KEY_MARK_LEFT = "mark_left"
     private const val KEY_LAST_ROUND = "last_round"
+    private const val KEY_KEYBOARD = "keyboard_px"
 
     /** 노란 판정 단추를 왼쪽에 둘 것인가. 기본은 오른쪽이다. */
     fun markOnLeft(c: Context): Boolean =
@@ -27,6 +28,19 @@ object Settings {
     fun setLastRound(c: Context, round: Int) {
         c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putInt(KEY_LAST_ROUND, round).apply()
+    }
+
+    /**
+     * 여태 본 키보드의 높이(px). 기기와 자판이 정해지면 늘 같은 값이라, 한 번
+     * 보아 둔 것을 적어 두었다가 다음부터는 인셋이 오기 전에 미리 셈한다.
+     * 본 적이 없으면 0 — 그때는 인셋이 올 때까지 기다린다.
+     */
+    fun keyboard(c: Context): Int =
+        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_KEYBOARD, 0)
+
+    fun setKeyboard(c: Context, px: Int) {
+        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putInt(KEY_KEYBOARD, px).apply()
     }
 
     /**

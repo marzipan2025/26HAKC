@@ -787,7 +787,7 @@ private fun QuestionPage(
             // 큰 한자만 제자리에 두고 나머지는 조금 안쪽에서 시작한다
             Text(
                 item.label,
-                fontSize = 17.sp,
+                fontSize = 20.sp,
                 color = ink(if (mark != null) borderColor(mark) else Hak3.TextDim),
                 modifier = Modifier.padding(start = SHIFT),
             )
@@ -885,8 +885,8 @@ private fun AnswerSlot(item: Item, revealed: Boolean, ink: (Color) -> Color) {
                 Spacer(Modifier.height(6.dp))
                 Text(
                     g,
-                    fontSize = 17.sp,
-                    lineHeight = 27.sp,
+                    fontSize = 20.sp,
+                    lineHeight = 32.sp,
                     color = ink(Hak3.Neon.copy(alpha = 0.66f)),
                 )
             }
@@ -903,7 +903,7 @@ private val TOP = 52.dp
 private val LEAD = 60.dp
 
 /** 번호와 한자 사이를 이만큼 좁힌다. 한자 아래의 것들도 함께 딸려 올라온다. */
-private val TIGHTEN = 16.dp
+private val TIGHTEN = 19.6.dp
 
 /**
  * 첫 줄 위에 붙는 여백을 걷어낸다. 글자 상자의 윗변이 곧 글자의 윗선이 되어
@@ -1003,7 +1003,7 @@ private fun CloseDot(onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text("✕", fontSize = 17.sp, color = Hak3.Text)
+        Text("✕", fontSize = 20.sp, color = Hak3.Text)
     }
 }
 
