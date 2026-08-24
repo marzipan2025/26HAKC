@@ -25,12 +25,16 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.ui.zIndex
+import androidx.annotation.DrawableRes
 import androidx.compose.material3.Icon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import kotlin.math.abs
+import kotlin.math.sqrt
 import kotlin.math.roundToInt
 import androidx.compose.material3.Text
 import androidx.compose.ui.res.painterResource
@@ -83,11 +87,83 @@ import androidx.compose.ui.unit.sp
  * 된다. 최대는 화면의 60%, 최소는 한자 한 줄과 訓音 두 줄이 남는 높이다. 입력 칸에
  * 포커스가 가면 키보드 바로 위까지 자란다.
  */
+/** 판과 목록이 벌어지는 만큼. 기출 상세의 카드와 바닥 줄 사이와 같은 값이다. */
+private val GAP = 8.dp
+
+/** 판이 화면 가장자리에서 물러나 있는 만큼. */
+private val CARD = 8.dp
+
+/** 평소의 잉크. 아이콘 대신 점 하나만 남겼다 — 예전 21dp 의 40% 다. */
+private val DOT = 8.4.dp
+
+/** 서랍이 나와 있는 동안 점 대신 서는 화살표. 자리는 이 크기에 맞춰 잡는다. */
+private val ARROW = 21.dp
+
+/** 그 잉크를 누를 수 있는 자리. 틈보다 크므로 판 위로 걸쳐 앉는다. */
+private val TOUCH = 40.dp
+
+/** 잉크와 판의 둥근 모서리 사이에 남겨 둘 숨. */
+private val CLEAR = 2.dp
+
+/** 잉크의 중심에서 모서리 원의 중심까지 — 이만큼이면 CLEAR 를 두고 스친다. */
+private fun far(r: Float, ink: Dp) = r + ink.value / 2 + CLEAR.value
+
+/** 잉크가 물러날 수 있는 가장 바깥. 화면 밖으로 나가지 않는 선이다. */
+private val EDGE = ARROW / 2 + CLEAR
+
 /**
- * 판과 목록 사이의 손잡이 줄 높이. 키보드 위에 남길 자리를 셈할 때도 쓴다.
- * 아이콘 21 에 위아래 여백 18.75 씩 — 처음 12.5 씩에서 반을 더 준 것이다.
+ * 두 판 사이의 틈. 늘 서 있는 것은 점이니 점을 기준으로 잰다 — 웬만한 곡률이면
+ * GAP 그대로고, 아주 얕은 폰에서만 점이 모서리를 스치지 않을 만큼 벌어진다.
+ * 겹쳐 놓느니 조금 벌리는 편이 낫다.
  */
-private val HANDLE = 58.5.dp
+private fun gap(radius: Dp): Dp {
+    val r = radius.value
+    val across = CARD.value + r - EDGE.value         // 가장자리에 붙였을 때의 가로 거리
+    val far = far(r, DOT)                            // 늘 서 있는 것은 점이다
+    val down = sqrt((far * far - across * across).coerceAtLeast(0f))
+    return ((down - r) * 2).dp.coerceAtLeast(GAP)
+}
+
+/**
+ * 판의 둥근 모서리가 화면 가장자리에 비워 둔 자리 — 그 안에 점을 앉혔을 때의
+ * 한가운데.
+ *
+ * 모서리는 반지름 R 인 원의 호고 점도 원이니, 두 중심이 far 만큼 떨어졌을 때
+ * CLEAR 를 두고 스친다. 세로 거리는 틈의 절반과 R 을 더한 값으로 이미 정해져
+ * 있으니, 남는 가로 거리를 피타고라스로 풀면 점이 들어갈 수 있는 가장 안쪽이 나온다.
+ *
+ * 여기서는 화살표를 기준으로 잰다. 서랍이 나오면 그 자리에 화살표가 서니, 큰
+ * 쪽이 들어가는 자리라야 둘 다 걸리지 않는다.
+ *
+ * 다만 끝까지 밀어 넣지는 않는다. 곡률이 아주 크면 한참 안쪽까지 들어가는데,
+ * 그러면 가장자리가 아니라 판 밑을 파고든 꼴이 된다. 누르는 자리가 화면 끝에
+ * 맞닿는 선(TOUCH/2)에서 멈춘다.
+ */
+private fun tuck(radius: Dp, gap: Dp): Dp {
+    val r = radius.value
+    val far = far(r, ARROW)                          // 화살표가 들어가면 점은 넉넉하다
+    val down = gap.value / 2 + r                     // 세로로 벌어진 만큼
+    val across = sqrt((far * far - down * down).coerceAtLeast(0f))
+    return (CARD.value + r - across).dp.coerceIn(EDGE, TOUCH / 2)
+}
+
+/**
+ * 틈에 박히는 점. 제 서랍이 나와 있는 동안에는 그 자리에 화살표가 대신 선다 —
+ * 판이 도로 밀려갈 쪽을 가리킨다.
+ */
+@Composable
+private fun Dot(open: Boolean, @DrawableRes arrow: Int) {
+    if (open) {
+        Icon(
+            painterResource(arrow),
+            contentDescription = null,
+            tint = Hak3.TextDim,
+            modifier = Modifier.size(ARROW),
+        )
+    } else {
+        Box(Modifier.size(DOT).background(Hak3.TextDim, CircleShape))
+    }
+}
 
 @Composable
 fun RoundPicker(
@@ -110,6 +186,11 @@ fun RoundPicker(
     val ime = LocalSoftwareKeyboardController.current
     // 상세 화면 카드와 같은 곡률
     val radius = (screenCornerRadius() - 8.dp).coerceAtLeast(0.dp)
+    // 곡률이 정해지면 두 판 사이의 틈도, 그 틈에 얹힌 아이콘의 자리도 함께 정해진다
+    val gap = gap(radius)
+    val tuck = tuck(radius, gap)
+    // 판 아래로 아이콘이 삐져나오는 만큼. 키보드가 올라올 때 그 위에 남길 자리다.
+    val band = gap / 2 + TOUCH / 2
     // 묶음은 회차의 표시에서 그때그때 모아 낸다. 쌓아 두지 않으므로 표시를
     // 바꾸고 돌아오면 수도 따라 바뀌어 있다. 넷 — 낱글자 둘, 문제 둘.
     val counts = remember(db) {
@@ -162,9 +243,9 @@ fun RoundPicker(
         // 여기서는 60% 를 넘겨도 좋다 — 그 한계는 손으로 여닫을 때의 것이고, 찾는
         // 동안에는 손잡이를 키보드 위에 붙이는 쪽이 먼저다.
         var typing by remember { mutableStateOf(false) }
-        LaunchedEffect(typing, usable) {
+        LaunchedEffect(typing, usable, band) {
             if (typing && usable < screenPx) {
-                height = (usable - with(density) { (HANDLE + 4.dp).toPx() })
+                height = (usable - with(density) { (band + 4.dp).toPx() })
                     .coerceAtLeast(minPx)
             }
         }
@@ -296,74 +377,34 @@ fun RoundPicker(
                 )
             }
 
-            // 손잡이 줄 — 왼쪽 차림표, 가운데 손잡이, 오른쪽 설정
-            Row(
-                Modifier.fillMaxWidth().height(HANDLE).then(veil).padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    Modifier.size(40.dp).clickable {
-                        // 적는 중이었으면 키보드가 내려가며 함께 움직인다
-                        if (typing) { focus.clearFocus(); ime?.hide() }
-                        drawer = if (drawer == Drawer.USER) Drawer.NONE else Drawer.USER
-                    },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    // 서랍이 열려 있으면 화살표가 그 자리에 선다. 판이 도로 밀려갈
-                    // 쪽을 가리킨다 — 왼쪽 서랍은 판을 오른쪽에서 되돌려 온다.
-                    Icon(
-                        painterResource(
-                            if (drawer == Drawer.USER) R.drawable.ic_arrow_right
-                            else R.drawable.ic_user
-                        ),
-                        contentDescription = null,
-                        tint = Hak3.TextDim,
-                        modifier = Modifier.size(21.dp),
-                    )
-                }
+            // 판과 목록 사이는 8dp 만 벌어진다. 아이콘은 그 틈 한가운데에 서되,
+            // 둥근 모서리가 좌우에 비워 둔 자리로 물러나 앉는다 — 판이 없는
+            // 곳이라 틈이 좁아도 겹치지 않는다. 누르는 자리는 틈보다 크므로
+            // 층을 올려 판 위로 얹는다.
+            Box(Modifier.fillMaxWidth().height(gap).zIndex(1f).then(veil)) {
                 Box(
                     Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .draggable(
-                            orientation = Orientation.Vertical,
-                            state = rememberDraggableState { dy ->
-                                height = (height + dy).coerceIn(minPx, maxPx)
-                            },
-                            // 손잡이를 잡으면 입력 칸이 포커스를 놓고 키보드가 내려간다.
-                            // 판을 손으로 여닫겠다는 뜻이니 키보드가 남아 있을 까닭이 없다.
-                            onDragStarted = {
-                                focus.clearFocus()
-                                ime?.hide()
-                            },
-                        ),
+                        .align(Alignment.CenterStart)
+                        .requiredSize(TOUCH)
+                        .offset(x = tuck - TOUCH / 2)
+                        .clickable {
+                            // 적는 중이었으면 키보드가 내려가며 함께 움직인다
+                            if (typing) { focus.clearFocus(); ime?.hide() }
+                            drawer = if (drawer == Drawer.USER) Drawer.NONE else Drawer.USER
+                        },
                     contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        Modifier
-                            .graphicsLayer(dim)
-                            .width(38.dp)
-                            .height(4.dp)
-                            .background(Hak3.Rule, RoundedCornerShape(2.dp))
-                    )
-                }
+                ) { Dot(drawer == Drawer.USER, R.drawable.ic_arrow_right) }
                 Box(
-                    Modifier.size(40.dp).clickable {
-                        if (typing) { focus.clearFocus(); ime?.hide() }
-                        drawer = if (drawer == Drawer.SETTINGS) Drawer.NONE else Drawer.SETTINGS
-                    },
+                    Modifier
+                        .align(Alignment.CenterEnd)
+                        .requiredSize(TOUCH)
+                        .offset(x = TOUCH / 2 - tuck)
+                        .clickable {
+                            if (typing) { focus.clearFocus(); ime?.hide() }
+                            drawer = if (drawer == Drawer.SETTINGS) Drawer.NONE else Drawer.SETTINGS
+                        },
                     contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painterResource(
-                            if (drawer == Drawer.SETTINGS) R.drawable.ic_arrow_left
-                            else R.drawable.ic_settings
-                        ),
-                        contentDescription = null,
-                        tint = Hak3.TextDim,
-                        modifier = Modifier.size(21.dp),
-                    )
-                }
+                ) { Dot(drawer == Drawer.SETTINGS, R.drawable.ic_arrow_left) }
             }
 
             // 새 판 안내는 목록과 같은 얼굴로, 그러나 제 영역에 따로 선다
@@ -445,9 +486,9 @@ fun RoundPicker(
         // 밀려나 있는 동안 판은 손짓을 받지 않는다. 손잡이 줄만 비워 두어 화살표로
         // 돌아갈 수 있게 하고, 나머지는 이 층이 다 삼킨다. 옆으로 쓸면 닫힌다.
         if (open) Column(Modifier.matchParentSize()) {
-            val band = if (dict != null) 4.dp + with(density) { height.toDp() } else 0.dp
-            Deaf(Modifier.fillMaxWidth().height(band))
-            Spacer(Modifier.height(HANDLE))
+            val below = if (dict != null) 4.dp + with(density) { height.toDp() } else 0.dp
+            Deaf(Modifier.fillMaxWidth().height((below + gap - band).coerceAtLeast(0.dp)))
+            Spacer(Modifier.height(TOUCH))
             Deaf(Modifier.fillMaxWidth().weight(1f))
         }
         }
@@ -479,8 +520,8 @@ private fun anchor(drawer: Drawer, room: Float) = when (drawer) {
     Drawer.NONE -> 0f
 }
 
-/** 서랍이 열렸을 때 남는 판의 자락. */
-private const val STRIP = 0.30f
+/** 서랍이 열렸을 때 남는 판의 자락. 돌아가는 길로만 쓰는 자리라 좁게 둔다. */
+private const val STRIP = 0.15f
 
 /** 여기까지 끌면 놓아도 그쪽으로 앉는다. */
 private const val COMMIT = 0.35f
