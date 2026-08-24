@@ -22,13 +22,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.zIndex
-import androidx.annotation.DrawableRes
 import androidx.compose.material3.Icon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.GraphicsLayerScope
@@ -97,9 +103,6 @@ private val CARD = 8.dp
 /** 평소의 잉크. 아이콘 대신 점 하나만 남겼다 — 예전 21dp 의 40% 다. */
 private val DOT = 8.4.dp
 
-/** 서랍이 나와 있는 동안 점 대신 서는 화살표. 자리는 이 크기에 맞춰 잡는다. */
-private val ARROW = 21.dp
-
 /** 그 잉크를 누를 수 있는 자리. 틈보다 크므로 판 위로 걸쳐 앉는다. */
 private val TOUCH = 40.dp
 
@@ -116,11 +119,11 @@ private val BAR = 38.dp
 /** 잉크와 판의 둥근 모서리 사이에 남겨 둘 숨. */
 private val CLEAR = 2.dp
 
-/** 잉크의 중심에서 모서리 원의 중심까지 — 이만큼이면 CLEAR 를 두고 스친다. */
-private fun far(r: Float, ink: Dp) = r + ink.value / 2 + CLEAR.value
+/** 점의 중심에서 모서리 원의 중심까지 — 이만큼이면 CLEAR 를 두고 스친다. */
+private fun far(r: Float) = r + DOT.value / 2 + CLEAR.value
 
-/** 잉크가 물러날 수 있는 가장 바깥. 화면 밖으로 나가지 않는 선이다. */
-private val EDGE = ARROW / 2 + CLEAR
+/** 점이 물러날 수 있는 가장 바깥. 잉크가 화면 밖으로 나가지 않는 선이다. */
+private val EDGE = DOT / 2 + CLEAR
 
 /**
  * 두 판 사이의 틈. 늘 서 있는 것은 점이니 점을 기준으로 잰다 — 웬만한 곡률이면
@@ -130,7 +133,7 @@ private val EDGE = ARROW / 2 + CLEAR
 private fun gap(radius: Dp): Dp {
     val r = radius.value
     val across = CARD.value + r - EDGE.value         // 가장자리에 붙였을 때의 가로 거리
-    val far = far(r, DOT)                            // 늘 서 있는 것은 점이다
+    val far = far(r)
     val down = sqrt((far * far - across * across).coerceAtLeast(0f))
     return ((down - r) * 2).dp.coerceAtLeast(GAP)
 }
@@ -143,37 +146,22 @@ private fun gap(radius: Dp): Dp {
  * CLEAR 를 두고 스친다. 세로 거리는 틈의 절반과 R 을 더한 값으로 이미 정해져
  * 있으니, 남는 가로 거리를 피타고라스로 풀면 점이 들어갈 수 있는 가장 안쪽이 나온다.
  *
- * 여기서는 화살표를 기준으로 잰다. 서랍이 나오면 그 자리에 화살표가 서니, 큰
- * 쪽이 들어가는 자리라야 둘 다 걸리지 않는다.
- *
  * 다만 끝까지 밀어 넣지는 않는다. 곡률이 아주 크면 한참 안쪽까지 들어가는데,
  * 그러면 가장자리가 아니라 판 밑을 파고든 꼴이 된다. 누르는 자리가 화면 끝에
  * 맞닿는 선(TOUCH/2)에서 멈춘다.
  */
 private fun tuck(radius: Dp, gap: Dp): Dp {
     val r = radius.value
-    val far = far(r, ARROW)                          // 화살표가 들어가면 점은 넉넉하다
+    val far = far(r)
     val down = gap.value / 2 + r                     // 세로로 벌어진 만큼
     val across = sqrt((far * far - down * down).coerceAtLeast(0f))
     return (CARD.value + r - across).dp.coerceIn(EDGE, TOUCH / 2)
 }
 
-/**
- * 틈에 박히는 점. 제 서랍이 나와 있는 동안에는 그 자리에 화살표가 대신 선다 —
- * 판이 도로 밀려갈 쪽을 가리킨다.
- */
+/** 틈에 박히는 점. 서랍이 나와 있든 아니든 늘 같은 얼굴이다. */
 @Composable
-private fun Dot(open: Boolean, @DrawableRes arrow: Int) {
-    if (open) {
-        Icon(
-            painterResource(arrow),
-            contentDescription = null,
-            tint = Hak3.TextDim,
-            modifier = Modifier.size(ARROW),
-        )
-    } else {
-        Box(Modifier.size(DOT).background(Hak3.TextDim, CircleShape))
-    }
+private fun Dot() {
+    Box(Modifier.size(DOT).background(Hak3.TextDim, CircleShape))
 }
 
 @Composable
@@ -253,12 +241,25 @@ fun RoundPicker(
         // 여기서는 60% 를 넘겨도 좋다 — 그 한계는 손으로 여닫을 때의 것이고, 찾는
         // 동안에는 틈을 키보드 위에 붙이는 쪽이 먼저다.
         var typing by remember { mutableStateOf(false) }
-        // 키보드가 올라와 있는 동안만 틈이 벌어진다
-        val band = if (typing) TYPING else gap
-        LaunchedEffect(typing, usable, band) {
+        // 키보드가 올라와 있는 동안만 틈이 벌어진다. 벌어지고 오므라드는 사이에
+        // 아래 판이 따라 내려갔다 도로 올라붙는다 — 그 사이가 곧 이 모션이다.
+        val bandTo = if (typing) TYPING else gap
+        val band by animateDpAsState(bandTo, tween(QUICK, easing = FastOutSlowInEasing), "band")
+        // 막대는 틈이 벌어질 때 배어 나오고, 오므라들 때 스러진다
+        val bar by animateFloatAsState(
+            if (typing) 1f else 0f,
+            tween(DISSOLVE, easing = LinearEasing),
+            label = "bar",
+        )
+        LaunchedEffect(typing, usable, bandTo) {
             if (typing && usable < screenPx) {
-                height = (usable - with(density) { (band + 4.dp).toPx() })
+                val goal = (usable - with(density) { (bandTo + 4.dp).toPx() })
                     .coerceAtLeast(minPx)
+                // 인셋이 한 프레임씩 오므로 이 효과가 여러 번 돈다. 그때마다 지금
+                // 자리에서 새로 이어 달리니 키보드가 오르는 결을 그대로 탄다.
+                animate(height, goal, animationSpec = tween(QUICK, easing = FastOutSlowInEasing)) {
+                    v, _ -> height = v
+                }
             }
         }
 
@@ -417,11 +418,12 @@ fun RoundPicker(
                 )
                 // 틈이 벌어져 있을 때만 막대가 선다. 잡을 데가 여기라고 알리는 표시고,
                 // 잡아 내리면 키보드가 함께 내려간다.
-                if (typing) {
+                if (bar > 0f) {
                     Box(
                         Modifier
                             .align(Alignment.Center)
                             .size(BAR, 4.dp)
+                            .alpha(bar)
                             .background(Hak3.Rule, RoundedCornerShape(2.dp))
                     )
                 }
@@ -436,7 +438,7 @@ fun RoundPicker(
                             drawer = if (drawer == Drawer.USER) Drawer.NONE else Drawer.USER
                         },
                     contentAlignment = Alignment.Center,
-                ) { Dot(drawer == Drawer.USER, R.drawable.ic_arrow_right) }
+                ) { Dot() }
                 Box(
                     Modifier
                         .align(Alignment.CenterEnd)
@@ -447,7 +449,7 @@ fun RoundPicker(
                             drawer = if (drawer == Drawer.SETTINGS) Drawer.NONE else Drawer.SETTINGS
                         },
                     contentAlignment = Alignment.Center,
-                ) { Dot(drawer == Drawer.SETTINGS, R.drawable.ic_arrow_left) }
+                ) { Dot() }
             }
 
             // 새 판 안내는 목록과 같은 얼굴로, 그러나 제 영역에 따로 선다
@@ -507,10 +509,13 @@ fun RoundPicker(
                     .then(morph)
                     .background(Hak3.Surface, RoundedCornerShape(radius))
             ) {
-                // 키보드가 올라와 있는 동안에는 알맹이를 비운다. 판이 딱 맞아떨어지지
-                // 않아 한 줄쯤 삐져나올 때가 있는데, 그때 글자가 반쯤 잘려 보이느니
-                // 판 색 한 겹으로 서는 편이 낫다.
-                if (!typing) LazyColumn(
+                // 목록이 키보드 밑으로 다 내려간 뒤에야 알맹이를 비운다. 판이 딱
+                // 맞아떨어지지 않아 한 줄쯤 삐져나올 때가 있는데, 그때 글자가 반쯤
+                // 잘려 보이느니 판 색 한 겹으로 서는 편이 낫다. 내려가는 동안까지
+                // 비우면 미끄러지기도 전에 글자가 사라져 버린다.
+                val sunk = typing &&
+                    with(density) { (4.dp + band).toPx() } + height >= usable
+                if (!sunk) LazyColumn(
                     Modifier.fillMaxSize().then(veil).nestedScroll(nested),
                     state = rounds,
                     contentPadding = PaddingValues(vertical = 18.dp),
@@ -531,13 +536,11 @@ fun RoundPicker(
 
         // 밀려나 있는 동안 판은 손짓을 받지 않는다. 손잡이 줄만 비워 두어 화살표로
         // 돌아갈 수 있게 하고, 나머지는 이 층이 다 삼킨다. 옆으로 쓸면 닫힌다.
-        if (open) Column(Modifier.matchParentSize()) {
-            val below = if (dict != null) 4.dp + with(density) { height.toDp() } else 0.dp
-            val live = maxOf(TOUCH, band)                // 틈에서 손짓을 받는 높이
-            Deaf(Modifier.fillMaxWidth().height((below + band / 2 - live / 2).coerceAtLeast(0.dp)))
-            Spacer(Modifier.height(live))
-            Deaf(Modifier.fillMaxWidth().weight(1f))
-        }
+        if (open) Box(
+            Modifier
+                .matchParentSize()
+                .pointerInput(Unit) { detectTapGestures { drawer = Drawer.NONE } }
+        )
         }
         }
     }
@@ -579,20 +582,17 @@ private const val FLING = 400f
 /** 밀려난 판의 밝기. */
 private const val DIM = 0.48f
 
+/** 판이 자라고 틈이 벌어지는 결. 뚝딱대지 않게, 그러나 기다리게 하지 않을 만큼. */
+private const val QUICK = 180
+
+/** 막대가 배어 나오고 스러지는 결. 자리가 잡히는 것보다 조금 빠르다. */
+private const val DISSOLVE = 120
+
 /** 서랍이 앉는 결. 튕기지 않으면서 짧게 끊어 붙는다. 붙는 힘을 좀 더 주었다. */
 private val SNAP = spring<Float>(dampingRatio = 0.9f, stiffness = 2800f)
 
 /** 서랍이 문 자리. 왼쪽은 아직 비었다. */
 enum class Drawer { NONE, USER, SETTINGS }
-
-/**
- * 밀려난 판을 덮어 누르는 손짓을 삼키는 층. 끄는 것은 삼키지 않는다 —
- * 밑에 깔린 것 대신 바깥의 서랍 손짓이 받아 간다.
- */
-@Composable
-private fun Deaf(modifier: Modifier) {
-    Box(modifier.pointerInput(Unit) { detectTapGestures { } })
-}
 
 /** 기출 데이터를 아직 못 읽었을 때 목록 자리에 서는 카드. 사전은 그동안에도 쓴다. */
 @Composable
