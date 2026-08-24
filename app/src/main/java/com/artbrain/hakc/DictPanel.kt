@@ -56,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -130,6 +131,15 @@ private fun gradeColor(grade: Int?) = when (grade) {
 // 창 단추 자리(26)는 안드로이드에 올 것이 없으니 뺀 244 를 기준으로 삼는다.
 private const val HEAD = 84f / 244f
 private const val FOOT = 50f / 244f * 0.72f    // 입력 칸
+
+/**
+ * 판 위쪽에 얹는 빛. 흰빛 8% 로 시작해 판 높이의 30% 에서 스러진다.
+ * 있는 줄 모르고 지나칠 만큼만 — 판이 위에서 조금 들린 것처럼 보이게 하는 몫이다.
+ */
+private val GLOW = Brush.verticalGradient(
+    0f to Color.White.copy(alpha = 0.08f),
+    0.30f to Color.Transparent,
+)
 
 /** 실선이 벽에서 물러나는 거리. */
 private val WALL = 16.dp
@@ -268,6 +278,7 @@ fun DictPanel(
             .clip(RoundedCornerShape(radius))
             .background(Hak3.Surface)
             .background(Hak3.Rule)          // 01HAKA 의 패널 바탕 한 겹
+            .background(GLOW)               // 위쪽에 얹히는 아주 옅은 빛 한 겹
     ) {
         val square = maxWidth                       // 정사각형이었을 때의 한 변
         val foot = square * FOOT

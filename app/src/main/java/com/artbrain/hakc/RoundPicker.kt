@@ -525,6 +525,9 @@ fun RoundPicker(
     }
 }
 
+/** 진행 눈금의 두께. */
+private val GAUGE = 4.dp
+
 /** 회차 숫자를 알약 한가운데로 내리는 값. 잉크의 가운데를 재어 잡았다. */
 private val INK = 2.dp
 
@@ -679,8 +682,10 @@ private fun Cell(
 private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, onPick: (Int) -> Unit) {
     val context = LocalContext.current
     val counts = remember(e.round) { Marks.counts(context, e.round) }
+    // 그 회차에서 마지막으로 보고 있던 문항. 한 번도 안 들어갔으면 0 이다.
+    val seen = remember(e.round) { Marks.lastSeen(context, e.round) }
     val live = e.complete || e.items > 0
-    Box(
+    BoxWithConstraints(
         Modifier
             .fillMaxWidth()
             .clickable(enabled = live) { onPick(e.round) }
@@ -719,6 +724,28 @@ private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, onPick: (Int) -> Unit) {
                     Text("${counts.known}", style = COUNT, color = Hak3.Green)
                 }
                 if (!live) Text("no text", fontSize = 13.sp, color = Hak3.TextDim)
+            }
+        }
+
+        // 어디까지 갔는지를 알약 오른쪽에 눈금 하나로. 알약 끝에서 카드 벽까지의
+        // 자리를 셋으로 나눠 그 가운데 토막을 쓴다 — 알약에도 벽에도 붙지 않는다.
+        // 한 번도 들어가지 않은 회차에는 눈금 자체가 서지 않는다.
+        if (seen > 0 && e.items > 0) {
+            val room = (maxWidth - pill) / 2
+            Box(
+                Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = room * 0.40f)
+                    .width(room * 0.30f)
+                    .height(GAUGE)
+                    .background(Hak3.Rule, CircleShape)
+            ) {
+                Box(
+                    Modifier
+                        .fillMaxWidth((seen.toFloat() / e.items).coerceIn(0f, 1f))
+                        .fillMaxHeight()
+                        .background(Hak3.HanjaDim, CircleShape)
+                )
             }
         }
     }
