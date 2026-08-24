@@ -525,8 +525,8 @@ fun RoundPicker(
     }
 }
 
-/** 진행 눈금의 두께. */
-private val GAUGE = 2.dp
+/** 진행 눈금의 두께. 실선 한 줄만큼만 남긴다. */
+private val GAUGE = 1.dp
 
 /** 눈금의 바탕. 경계선에서 한 겹 더 물러난다. */
 private val GAUGE_TRACK = Hak3.Rule.copy(alpha = Hak3.Rule.alpha / 2)
@@ -734,15 +734,15 @@ private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, onPick: (Int) -> Unit) {
         }
 
         // 어디까지 갔는지를 알약 오른쪽에 눈금 하나로. 알약 끝에서 카드 벽까지의
-        // 자리를 셋으로 나눠 그 가운데 토막을 쓴다 — 알약에도 벽에도 붙지 않는다.
+        // 자리에서 25% 부터 65% 까지를 쓴다 — 알약에도 벽에도 붙지 않는다.
         // 한 번도 들어가지 않은 회차에는 눈금 자체가 서지 않는다.
         if (seen > 0 && e.items > 0) {
             val room = (maxWidth - pill) / 2
             Box(
                 Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = room * 0.40f)
-                    .width(room * 0.30f)
+                    .padding(end = room * 0.35f)
+                    .width(room * 0.40f)
                     .height(GAUGE)
                     .background(GAUGE_TRACK, CircleShape)
             ) {
