@@ -12,9 +12,12 @@
 import os
 from PIL import Image
 
-SRC = os.path.expanduser('~/Downloads/HAKC_asset/AppIcon_26HAKC.png')
+# 런처용 — 흰 판에 그림이 얹힌 원본. 판이 불투명해야 런처가 제 모양으로 도려낸다.
+SRC = os.path.expanduser('~/Downloads/HAKC_asset/AppIcon_26HAKC_white.png')
+# 첫 화면용 — 바탕이 비어 있는 원본. 알파를 그대로 살려 검은 첫 화면에 띄운다.
+SRC_ALPHA = os.path.expanduser('~/Downloads/HAKC_asset/AppIcon_26HAKC_alpha.png')
 RES = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'app', 'src', 'main', 'res')
-GROUND = (0, 0, 0, 255)         # 원본의 바탕색 — 앱의 검은 바탕과 이어진다
+GROUND = (255, 255, 255, 255)   # 판의 색 — 런처에서는 흰 판이다
 
 # mdpi 기준 배수 — 런처 아이콘 48dp, 적응형 레이어 108dp
 DENSITY = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}
@@ -24,6 +27,7 @@ SPLASH = 864             # 288dp @3x
 
 def main():
     src = Image.open(SRC).convert('RGBA')
+    alpha = Image.open(SRC_ALPHA).convert('RGBA')
     for name, k in DENSITY.items():
         out = os.path.join(RES, 'mipmap-' + name)
         os.makedirs(out, exist_ok=True)
@@ -32,9 +36,10 @@ def main():
         src.resize((legacy, legacy), Image.LANCZOS).save(os.path.join(out, 'ic_launcher.png'))
         src.resize((legacy, legacy), Image.LANCZOS).save(os.path.join(out, 'ic_launcher_round.png'))
 
-        # 원본이 이미 원에 맞으니 108dp 층에 통째로 얹는다
+        # 앞 층은 바탕이 빈 원본을 쓴다 — 흰 판(배경 층) 위에 그림만 얹히게.
+        # 원본이 이미 런처의 원에 맞으니 108dp 층에 통째로 올린다.
         layer = int(108 * k)
-        src.resize((layer, layer), Image.LANCZOS).save(
+        alpha.resize((layer, layer), Image.LANCZOS).save(
             os.path.join(out, 'ic_launcher_foreground.png'))
 
         Image.new('RGBA', (layer, layer), GROUND).save(
@@ -43,10 +48,10 @@ def main():
 
 
 def splash():
-    """첫 화면에 세울 사각 아이콘. 원본 그대로 줄이기만 한다."""
+    """첫 화면에 세울 그림. 바탕이 빈 원본을 그대로 줄인다 — 판도 테두리도 없다."""
     out = os.path.join(RES, 'drawable-xxhdpi')
     os.makedirs(out, exist_ok=True)
-    Image.open(SRC).convert('RGBA').resize((SPLASH, SPLASH), Image.LANCZOS).save(
+    Image.open(SRC_ALPHA).convert('RGBA').resize((SPLASH, SPLASH), Image.LANCZOS).save(
         os.path.join(out, 'splash_icon.png'))
     print('splash', SPLASH)
 

@@ -1,6 +1,8 @@
 package com.artbrain.hakc
 
 import android.os.Bundle
+import android.view.View
+import android.view.ViewTreeObserver
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -45,6 +47,7 @@ import androidx.compose.ui.unit.sp
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        holdSplash()
         setContent {
             Hak3Theme {
                 Box(
@@ -58,7 +61,33 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    /**
+     * 첫 화면을 잠깐 붙잡아 둔다. 앱이 순식간에 서면 아이콘이 번쩍하고 지나가
+     * 무엇이 지나갔는지 눈에 남지 않는다.
+     *
+     * 그리기 직전에 묻는 이에게 아직이라고 답하면 시스템이 첫 화면을 거두지 않는다.
+     * 때가 되면 깨워서 다시 그리게 한다 — 그냥 기다리기만 하면 다음 프레임이
+     * 오지 않아 영영 서 있을 수 있다.
+     */
+    private fun holdSplash() {
+        val root = findViewById<View>(android.R.id.content)
+        var ready = false
+        root.viewTreeObserver.addOnPreDrawListener(
+            object : ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    if (!ready) return false
+                    root.viewTreeObserver.removeOnPreDrawListener(this)
+                    return true
+                }
+            }
+        )
+        root.postDelayed({ ready = true; root.invalidate() }, HOLD)
+    }
 }
+
+/** 첫 화면을 붙잡아 두는 참. (ms) */
+private const val HOLD = 400L
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
