@@ -609,12 +609,23 @@ private fun TopBar(
                 amber,
             ) { onFilter(Mark.AMBER) }
         }
-        // 제목과 곁줄은 한 덩이로 캡슐 한가운데
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(title, fontSize = 15.sp, color = Hak3.Text)
+        // 제목과 곁줄은 한 덩이로 캡슐 한가운데. 둘은 밑선으로 맞춘다 —
+        // 한자가 낀 쪽은 줄 상자가 달라 가운데로 맞추면 글이 어긋나 보인다.
+        Row {
+            Text(
+                title,
+                fontSize = 15.sp,
+                color = Hak3.Text,
+                modifier = Modifier.alignByBaseline(),
+            )
             if (sub != null) {
                 Spacer(Modifier.width(8.dp))
-                Text(sub, fontSize = 15.sp, color = Hak3.Hanja)
+                Text(
+                    sub,
+                    fontSize = 15.sp,
+                    color = Hak3.Hanja,
+                    modifier = Modifier.alignByBaseline(),
+                )
             }
         }
         // 오른쪽은 초록. 왼쪽 노랑과 같은 단추이고 모아 보이는 것만 다르다.

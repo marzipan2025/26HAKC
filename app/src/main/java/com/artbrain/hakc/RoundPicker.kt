@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -323,7 +324,6 @@ fun RoundPicker(
                             for (bin in Mark.entries) {
                                 val n = counts[bin]?.get(kind) ?: 0
                                 Cell(
-                                    radius = radius,
                                     big = "$n",
                                     small = if (kind == Collect.Kind.CHARS) "letters" else "cards",
                                     color = if (bin == Mark.AMBER) Hak3.Amber else Hak3.Green,
@@ -644,7 +644,6 @@ private fun Setup(radius: Dp, trouble: String, onFolder: () -> Unit, onFile: () 
 /** 회차 칸과 같은 얼굴을 한 칸. 큰 줄과 작은 줄만 밖에서 정한다. */
 @Composable
 private fun Cell(
-    radius: Dp,
     big: String,
     small: String,
     color: Color,
@@ -658,11 +657,12 @@ private fun Cell(
     val ink = if (enabled) Color.Black else Hak3.TextDim
     Column(
         modifier
-            .fillMaxWidth()
-            .background(face, RoundedCornerShape(radius))
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(vertical = 16.dp),
+            // 네모가 아니라 정원이다. 폭이 곧 지름이고, 글은 그 한가운데 앉는다.
+            .aspectRatio(1f)
+            .background(face, CircleShape)
+            .clickable(enabled = enabled, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
         // 한자가 아니므로 회차 줄과 같은 코레일체로. 얇은 한자 서체는 큰 한자에만 쓴다.
         Text(
