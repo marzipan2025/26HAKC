@@ -25,6 +25,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.zIndex
 import androidx.annotation.DrawableRes
@@ -189,7 +190,7 @@ fun RoundPicker(
     // 곡률이 정해지면 두 판 사이의 틈도, 그 틈에 얹힌 아이콘의 자리도 함께 정해진다
     val gap = gap(radius)
     val tuck = tuck(radius, gap)
-    // 판 아래로 아이콘이 삐져나오는 만큼. 키보드가 올라올 때 그 위에 남길 자리다.
+    // 판 아래로 점이 삐져나오는 만큼. 먹통 층에서 그만큼을 비워 둔다.
     val band = gap / 2 + TOUCH / 2
     // 묶음은 회차의 표시에서 그때그때 모아 낸다. 쌓아 두지 않으므로 표시를
     // 바꾸고 돌아오면 수도 따라 바뀌어 있다. 넷 — 낱글자 둘, 문제 둘.
@@ -236,16 +237,16 @@ fun RoundPicker(
         var height by remember(square) { mutableFloatStateOf(with(density) { square.toPx() }) }
         LaunchedEffect(minPx, maxPx) { height = height.coerceIn(minPx, maxPx) }
 
-        // 입력 칸에 포커스가 가면 손잡이 줄이 키보드 바로 위에 붙을 만큼 키운다.
-        // 그 아래로 목록이 딱 안 보이는 자리다. 인셋이 한 프레임씩 오므로 키보드가
-        // 오르는 대로 따라 붙는다.
+        // 입력 칸에 포커스가 가면 판을 키워 목록을 키보드 아래로 완전히 밀어낸다.
+        // 판 아래의 틈까지가 딱 키보드 위끝이다 — 목록의 모서리 한 줄도 남지 않는다.
+        // 인셋이 한 프레임씩 오므로 키보드가 오르는 대로 따라 붙는다.
         //
         // 여기서는 60% 를 넘겨도 좋다 — 그 한계는 손으로 여닫을 때의 것이고, 찾는
         // 동안에는 손잡이를 키보드 위에 붙이는 쪽이 먼저다.
         var typing by remember { mutableStateOf(false) }
-        LaunchedEffect(typing, usable, band) {
+        LaunchedEffect(typing, usable, gap) {
             if (typing && usable < screenPx) {
-                height = (usable - with(density) { (band + 4.dp).toPx() })
+                height = (usable - with(density) { (gap + 4.dp).toPx() })
                     .coerceAtLeast(minPx)
             }
         }
@@ -382,6 +383,27 @@ fun RoundPicker(
             // 곳이라 틈이 좁아도 겹치지 않는다. 누르는 자리는 틈보다 크므로
             // 층을 올려 판 위로 얹는다.
             Box(Modifier.fillMaxWidth().height(gap).zIndex(1f).then(veil)) {
+                // 손잡이 막대는 걷었어도 잡는 자리는 남는다. 틈이 좁으니 잡히는
+                // 높이만 넉넉히 넓혀 두 판에 걸쳐 둔다. 점 둘은 이 뒤에 서므로
+                // 그 자리를 누르는 것은 점이 먼저 가져간다.
+                Box(
+                    Modifier
+                        .align(Alignment.Center)
+                        .fillMaxWidth()
+                        .requiredHeight(TOUCH)
+                        .draggable(
+                            orientation = Orientation.Vertical,
+                            state = rememberDraggableState { dy ->
+                                height = (height + dy).coerceIn(minPx, maxPx)
+                            },
+                            // 틈을 잡으면 입력 칸이 포커스를 놓고 키보드가 내려간다.
+                            // 판을 손으로 여닫겠다는 뜻이니 키보드가 남아 있을 까닭이 없다.
+                            onDragStarted = {
+                                focus.clearFocus()
+                                ime?.hide()
+                            },
+                        )
+                )
                 Box(
                     Modifier
                         .align(Alignment.CenterStart)
@@ -530,7 +552,7 @@ private const val COMMIT = 0.35f
 private const val FLING = 650f
 
 /** 밀려난 판의 밝기. */
-private const val DIM = 0.32f
+private const val DIM = 0.48f
 
 /** 서랍이 앉는 결. 튕기지 않으면서 짧게 끊어 붙는다. */
 private val SNAP = spring<Float>(dampingRatio = 0.92f, stiffness = 2000f)
