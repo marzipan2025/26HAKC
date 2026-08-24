@@ -141,7 +141,7 @@ private val scheme = darkColorScheme(
 private val type = Typography(
     bodyLarge = TextStyle(fontSize = 15.sp, lineHeight = 24.sp),
     bodyMedium = TextStyle(fontSize = 13.sp, lineHeight = 20.sp),
-    labelSmall = TextStyle(fontSize = 11.sp, letterSpacing = 0.8.sp),
+    labelSmall = TextStyle(fontSize = 13.sp, letterSpacing = 1.0.sp),
 )
 
 @Composable

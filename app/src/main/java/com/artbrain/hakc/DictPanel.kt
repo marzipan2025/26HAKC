@@ -420,7 +420,7 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                         // 여러 표기가 있을 때, 첫 글자에 어느 표기인지 표시를 단다
                         if (s.many && i == 0) {
                             withStyle(
-                                SpanStyle(fontSize = 11.sp, baselineShift = BaselineShift(0.6f))
+                                SpanStyle(fontSize = 13.sp, baselineShift = BaselineShift(0.5f))
                             ) { append(if (s.index == 0) "  ●" else "  ${s.index}") }
                         }
                     },

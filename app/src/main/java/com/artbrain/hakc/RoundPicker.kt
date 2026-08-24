@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateDpAsState
@@ -244,21 +243,26 @@ fun RoundPicker(
         // 키보드가 올라와 있는 동안만 틈이 벌어진다. 벌어지고 오므라드는 사이에
         // 아래 판이 따라 내려갔다 도로 올라붙는다 — 그 사이가 곧 이 모션이다.
         val bandTo = if (typing) TYPING else gap
-        val band by animateDpAsState(bandTo, tween(QUICK, easing = FastOutSlowInEasing), "band")
+        val band by animateDpAsState(bandTo, QUICK_DP, "band")
         // 막대는 틈이 벌어질 때 배어 나오고, 오므라들 때 스러진다
         val bar by animateFloatAsState(
             if (typing) 1f else 0f,
             tween(DISSOLVE, easing = LinearEasing),
             label = "bar",
         )
+        // 다시 걸릴 때 넘겨 줄 속도. 이것이 있어야 이어 달린다.
+        var speed by remember { mutableFloatStateOf(0f) }
         LaunchedEffect(typing, usable, bandTo) {
-            if (typing && usable < screenPx) {
+            if (!typing) {
+                speed = 0f
+                return@LaunchedEffect
+            }
+            if (usable < screenPx) {
                 val goal = (usable - with(density) { (bandTo + 4.dp).toPx() })
                     .coerceAtLeast(minPx)
-                // 인셋이 한 프레임씩 오므로 이 효과가 여러 번 돈다. 그때마다 지금
-                // 자리에서 새로 이어 달리니 키보드가 오르는 결을 그대로 탄다.
-                animate(height, goal, animationSpec = tween(QUICK, easing = FastOutSlowInEasing)) {
-                    v, _ -> height = v
+                animate(height, goal, speed, QUICK) { v, dv ->
+                    height = v
+                    speed = dv
                 }
             }
         }
@@ -582,8 +586,17 @@ private const val FLING = 400f
 /** 밀려난 판의 밝기. */
 private const val DIM = 0.48f
 
-/** 판이 자라고 틈이 벌어지는 결. 뚝딱대지 않게, 그러나 기다리게 하지 않을 만큼. */
-private const val QUICK = 180
+/**
+ * 판이 자라고 틈이 벌어지는 결. 튕김 없이 곧장 붙는다.
+ *
+ * 트윈이 아니라 스프링이다. 키보드 인셋은 한 프레임씩 오고 그때마다 애니메이션이
+ * 다시 걸리는데, 트윈은 걸릴 때마다 처음의 느린 구간으로 되돌아가 한참 멈칫하는
+ * 것처럼 보였다. 스프링에 직전의 속도를 넘겨 주면 그 자리에서 이어 달린다.
+ */
+private val QUICK = spring<Float>(dampingRatio = 1f, stiffness = 1200f)
+
+/** 틈이 쓰는 같은 결. */
+private val QUICK_DP = spring<Dp>(dampingRatio = 1f, stiffness = 1200f)
 
 /** 막대가 배어 나오고 스러지는 결. 자리가 잡히는 것보다 조금 빠르다. */
 private const val DISSOLVE = 120

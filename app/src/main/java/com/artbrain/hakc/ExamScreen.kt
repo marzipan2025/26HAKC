@@ -475,8 +475,8 @@ fun SettingsPanel(
         // 이름의 내력
         Text(
             "Haka Android Kichul Combined",
-            fontSize = 11.sp,
-            letterSpacing = 0.4.sp,
+            fontSize = 13.sp,
+            letterSpacing = 0.5.sp,
             color = Hak3.TextDim,
         )
 
@@ -544,7 +544,7 @@ private const val SIGN = 830f / 170f
 /** 묶음의 이름. 작고 성기게 적어 아래 것들과 층을 가른다. */
 @Composable
 private fun Label(text: String) {
-    Text(text, fontSize = 11.sp, letterSpacing = 1.2.sp, color = Hak3.TextDim)
+    Text(text, fontSize = 13.sp, letterSpacing = 1.4.sp, color = Hak3.TextDim)
 }
 
 /** 고른 쪽은 앰버로 테를 두른다. */
