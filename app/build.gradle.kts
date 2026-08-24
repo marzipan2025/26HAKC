@@ -23,7 +23,7 @@ android {
         applicationId = "com.artbrain.hakc"
         minSdk = 26
         targetSdk = 36
-        versionCode = 53
+        versionCode = 55
         versionName = "0.2.8.1"
     }
 

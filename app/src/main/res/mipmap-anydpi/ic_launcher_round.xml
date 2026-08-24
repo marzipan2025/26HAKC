@@ -2,4 +2,7 @@
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background" />
     <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <!-- 테마 아이콘(Nothing 런처의 단색 아이콘 포함)이 쓰는 층. 이것을 두지 않으면
+         런처가 판 전체를 실루엣으로 잡아 검은 원으로 그린다. 그림만 넘겨준다. -->
+    <monochrome android:drawable="@mipmap/ic_launcher_foreground" />
 </adaptive-icon>
