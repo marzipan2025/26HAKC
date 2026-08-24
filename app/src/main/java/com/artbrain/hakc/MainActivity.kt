@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
 }
 
 /** 첫 화면을 붙잡아 두는 참. (ms) */
-private const val HOLD = 400L
+private const val HOLD = 640L
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
