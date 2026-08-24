@@ -103,6 +103,16 @@ private val ARROW = 21.dp
 /** 그 잉크를 누를 수 있는 자리. 틈보다 크므로 판 위로 걸쳐 앉는다. */
 private val TOUCH = 40.dp
 
+/**
+ * 키보드가 올라와 있는 동안의 틈. 판이 키보드에 딱 붙으면 잡을 데가 없어 키보드를
+ * 내릴 길이 막힌다. 잡는 자리(TOUCH)가 통째로 키보드 위에 오르도록 벌리고, 그
+ * 안에 손잡이 막대를 세운다 — 여기서만 보이는 막대다.
+ */
+private val TYPING = TOUCH + GAP
+
+/** 손잡이 막대. 키보드가 올라와 틈이 벌어졌을 때만 선다. */
+private val BAR = 38.dp
+
 /** 잉크와 판의 둥근 모서리 사이에 남겨 둘 숨. */
 private val CLEAR = 2.dp
 
@@ -190,8 +200,6 @@ fun RoundPicker(
     // 곡률이 정해지면 두 판 사이의 틈도, 그 틈에 얹힌 아이콘의 자리도 함께 정해진다
     val gap = gap(radius)
     val tuck = tuck(radius, gap)
-    // 판 아래로 점이 삐져나오는 만큼. 먹통 층에서 그만큼을 비워 둔다.
-    val band = gap / 2 + TOUCH / 2
     // 묶음은 회차의 표시에서 그때그때 모아 낸다. 쌓아 두지 않으므로 표시를
     // 바꾸고 돌아오면 수도 따라 바뀌어 있다. 넷 — 낱글자 둘, 문제 둘.
     val counts = remember(db) {
@@ -238,15 +246,18 @@ fun RoundPicker(
         LaunchedEffect(minPx, maxPx) { height = height.coerceIn(minPx, maxPx) }
 
         // 입력 칸에 포커스가 가면 판을 키워 목록을 키보드 아래로 완전히 밀어낸다.
-        // 판 아래의 틈까지가 딱 키보드 위끝이다 — 목록의 모서리 한 줄도 남지 않는다.
-        // 인셋이 한 프레임씩 오므로 키보드가 오르는 대로 따라 붙는다.
+        // 벌어진 틈까지가 딱 키보드 위끝이다 — 목록은 한 줄도 올라오지 않고, 틈은
+        // 손이 들어갈 만큼 남는다. 인셋이 한 프레임씩 오므로 키보드가 오르는 대로
+        // 따라 붙는다.
         //
         // 여기서는 60% 를 넘겨도 좋다 — 그 한계는 손으로 여닫을 때의 것이고, 찾는
-        // 동안에는 손잡이를 키보드 위에 붙이는 쪽이 먼저다.
+        // 동안에는 틈을 키보드 위에 붙이는 쪽이 먼저다.
         var typing by remember { mutableStateOf(false) }
-        LaunchedEffect(typing, usable, gap) {
+        // 키보드가 올라와 있는 동안만 틈이 벌어진다
+        val band = if (typing) TYPING else gap
+        LaunchedEffect(typing, usable, band) {
             if (typing && usable < screenPx) {
-                height = (usable - with(density) { (gap + 4.dp).toPx() })
+                height = (usable - with(density) { (band + 4.dp).toPx() })
                     .coerceAtLeast(minPx)
             }
         }
@@ -382,7 +393,7 @@ fun RoundPicker(
             // 둥근 모서리가 좌우에 비워 둔 자리로 물러나 앉는다 — 판이 없는
             // 곳이라 틈이 좁아도 겹치지 않는다. 누르는 자리는 틈보다 크므로
             // 층을 올려 판 위로 얹는다.
-            Box(Modifier.fillMaxWidth().height(gap).zIndex(1f).then(veil)) {
+            Box(Modifier.fillMaxWidth().height(band).zIndex(1f).then(veil)) {
                 // 손잡이 막대는 걷었어도 잡는 자리는 남는다. 틈이 좁으니 잡히는
                 // 높이만 넉넉히 넓혀 두 판에 걸쳐 둔다. 점 둘은 이 뒤에 서므로
                 // 그 자리를 누르는 것은 점이 먼저 가져간다.
@@ -390,7 +401,7 @@ fun RoundPicker(
                     Modifier
                         .align(Alignment.Center)
                         .fillMaxWidth()
-                        .requiredHeight(TOUCH)
+                        .requiredHeight(maxOf(TOUCH, band))
                         .draggable(
                             orientation = Orientation.Vertical,
                             state = rememberDraggableState { dy ->
@@ -404,6 +415,16 @@ fun RoundPicker(
                             },
                         )
                 )
+                // 틈이 벌어져 있을 때만 막대가 선다. 잡을 데가 여기라고 알리는 표시고,
+                // 잡아 내리면 키보드가 함께 내려간다.
+                if (typing) {
+                    Box(
+                        Modifier
+                            .align(Alignment.Center)
+                            .size(BAR, 4.dp)
+                            .background(Hak3.Rule, RoundedCornerShape(2.dp))
+                    )
+                }
                 Box(
                     Modifier
                         .align(Alignment.CenterStart)
@@ -486,7 +507,10 @@ fun RoundPicker(
                     .then(morph)
                     .background(Hak3.Surface, RoundedCornerShape(radius))
             ) {
-                LazyColumn(
+                // 키보드가 올라와 있는 동안에는 알맹이를 비운다. 판이 딱 맞아떨어지지
+                // 않아 한 줄쯤 삐져나올 때가 있는데, 그때 글자가 반쯤 잘려 보이느니
+                // 판 색 한 겹으로 서는 편이 낫다.
+                if (!typing) LazyColumn(
                     Modifier.fillMaxSize().then(veil).nestedScroll(nested),
                     state = rounds,
                     contentPadding = PaddingValues(vertical = 18.dp),
@@ -509,8 +533,9 @@ fun RoundPicker(
         // 돌아갈 수 있게 하고, 나머지는 이 층이 다 삼킨다. 옆으로 쓸면 닫힌다.
         if (open) Column(Modifier.matchParentSize()) {
             val below = if (dict != null) 4.dp + with(density) { height.toDp() } else 0.dp
-            Deaf(Modifier.fillMaxWidth().height((below + gap - band).coerceAtLeast(0.dp)))
-            Spacer(Modifier.height(TOUCH))
+            val live = maxOf(TOUCH, band)                // 틈에서 손짓을 받는 높이
+            Deaf(Modifier.fillMaxWidth().height((below + band / 2 - live / 2).coerceAtLeast(0.dp)))
+            Spacer(Modifier.height(live))
             Deaf(Modifier.fillMaxWidth().weight(1f))
         }
         }
@@ -545,17 +570,17 @@ private fun anchor(drawer: Drawer, room: Float) = when (drawer) {
 /** 서랍이 열렸을 때 남는 판의 자락. 돌아가는 길로만 쓰는 자리라 좁게 둔다. */
 private const val STRIP = 0.15f
 
-/** 여기까지 끌면 놓아도 그쪽으로 앉는다. */
-private const val COMMIT = 0.35f
+/** 여기까지 끌면 놓아도 그쪽으로 앉는다. 자락이 좁아진 만큼 문턱도 낮췄다. */
+private const val COMMIT = 0.22f
 
 /** 이만큼 빠르게 튕기면 끌린 거리와 상관없이 그쪽으로 앉힌다. (px/s) */
-private const val FLING = 650f
+private const val FLING = 400f
 
 /** 밀려난 판의 밝기. */
 private const val DIM = 0.48f
 
-/** 서랍이 앉는 결. 튕기지 않으면서 짧게 끊어 붙는다. */
-private val SNAP = spring<Float>(dampingRatio = 0.92f, stiffness = 2000f)
+/** 서랍이 앉는 결. 튕기지 않으면서 짧게 끊어 붙는다. 붙는 힘을 좀 더 주었다. */
+private val SNAP = spring<Float>(dampingRatio = 0.9f, stiffness = 2800f)
 
 /** 서랍이 문 자리. 왼쪽은 아직 비었다. */
 enum class Drawer { NONE, USER, SETTINGS }
