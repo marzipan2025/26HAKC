@@ -508,7 +508,7 @@ fun SettingsPanel(
 
         // 판 번호와 자료 날짜는 사인에 딸린 말이라 바짝 붙인다
         Spacer(Modifier.height(13.dp))
-        Text("Data ${built ?: "unknown"}", fontSize = 15.sp, color = Hak3.TextDim)
+        Text("Data ${day(built)}", fontSize = 15.sp, color = Hak3.TextDim)
         Text("Version ${BuildConfig.VERSION_NAME}", fontSize = 15.sp, color = Hak3.TextDim)
 
         Spacer(Modifier.height(36.dp))
@@ -563,6 +563,9 @@ fun SettingsPanel(
         }
     }
 }
+
+/** 날짜는 YYYY.MM.DD 로 적는다. 데이터는 하이픈으로 적어 오므로 그것만 바꾼다. */
+private fun day(s: String?): String = s?.replace('-', '.') ?: "unknown"
 
 /** 사인의 가로세로 비 — 원본 그대로다. */
 private const val SIGN = 830f / 170f
@@ -788,8 +791,8 @@ private fun QuestionPage(
         // 아래 것들과 한 흐름으로 두지 않는다 — 자리도 정렬도 따로 간다.
         Text(
             instruction(page.section.instruction, ink(Hak3.Text)),
-            fontSize = 16.sp,
-            lineHeight = 22.sp,
+            fontSize = 15.sp,
+            lineHeight = 21.sp,
             color = ink(Hak3.TextDim),
             textAlign = TextAlign.Center,
             modifier = Modifier
@@ -815,7 +818,7 @@ private fun QuestionPage(
             // 큰 한자만 제자리에 두고 나머지는 조금 안쪽에서 시작한다
             Text(
                 item.label,
-                fontSize = 20.sp,
+                fontSize = 22.sp,
                 color = ink(if (mark != null) borderColor(mark) else Hak3.TextDim),
                 modifier = Modifier.padding(start = SHIFT),
             )
@@ -913,8 +916,8 @@ private fun AnswerSlot(item: Item, revealed: Boolean, ink: (Color) -> Color) {
                 Spacer(Modifier.height(6.dp))
                 Text(
                     g,
-                    fontSize = 20.sp,
-                    lineHeight = 32.sp,
+                    fontSize = 22.sp,
+                    lineHeight = 35.sp,
                     color = ink(Hak3.Neon.copy(alpha = 0.66f)),
                 )
             }
@@ -931,7 +934,7 @@ private val TOP = 52.dp
 private val LEAD = 60.dp
 
 /** 번호와 한자 사이를 이만큼 좁힌다. 한자 아래의 것들도 함께 딸려 올라온다. */
-private val TIGHTEN = 19.6.dp
+private val TIGHTEN = 22.dp
 
 /**
  * 첫 줄 위에 붙는 여백을 걷어낸다. 글자 상자의 윗변이 곧 글자의 윗선이 되어
@@ -1031,7 +1034,7 @@ private fun CloseDot(onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text("✕", fontSize = 20.sp, color = Hak3.Text)
+        Text("✕", fontSize = 22.sp, color = Hak3.Text)
     }
 }
 

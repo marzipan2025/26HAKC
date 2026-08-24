@@ -603,7 +603,7 @@ private fun Setup(radius: Dp, trouble: String, onFolder: () -> Unit, onFile: () 
             .background(Hak3.Surface, RoundedCornerShape(radius))
             .padding(20.dp),
     ) {
-        Text("No exam data yet", fontSize = 20.sp, color = Hak3.Text)
+        Text("No exam data yet", fontSize = 22.sp, color = Hak3.Text)
         Spacer(Modifier.height(8.dp))
         Text(
             "Put hanja3.db in a 26HAKC folder inside Downloads, then point the app " +
@@ -669,7 +669,7 @@ private fun Cell(
             big,
             fontFamily = Korail,
             fontWeight = FontWeight.Light,
-            fontSize = 40.sp,
+            fontSize = 44.sp,
             color = ink,
             maxLines = 1,
         )
