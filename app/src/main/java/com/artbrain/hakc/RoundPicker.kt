@@ -319,15 +319,18 @@ fun RoundPicker(
                 // 윗줄은 낱글자, 아랫줄은 문제.
                 Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                     Spacer(Modifier.height(4.dp))
-                    for (kind in Collect.Kind.entries) {
+                    // 문제가 위, 낱글자가 아래다. 문제 쪽은 테만 두르고 속을
+                    // 비워 두 갈래가 한눈에 갈린다.
+                    for (kind in listOf(Collect.Kind.CARDS, Collect.Kind.CHARS)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             for (bin in Mark.entries) {
                                 val n = counts[bin]?.get(kind) ?: 0
                                 Cell(
                                     big = "$n",
-                                    small = if (kind == Collect.Kind.CHARS) "letters" else "cards",
+                                    small = if (kind == Collect.Kind.CHARS) "Letters" else "Cards",
                                     color = if (bin == Mark.AMBER) Hak3.Amber else Hak3.Green,
                                     enabled = n > 0,
+                                    solid = kind == Collect.Kind.CHARS,
                                     modifier = Modifier.weight(1f),
                                 ) { onWords(bin, kind) }
                             }
@@ -525,6 +528,9 @@ fun RoundPicker(
     }
 }
 
+/** 속을 비운 묶음이 두르는 테의 두께. */
+private val RING = 2.dp
+
 /** 진행 눈금의 두께. 실선 한 줄만큼만 남긴다. */
 private val GAUGE = 1.dp
 
@@ -648,18 +654,27 @@ private fun Cell(
     small: String,
     color: Color,
     enabled: Boolean,
+    solid: Boolean = true,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    // 묶음 안의 카드와 같이 앞면이 통째로 그 색이고, 그 위의 글은 검정이다.
-    // 비어 있는 묶음은 색을 죽여 지금 열 것이 없음을 알린다.
+    // 채운 쪽은 묶음 안의 카드와 같이 앞면이 통째로 그 색이고 글은 검정이다.
+    // 비운 쪽은 테와 글만 그 색으로 서고 속은 바탕 그대로 둔다.
+    // 어느 쪽이든 비어 있는 묶음은 색을 죽여 지금 열 것이 없음을 알린다.
     val face = if (enabled) color else Hak3.Knob
-    val ink = if (enabled) Color.Black else Hak3.TextDim
+    val ink = when {
+        !enabled -> Hak3.TextDim
+        solid -> Color.Black
+        else -> color
+    }
     Column(
         modifier
             // 네모가 아니라 정원이다. 폭이 곧 지름이고, 글은 그 한가운데 앉는다.
             .aspectRatio(1f)
-            .background(face, CircleShape)
+            .then(
+                if (solid) Modifier.background(face, CircleShape)
+                else Modifier.border(RING, face, CircleShape)
+            )
             .clickable(enabled = enabled, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,

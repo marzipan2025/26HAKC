@@ -149,10 +149,10 @@ private val TEXT_WALL = 26.dp
 private val RULE_GAP = 10.dp
 
 /** 訓音 줄에서 음이 차지하는 너비. 음은 늘 한 글자라 이만큼이면 넉넉하다. */
-private val EUM = 31.dp
+private val EUM = 30.dp
 
 /** 訓音 자리는 두 줄에 한 줄 남짓 여백까지는 있어야 읽을 만하다. */
-private val MID_MIN = 80.dp
+private val MID_MIN = 76.dp
 
 /** 한자 자리는 제 높이의 1/4 까지 줄어든다. */
 private const val HEAD_FLOOR = 0.25f
@@ -562,8 +562,8 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
             Row {
                 Text(
                     "${g.eum} :",
-                    fontSize = 20.sp,
-                    lineHeight = 28.sp,
+                    fontSize = 19.sp,
+                    lineHeight = 27.sp,
                     // 흰 글씨는 판에서 가장 밝아 한자보다 앞으로 나온다.
                     // 訓音은 한자에 딸린 말이니 한자와 같은 색을 쓴다.
                     // 담아 둔 글자만 노랑으로 도드라진다.
@@ -584,13 +584,13 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                             ) { append(if (s.index == 0) "  ●" else "  ${s.index}") }
                         }
                     },
-                    fontSize = 20.sp,
-                    lineHeight = 28.sp,
+                    fontSize = 19.sp,
+                    lineHeight = 27.sp,
                     color = Hak3.Hanja,
                     modifier = Modifier.alignByBaseline(),
                     inlineContent = mapOf(
                         GRADE_SLOT to InlineTextContent(
-                            Placeholder(20.sp, 20.sp, PlaceholderVerticalAlign.TextCenter)
+                            Placeholder(19.sp, 19.sp, PlaceholderVerticalAlign.TextCenter)
                         ) {
                             Icon(
                                 painterResource(gradeIcon(g.grade)),
@@ -625,8 +625,8 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                 Spacer(Modifier.width(6.dp))
                 Text(
                     body,
-                    fontSize = 20.sp,
-                    lineHeight = 28.sp,
+                    fontSize = 19.sp,
+                    lineHeight = 27.sp,
                     color = Hak3.TextSoft,
                     maxLines = if (open) Int.MAX_VALUE else 1,
                     overflow = TextOverflow.Ellipsis,

@@ -296,7 +296,8 @@ fun WordScreen(db: ExamDb, bin: Mark, kind: Collect.Kind, onBack: () -> Unit) {
     }
     Deck(
         all = all,
-        title = (if (bin == Mark.AMBER) "Yellow " else "Green ") + if (chars) "letters" else "cards",
+        // 서랍의 이름과 같은 꼴로 적는다 — 거기서 눌러 온 자리다
+        title = (if (bin == Mark.AMBER) "Yellow " else "Green ") + if (chars) "Letters" else "Cards",
         // 문제 묶음의 카드는 제 회차에서 온 것이라 어느 회차인지 밝혀 둔다
         subOf = { p -> if (chars) null else "第 ${p.round} 回" },
         marks = marks,
@@ -501,8 +502,8 @@ fun SettingsPanel(
         // 이름의 내력
         Text(
             "Haka Android Kichul Combined",
-            fontSize = 20.sp,
-            letterSpacing = 0.8.sp,
+            fontSize = 18.sp,
+            letterSpacing = 0.7.sp,
             color = Hak3.TextDim,
         )
 
