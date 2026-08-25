@@ -490,7 +490,8 @@ fun RoundPicker(
                     verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
                 ) {
                     for (bin in Mark.entries) {
-                        for (kind in listOf(Collect.Kind.CARDS, Collect.Kind.CHARS)) {
+                        // 색마다 둘씩 — 속을 채운 낱글자가 먼저, 테만 두른 문제가 뒤다
+                        for (kind in listOf(Collect.Kind.CHARS, Collect.Kind.CARDS)) {
                             val n = counts[bin]?.get(kind) ?: 0
                             Chip(
                                 n = n,
@@ -704,11 +705,15 @@ private fun Cell(
     }
 }
 
-/** 단어장 단추의 높이. 설정 서랍의 단추(약 44dp) 절반에서 40% 키웠다. */
-private val CHIP = 31.dp
+/**
+ * 단어장 단추의 지름. 네 자리 수(7,374 자가 낱글자의 끝이다)까지 들어가는 크기다.
+ * 수가 몇 자리든 원은 늘 같은 크기로 선다 — 넷이 나란히 서는 자리라 크기가
+ * 들쭉날쭉하면 줄이 흔들린다.
+ */
+private val CHIP = 44.dp
 
 /** 단추끼리 벌어지는 만큼. */
-private val CHIP_GAP = 14.dp
+private val CHIP_GAP = 8.dp
 
 /** 회차 목록이 판 위에서 물러나는 만큼. 단추의 위 여백도 이 자에 맞춘다. */
 private val ROOF = 18.dp
@@ -716,8 +721,6 @@ private val ROOF = 18.dp
 /**
  * 목록 판의 어깨에 서는 단어장 단추. 담긴 수만 적는다 — 이만한 자리에 이름까지
  * 넣을 수는 없고, 색과 테가 어느 묶음인지 이미 말해 준다.
- *
- * 세 자리 수도 있으므로 정원이 아니라 알약이다. 한 자리 수일 때만 원이 된다.
  */
 @Composable
 private fun Chip(n: Int, color: Color, solid: Boolean, onClick: () -> Unit) {
@@ -730,17 +733,15 @@ private fun Chip(n: Int, color: Color, solid: Boolean, onClick: () -> Unit) {
     }
     Box(
         Modifier
-            .height(CHIP)
-            .defaultMinSize(minWidth = CHIP)
+            .size(CHIP)
             .then(
                 if (solid) Modifier.background(face, CircleShape)
-                else Modifier.border(1.dp, face, CircleShape)
+                else Modifier.border(RING, face, CircleShape)
             )
-            .clickable(enabled = on, onClick = onClick)
-            .padding(horizontal = 10.dp),
+            .clickable(enabled = on, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text("$n", fontSize = 18.sp, color = ink)
+        Text("$n", fontSize = 15.sp, color = ink, maxLines = 1)
     }
 }
 
