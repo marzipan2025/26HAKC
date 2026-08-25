@@ -478,9 +478,9 @@ fun RoundPicker(
                 // 단어장 넷은 목록 판의 왼쪽 어깨에 작게 선다. 회차 번호는 판
                 // 가운데 1/3 에만 서므로 이 자리는 늘 비어 있다.
                 // 위에서부터 노랑 문제 · 노랑 낱글자 · 초록 문제 · 초록 낱글자다.
-                // 왼쪽 여백은 오른쪽 눈금이 벽에서 물러난 만큼에서 8dp 당긴 자리다.
+                // 왼쪽 여백은 오른쪽 눈금이 벽에서 물러난 만큼에서 2dp 당긴 자리다.
                 // 위 여백은 회차 목록이 판 위에서 물러난 만큼(ROOF)을 그대로 쓴다.
-                val ledge = ((wide - 16.dp - wide / 3) / 2) * 0.35f - 8.dp
+                val ledge = ((wide - 16.dp - wide / 3) / 2) * 0.35f - 2.dp
                 if (!sunk) Column(
                     Modifier
                         .align(Alignment.TopStart)
@@ -512,7 +512,8 @@ fun RoundPicker(
                         item(key = "setup") { Setup(radius, trouble, onFolder, onFile) }
                     }
                     items(exams, key = { it.round }) { e ->
-                        RoundRow(e, e.round == last, wide / 3) {
+                        // 번호는 단추 자리 오른쪽으로 30dp 떨어져 왼쪽으로 정렬한다
+                        RoundRow(e, e.round == last, wide / 3, ledge + CHIP + 30.dp) {
                             last = it
                             Settings.setLastRound(context, it)
                             onPick(it)
@@ -549,8 +550,14 @@ private val GAUGE_FILL = Hak3.HanjaDim.copy(alpha = Hak3.HanjaDim.alpha * 0.6f)
 /** 끝까지 간 것. 흰빛이되 반만 — 온전한 흰색은 이 자리에 너무 세다. */
 private val GAUGE_DONE = Color.White.copy(alpha = 0.5f)
 
-/** 회차 숫자를 알약 한가운데로 내리는 값. 잉크의 가운데를 재어 잡았다. */
-private val INK = 2.dp
+/** 알약이 글자에서 좌우로 물러나는 만큼. */
+private val CAPSULE = 14.dp
+
+/**
+ * 회차 숫자를 알약 한가운데에 앉히는 값. 잉크의 가운데를 재어 잡았다.
+ * 코레일체에서는 2dp 내려야 맞았는데, 본문 서체가 바뀌며 되레 3dp 올려야 맞는다.
+ */
+private val INK = (-3).dp
 
 /** 번호의 글자 상자 위끝에서 잉크 위끝까지. 옆의 수를 그 선에 맞출 때 쓴다. */
 private val SHOULDER = 5.4.dp
@@ -747,7 +754,7 @@ private fun Chip(n: Int, color: Color, solid: Boolean, onClick: () -> Unit) {
  * 마지막으로 열어 본 줄에는 알약을 두른다.
  */
 @Composable
-private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, onPick: (Int) -> Unit) {
+private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, start: Dp, onPick: (Int) -> Unit) {
     val context = LocalContext.current
     val counts = remember(e.round) { Marks.counts(context, e.round) }
     // 그 회차에서 마지막으로 보고 있던 문항. 한 번도 안 들어갔으면 0 이다.
@@ -760,13 +767,14 @@ private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, onPick: (Int) -> Unit) {
             .padding(vertical = 1.dp),
         contentAlignment = Alignment.Center,
     ) {
-        // 알약은 글자를 감싸는 것이 아니라 화면 가운데 1/3 을 차지한다
+        // 번호는 왼쪽으로 정렬한다 — 단추 자리에서 30dp 떨어진 그 선이다.
+        // 알약은 글자를 감싸되 좌우로 조금 넉넉히 물러나 앉는다.
         Row(
             Modifier
-                .width(pill)
+                .align(Alignment.CenterStart)
+                .padding(start = start - CAPSULE)
                 .background(if (on) Hak3.Rule else Color.Transparent, CircleShape)
-                .padding(vertical = 6.dp),
-            horizontalArrangement = Arrangement.Center,
+                .padding(horizontal = CAPSULE, vertical = 6.dp),
             verticalAlignment = Alignment.Top,
         ) {
             // 숫자는 글자 상자 안에서 위로 쏠려 앉는다(내림자가 없다). 잰 만큼
@@ -774,8 +782,9 @@ private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, onPick: (Int) -> Unit) {
             // offset 은 그리는 자리만 옮기므로 알약 높이가 흔들리지 않는다.
             Text(
                 "${e.round}",
-                fontFamily = Korail,
-                fontWeight = FontWeight.Light,
+                // 회차 번호는 큰 한자와 같은 서체·같은 얇기로 선다
+                fontFamily = ThinHanja,
+                fontWeight = FontWeight.ExtraLight,
                 fontSize = 44.sp,
                 color = if (live) Hak3.Hanja else Hak3.HanjaDim,
                 modifier = Modifier.offset(y = INK),
