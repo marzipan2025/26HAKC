@@ -101,7 +101,7 @@ private fun Root() {
     // 묶음을 닫고 돌아오면 왼쪽 서랍이 열린 채로 선다 — 방금 있던 자리다.
     // 한 번 쓰고 잊는다. 그러지 않으면 회차를 보고 돌아올 때도 서랍이 열린다.
     var back by remember { mutableStateOf(Drawer.NONE) }
-    val book = remember { Dict.open(context) }
+    val dict = remember { Dict.open(context) }
 
     val pickFolder = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -130,24 +130,25 @@ private fun Root() {
 
     val ready = db
     val round = open
-    when {
-        words != null && ready != null -> {
-            BackHandler { words = null; back = Drawer.USER }
-            WordScreen(ready, words!!.first, words!!.second) {
-                words = null
-                back = Drawer.USER
-            }
-        }
-        // 목록과 상세는 판 하나를 나눠 갖는다. 회차를 누르면 목록의 판이 상세의
-        // 카드 자리까지 늘어나고, 나머지는 그동안 지워졌다가 뒤이어 떠오른다.
-        else -> SharedTransitionLayout {
+    val book = words
+    // 지금 어느 자리에 서 있는가. 셋 다 판 하나를 나눠 가지므로 한 자리에서 갈린다.
+    val where = when {
+        ready == null -> Where.List
+        book != null -> Where.Book(book.first, book.second)
+        round != null -> Where.Round(round)
+        else -> Where.List
+    }
+    // 목록과 상세는 판 하나를 나눠 갖는다. 회차를 누르면 목록의 판이 상세의
+    // 카드 자리까지 늘어나고, 나머지는 그동안 지워졌다가 뒤이어 떠오른다.
+    // 단어장도 같은 길로 연다 — 어깨의 단추에서 눌러도 판이 그렇게 늘어난다.
+    SharedTransitionLayout {
             AnimatedContent(
-                targetState = if (ready == null) null else round,
+                targetState = where,
                 // 화면째 흐려지면 판까지 같이 흐려진다. 지우고 띄우는 일은
                 // 조각마다 따로 맡긴다.
                 transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
-                label = "round",
-            ) { r ->
+                label = "where",
+            ) { w ->
                 val morph = Modifier.sharedBounds(
                     rememberSharedContentState("card"),
                     animatedVisibilityScope = this@AnimatedContent,
@@ -161,22 +162,40 @@ private fun Root() {
                     enter = fadeIn(tween(WIPE, delayMillis = WIPE + 40)),
                     exit = fadeOut(tween(WIPE)),
                 )
-                if (r == null || ready == null) {
-                    Picker(state, reload, ready, book, pickFolder, pickFile, morph, veil,
-                        onPick = { open = it }, onWords = { bin, kind -> words = bin to kind },
-                        startDrawer = back)
-                    LaunchedEffect(Unit) { back = Drawer.NONE }
-                } else {
-                    BackHandler { open = null }
-                    // 판은 넘어오는 동안에만 그린다. 뒤에 남겨 두면 카드를
-                    // 들췄을 때 그 뒤로 비쳐 카드가 겹쳐 있는 것처럼 보인다.
-                    ExamScreen(r, ready, morph, veil, { if (isTransitionActive) 1f else 0f }) {
-                        open = null
+                when {
+                    w is Where.Book && ready != null -> {
+                        BackHandler { words = null }
+                        WordScreen(
+                            ready, w.bin, w.kind,
+                            morph, veil, { if (isTransitionActive) 1f else 0f },
+                        ) { words = null }
+                    }
+                    w is Where.Round && ready != null -> {
+                        BackHandler { open = null }
+                        // 판은 넘어오는 동안에만 그린다. 뒤에 남겨 두면 카드를
+                        // 들췄을 때 그 뒤로 비쳐 카드가 겹쳐 있는 것처럼 보인다.
+                        ExamScreen(
+                            w.no, ready, morph, veil,
+                            { if (isTransitionActive) 1f else 0f },
+                        ) { open = null }
+                    }
+                    else -> {
+                        Picker(state, reload, ready, dict, pickFolder, pickFile, morph, veil,
+                            onPick = { open = it },
+                            onWords = { bin, kind -> words = bin to kind },
+                            startDrawer = back)
+                        LaunchedEffect(Unit) { back = Drawer.NONE }
                     }
                 }
             }
-        }
     }
+}
+
+/** 지금 서 있는 자리. 목록이거나, 한 회차이거나, 단어장 한 묶음이다. */
+private sealed interface Where {
+    data object List : Where
+    data class Round(val no: Int) : Where
+    data class Book(val bin: Mark, val kind: Collect.Kind) : Where
 }
 
 /** 지우고 띄우는 데 걸리는 참, 그리고 판이 늘어나는 참. (ms) */

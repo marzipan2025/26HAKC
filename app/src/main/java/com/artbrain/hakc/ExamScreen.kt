@@ -265,7 +265,15 @@ fun ExamScreen(
  *            바꾸면 **같은 글의 모든 회차분이 함께 간다.**
  */
 @Composable
-fun WordScreen(db: ExamDb, bin: Mark, kind: Collect.Kind, onBack: () -> Unit) {
+fun WordScreen(
+    db: ExamDb,
+    bin: Mark,
+    kind: Collect.Kind,
+    morph: Modifier = Modifier,
+    veil: Modifier = Modifier,
+    morphLit: () -> Float = { 0f },
+    onBack: () -> Unit,
+) {
     val context = LocalContext.current
     val chars = kind == Collect.Kind.CHARS
     val all = remember(bin, kind) {
@@ -303,9 +311,9 @@ fun WordScreen(db: ExamDb, bin: Mark, kind: Collect.Kind, onBack: () -> Unit) {
         marks = marks,
         numbered = false,
         start = 0,
-        morph = Modifier,
-        veil = Modifier,
-        morphLit = { 0f },
+        morph = morph,
+        veil = veil,
+        morphLit = morphLit,
         face = true,
         onMark = { p, m ->
             if (chars) {
