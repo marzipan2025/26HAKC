@@ -24,6 +24,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -550,8 +554,25 @@ private val GAUGE_FILL = Hak3.HanjaDim.copy(alpha = Hak3.HanjaDim.alpha * 0.6f)
 /** 끝까지 간 것. 흰빛이되 반만 — 온전한 흰색은 이 자리에 너무 세다. */
 private val GAUGE_DONE = Color.White.copy(alpha = 0.5f)
 
-/** 알약이 글자에서 좌우로 물러나는 만큼. */
-private val CAPSULE = 14.dp
+/** 깜박이는 점의 지름과, 번호에서 왼쪽으로 물러나는 만큼. */
+private val BEACON = 7.dp
+private val BEACON_GAP = 15.dp
+
+/** 점이 한 번 사그라들었다 돌아오는 데 걸리는 참. (ms) */
+private const val BLINK = 1400
+
+/** 마지막으로 열어 본 줄에 서는 점. 흰빛이 천천히 옅어졌다 짙어진다. */
+@Composable
+private fun Beacon(modifier: Modifier) {
+    val clock = rememberInfiniteTransition(label = "beacon")
+    val lit by clock.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.12f,
+        animationSpec = infiniteRepeatable(tween(BLINK, easing = LinearEasing), RepeatMode.Reverse),
+        label = "lit",
+    )
+    Box(modifier.size(BEACON).background(Color.White.copy(alpha = lit), CircleShape))
+}
 
 /**
  * 회차 숫자를 알약 한가운데에 앉히는 값. 잉크의 가운데를 재어 잡았다.
@@ -760,7 +781,7 @@ private fun Chip(n: Int, color: Color, solid: Boolean, onClick: () -> Unit) {
 
 /**
  * 회차 한 줄. 번호를 크게 적고 담아 둔 수를 그 어깨에 붙인다.
- * 마지막으로 열어 본 줄에는 알약을 두른다.
+ * 마지막으로 열어 본 줄에는 번호 왼쪽 위에 흰 점이 천천히 깜박인다.
  */
 @Composable
 private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, start: Dp, onPick: (Int) -> Unit) {
@@ -776,28 +797,30 @@ private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, start: Dp, onPick: (Int)
             .padding(vertical = 1.dp),
         contentAlignment = Alignment.Center,
     ) {
-        // 번호는 왼쪽으로 정렬한다 — 단추 자리에서 30dp 떨어진 그 선이다.
-        // 알약은 글자를 감싸되 좌우로 조금 넉넉히 물러나 앉는다.
+        // 번호는 왼쪽으로 정렬한다 — 단추 자리에서 떨어진 그 선이다.
         Row(
             Modifier
                 .align(Alignment.CenterStart)
-                .padding(start = start - CAPSULE)
-                .background(if (on) Hak3.Rule else Color.Transparent, CircleShape)
-                .padding(horizontal = CAPSULE, vertical = 6.dp),
+                .padding(start = start, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.Top,
         ) {
             // 숫자는 글자 상자 안에서 위로 쏠려 앉는다(내림자가 없다). 잰 만큼
-            // 내려 잉크의 가운데를 알약의 가운데에 맞춘다. 자리는 그대로다 —
-            // offset 은 그리는 자리만 옮기므로 알약 높이가 흔들리지 않는다.
-            Text(
-                "${e.round}",
-                // 회차 번호는 큰 한자와 같은 서체·같은 얇기로 선다
-                fontFamily = ThinHanja,
-                fontWeight = FontWeight.ExtraLight,
-                fontSize = 44.sp,
-                color = if (live) Hak3.Hanja else Hak3.HanjaDim,
-                modifier = Modifier.offset(y = INK),
-            )
+            // 올려 잉크가 줄 한가운데에 오게 한다. 자리는 그대로다 — offset 은
+            // 그리는 자리만 옮기므로 줄 높이가 흔들리지 않는다.
+            Box {
+                Text(
+                    "${e.round}",
+                    // 회차 번호는 큰 한자와 같은 서체·같은 얇기로 선다
+                    fontFamily = ThinHanja,
+                    fontWeight = FontWeight.ExtraLight,
+                    fontSize = 44.sp,
+                    color = if (live) Hak3.Hanja else Hak3.HanjaDim,
+                    modifier = Modifier.offset(y = INK),
+                )
+                // 마지막으로 열어 본 줄임을 알리는 점. 번호의 왼쪽 위 어깨에서
+                // 천천히 깜박인다 — 알약처럼 자리를 차지하지 않고 눈만 끈다.
+                if (on) Beacon(Modifier.align(Alignment.TopStart).offset(x = -BEACON_GAP, y = INK + SHOULDER))
+            }
             Spacer(Modifier.width(7.dp))
             // 담아 둔 수는 번호의 윗선에 맞춘다 — 한 개든 두 개든 같은 자리에서
             // 시작한다. 둘일 때는 아래 것을 3dp 끌어올려 한 덩이로 보이게 한다.
