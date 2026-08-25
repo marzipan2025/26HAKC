@@ -428,6 +428,7 @@ private fun Deck(
             title = title,
             sub = page?.let(subOf),
             filter = filter,
+            hollow = face,
             amber = marks.count { it.value == Mark.AMBER },
             known = marks.count { it.value == Mark.KNOWN },
             onFilter = { f ->
@@ -441,7 +442,8 @@ private fun Deck(
 
         BottomBar(
             modifier = Modifier.align(Alignment.BottomStart).then(veil),
-            enabled = page != null,
+            // 단어장에서 이미 풀린 카드는 뺄 것이 없으니 단추도 물러난다
+            enabled = page != null && (!face || marks[page.id] != null),
             markOnLeft = markOnLeft,
             label = page?.item?.label ?: "",
             lastNo = if (numbered && filter == null) all.lastOrNull()?.item?.spanEnd else null,
@@ -449,8 +451,17 @@ private fun Deck(
             total = pages.size,
             onSeek = { scope.launch { pager.scrollToPage(it) } },
             onBack = onBack,
+            // 단어장에서는 그 카드의 색을 그대로 입고 서서 묶음에서 빼는 자리가 된다
+            hue = if (face) page?.let { marks[it.id] }?.let(::borderColor) ?: Hak3.Knob else null,
         ) {
             val p = page ?: return@BottomBar
+            if (face) {
+                // 묶음에서 뺀다. 카드는 그 자리에 남아 색만 벗는다 — 무엇이
+                // 풀렸는지 보고 나서 넘어가라고 자리를 옮기지 않는다.
+                if (marks[p.id] == null) sound.no() else sound.yes()
+                onMark(p, null)
+                return@BottomBar
+            }
             // 이미 노랑이면 단추를 눌러도 자리가 바뀌지 않는다
             if (marks[p.id] == Mark.AMBER) sound.no() else sound.yes()
             onMark(p, Mark.AMBER)
@@ -590,6 +601,8 @@ private fun TopBar(
     filter: Mark?,
     amber: Int,
     known: Int,
+    /** 단어장에서는 원을 검게 두고 숫자만 제 색으로 남긴다. */
+    hollow: Boolean = false,
     onFilter: (Mark) -> Unit,
 ) {
     Box(
@@ -608,6 +621,7 @@ private fun TopBar(
                 if (amber > 0) Hak3.Amber else Hak3.Knob,
                 filter == Mark.AMBER,
                 amber,
+                hollow,
             ) { onFilter(Mark.AMBER) }
         }
         // 제목과 곁줄은 한 덩이로 캡슐 한가운데. 둘은 밑선으로 맞춘다 —
@@ -639,25 +653,31 @@ private fun TopBar(
                 if (known > 0) Hak3.Green else Hak3.Knob,
                 filter == Mark.KNOWN,
                 known,
+                hollow,
             ) { onFilter(Mark.KNOWN) }
         }
     }
 }
 
-/** 목록 필터 단추. 원 한가운데에 담긴 문항 수를 적는다. */
+/**
+ * 목록 필터 단추. 원 한가운데에 담긴 문항 수를 적는다.
+ *
+ * 단어장에서는 카드가 통째로 노랑이거나 초록이라, 같은 색 원이 그 위에 서면
+ * 서로 묻힌다. 그때는 원을 검게 두고 숫자만 제 색으로 남긴다.
+ */
 @Composable
-private fun FilterDot(color: Color, on: Boolean, count: Int, onClick: () -> Unit) {
+private fun FilterDot(color: Color, on: Boolean, count: Int, hollow: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
             .size(DOT)
-            .background(color, CircleShape)
+            .background(if (hollow) Hak3.Ground else color, CircleShape)
             // 켜져 있으면 흰 테를 두른다 — 아래 판정 원과 색이 같으므로 상태는 테로 가른다
             .border(if (on) 2.dp else 0.dp, if (on) Color.White else Color.Transparent, CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         if (count > 0) {
-            Text("$count", fontSize = 13.sp, color = Hak3.Ground)
+            Text("$count", fontSize = 13.sp, color = if (hollow) color else Hak3.Ground)
         }
     }
 }
@@ -1005,6 +1025,8 @@ private fun BottomBar(
     total: Int,
     onSeek: (Int) -> Unit,
     onBack: () -> Unit,
+    /** 단어장에서는 그 카드의 색. 회차에서는 null 이고 늘 노랑 단추가 선다. */
+    hue: Color? = null,
     onAmber: () -> Unit,
 ) {
     Row(
@@ -1014,8 +1036,9 @@ private fun BottomBar(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val pick = @Composable { PickDot(enabled, hue, onAmber) }
         // 노랑 단추 건너편이 닫기다. 남색 설정 단추가 있던 자리를 도로 쓴다.
-        if (markOnLeft) AmberDot(enabled, onAmber) else CloseDot(onBack)
+        if (markOnLeft) pick() else CloseDot(onBack)
         Scrubber(
             Modifier.weight(1f),
             index = index,
@@ -1023,7 +1046,7 @@ private fun BottomBar(
             text = if (lastNo != null) "$label / $lastNo" else "$label · ${index + 1} / $total",
             onSeek = onSeek,
         )
-        if (markOnLeft) CloseDot(onBack) else AmberDot(enabled, onAmber)
+        if (markOnLeft) CloseDot(onBack) else pick()
     }
 }
 
@@ -1038,6 +1061,27 @@ private fun CloseDot(onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Text("✕", fontSize = 22.sp, color = Hak3.Text)
+    }
+}
+
+/**
+ * 오른쪽 단추. 회차에서는 노랑을 찍는 자리이고, 단어장에서는 그 카드를 묶음에서
+ * 빼는 자리다 — 카드와 같은 색 위에 검은 ✕ 를 얹어 닫기와 같은 뜻으로 읽힌다.
+ */
+@Composable
+private fun PickDot(enabled: Boolean, hue: Color?, onPick: () -> Unit) {
+    if (hue == null) {
+        AmberDot(enabled, onPick)
+        return
+    }
+    Box(
+        Modifier
+            .size(BAR)
+            .background(if (enabled) hue else hue.copy(alpha = 0.2f), CircleShape)
+            .clickable(enabled = enabled, onClick = onPick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("✕", fontSize = 22.sp, color = if (enabled) Color.Black else Hak3.TextDim)
     }
 }
 
