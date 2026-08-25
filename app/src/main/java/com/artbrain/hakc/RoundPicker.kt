@@ -857,10 +857,11 @@ private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, start: Dp, onPick: (Int)
         // 한 번도 들어가지 않은 회차에는 눈금 자체가 서지 않는다.
         if (seen > 0 && e.items > 0) {
             val room = (maxWidth - pill) / 2
-            // 화면 폭의 68% 자리에서 시작해, 예전 오른쪽 끝에서 4dp 더 뻗는다.
+            // 화면 폭의 55.5% 자리에서 시작해, 예전 오른쪽 끝에서 4dp 더 뻗는다.
+            // 55.5% 는 어깨의 수에서 19dp 떨어진 자리다 — 재어서 잡았다.
             // 세로는 회차 번호의 윗선 — 어깨의 수도 깜박이는 점도 그 선에 선다.
             val far = room * 0.35f - 4.dp
-            val near = (maxWidth + 16.dp) * 0.68f - 8.dp
+            val near = (maxWidth + 16.dp) * 0.555f - 8.dp
             Box(
                 Modifier
                     .align(Alignment.TopStart)
