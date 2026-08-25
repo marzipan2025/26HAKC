@@ -555,11 +555,11 @@ private val GAUGE_FILL = Hak3.HanjaDim.copy(alpha = Hak3.HanjaDim.alpha * 0.6f)
 private val GAUGE_DONE = Color.White.copy(alpha = 0.5f)
 
 /** 깜박이는 점의 지름과, 번호에서 왼쪽으로 물러나는 만큼. */
-private val BEACON = 7.dp
+private val BEACON = 5.dp
 private val BEACON_GAP = 15.dp
 
 /** 점이 한 번 사그라들었다 돌아오는 데 걸리는 참. (ms) */
-private const val BLINK = 1400
+private const val BLINK = 1000
 
 /** 마지막으로 열어 본 줄에 서는 점. 흰빛이 천천히 옅어졌다 짙어진다. */
 @Composable
@@ -583,8 +583,9 @@ private val INK = (-3).dp
 /**
  * 번호의 글자 상자 위끝에서 잉크 위끝까지. 옆의 수를 그 선에 맞출 때 쓴다.
  * 코레일체에서 5.4dp 였는데, 번호가 Source Han 으로 바뀌며 8dp 더 내려앉았다.
+ * 거기서 3dp 더 — 눈으로 보고 잡은 자리다. 깜박이는 점도 이 자를 함께 본다.
  */
-private val SHOULDER = 13.4.dp
+private val SHOULDER = 16.4.dp
 
 /** 번호 옆의 작은 수. 줄 상자를 글자에 바짝 붙여 위아래 여백을 없앤다. */
 private val COUNT = TextStyle(
@@ -827,7 +828,13 @@ private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, start: Dp, onPick: (Int)
             Column(Modifier.offset(y = INK).padding(top = SHOULDER)) {
                 // 줄 상자를 글자에 바짝 붙여 둘이 한 덩이로 보이게 한다
                 if (counts.amber > 0) {
-                    Text("${counts.amber}", style = COUNT, color = Hak3.Amber)
+                    // 노란 수만 2dp 더 올라간다. 자리는 그대로라 초록은 따라오지 않는다.
+                    Text(
+                        "${counts.amber}",
+                        style = COUNT,
+                        color = Hak3.Amber,
+                        modifier = Modifier.offset(y = (-2).dp),
+                    )
                 }
                 if (counts.known > 0) {
                     Text("${counts.known}", style = COUNT, color = Hak3.Green)
