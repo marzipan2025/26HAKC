@@ -485,13 +485,21 @@ fun RoundPicker(
                 // 왼쪽 여백은 오른쪽 눈금이 벽에서 물러난 만큼에서 2dp 당긴 자리다.
                 // 위 여백은 회차 목록이 판 위에서 물러난 만큼(ROOF)을 그대로 쓴다.
                 val ledge = ((wide - 16.dp - wide / 3) / 2) * 0.35f - 2.dp
-                if (!sunk) Column(
+                // 단추를 빗나간 손짓은 이 자리에서 삼킨다. 그러지 않으면 단추
+                // 사이나 그 왼쪽을 스친 손짓이 목록으로 새어 회차가 열린다 —
+                // 단어장을 열었다고 여긴 채 회차를 보고 있게 된다.
+                if (!sunk) Box(
                     Modifier
                         .align(Alignment.TopStart)
-                        .padding(start = ledge, top = ROOF + CHIP_DROP)
+                        .padding(top = ROOF + CHIP_DROP)
+                        .width(ledge + CHIP)
+                        .pointerInput(Unit) { detectTapGestures { } }
                         .zIndex(1f),
-                    verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
                 ) {
+                    Column(
+                        Modifier.padding(start = ledge),
+                        verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
+                    ) {
                     for (bin in Mark.entries) {
                         // 색마다 둘씩 — 속을 채운 낱글자가 먼저, 테만 두른 문제가 뒤다
                         for (kind in listOf(Collect.Kind.CHARS, Collect.Kind.CARDS)) {
@@ -504,6 +512,7 @@ fun RoundPicker(
                                 solid = kind == Collect.Kind.CHARS,
                             ) { onWords(bin, kind) }
                         }
+                    }
                     }
                 }
 
