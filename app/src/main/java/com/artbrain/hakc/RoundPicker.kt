@@ -478,12 +478,16 @@ fun RoundPicker(
                 // 단어장 넷은 목록 판의 왼쪽 어깨에 작게 선다. 회차 번호는 판
                 // 가운데 1/3 에만 서므로 이 자리는 늘 비어 있다.
                 // 위에서부터 노랑 문제 · 노랑 낱글자 · 초록 문제 · 초록 낱글자다.
+                // 왼쪽 여백은 오른쪽 눈금이 벽에서 물러난 만큼과 같다 — 판의
+                // 두 어깨가 한 자로 재어진 것처럼 보이게. 위 여백은 회차 목록이
+                // 판 위에서 물러난 만큼(ROOF)을 그대로 쓴다.
+                val ledge = ((wide - 16.dp - wide / 3) / 2) * 0.35f
                 if (!sunk) Column(
                     Modifier
                         .align(Alignment.TopStart)
-                        .padding(start = 12.dp, top = 12.dp)
+                        .padding(start = ledge, top = ROOF)
                         .zIndex(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
                 ) {
                     for (bin in Mark.entries) {
                         for (kind in listOf(Collect.Kind.CARDS, Collect.Kind.CHARS)) {
@@ -502,7 +506,7 @@ fun RoundPicker(
                 if (!sunk) LazyColumn(
                     Modifier.fillMaxSize().then(veil).nestedScroll(nested),
                     state = rounds,
-                    contentPadding = PaddingValues(vertical = 18.dp),
+                    contentPadding = PaddingValues(vertical = ROOF),
                 ) {
                     if (trouble != null) {
                         item(key = "setup") { Setup(radius, trouble, onFolder, onFile) }
@@ -700,8 +704,14 @@ private fun Cell(
     }
 }
 
-/** 단어장 단추의 높이. 설정 서랍의 단추(약 44dp)의 절반이다. */
-private val CHIP = 22.dp
+/** 단어장 단추의 높이. 설정 서랍의 단추(약 44dp) 절반에서 40% 키웠다. */
+private val CHIP = 31.dp
+
+/** 단추끼리 벌어지는 만큼. */
+private val CHIP_GAP = 14.dp
+
+/** 회차 목록이 판 위에서 물러나는 만큼. 단추의 위 여백도 이 자에 맞춘다. */
+private val ROOF = 18.dp
 
 /**
  * 목록 판의 어깨에 서는 단어장 단추. 담긴 수만 적는다 — 이만한 자리에 이름까지
@@ -727,10 +737,10 @@ private fun Chip(n: Int, color: Color, solid: Boolean, onClick: () -> Unit) {
                 else Modifier.border(1.dp, face, CircleShape)
             )
             .clickable(enabled = on, onClick = onClick)
-            .padding(horizontal = 7.dp),
+            .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text("$n", fontSize = 13.sp, color = ink)
+        Text("$n", fontSize = 18.sp, color = ink)
     }
 }
 
