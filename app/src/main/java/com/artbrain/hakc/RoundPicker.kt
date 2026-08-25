@@ -752,7 +752,7 @@ private val ROOF = 18.dp
  * 첫 단추가 첫 회차 번호와 윗선을 맞추려고 더 내려앉는 만큼. 재어 보니 단추의
  * 잉크가 번호의 잉크보다 4dp 위에 있었다 — 서체가 서로 다른 탓이다.
  */
-private val CHIP_DROP = 4.dp
+private val CHIP_DROP = 6.dp
 
 /**
  * 목록 판의 어깨에 서는 단어장 단추. 색면도 테도 없이 담긴 수만 적는다 —
