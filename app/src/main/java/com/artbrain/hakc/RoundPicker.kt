@@ -478,10 +478,10 @@ fun RoundPicker(
                 // 단어장 넷은 목록 판의 왼쪽 어깨에 작게 선다. 회차 번호는 판
                 // 가운데 1/3 에만 서므로 이 자리는 늘 비어 있다.
                 // 위에서부터 노랑 문제 · 노랑 낱글자 · 초록 문제 · 초록 낱글자다.
-                // 왼쪽 여백은 오른쪽 눈금이 벽에서 물러난 만큼과 같다 — 판의
-                // 두 어깨가 한 자로 재어진 것처럼 보이게. 위 여백은 회차 목록이
-                // 판 위에서 물러난 만큼(ROOF)을 그대로 쓴다.
-                val ledge = ((wide - 16.dp - wide / 3) / 2) * 0.35f
+                // 왼쪽 여백은 오른쪽 눈금이 벽에서 물러난 만큼에서 20dp 더 당긴
+                // 자리다. 색면을 걷고 글자만 남기니 그만큼 안으로 들어와 보였다.
+                // 위 여백은 회차 목록이 판 위에서 물러난 만큼(ROOF)을 그대로 쓴다.
+                val ledge = ((wide - 16.dp - wide / 3) / 2) * 0.35f - 20.dp
                 if (!sunk) Column(
                     Modifier
                         .align(Alignment.TopStart)
@@ -719,29 +719,27 @@ private val CHIP_GAP = 8.dp
 private val ROOF = 18.dp
 
 /**
- * 목록 판의 어깨에 서는 단어장 단추. 담긴 수만 적는다 — 이만한 자리에 이름까지
- * 넣을 수는 없고, 색과 테가 어느 묶음인지 이미 말해 준다.
+ * 목록 판의 어깨에 서는 단어장 단추. 색면도 테도 없이 담긴 수만 적는다 —
+ * 색이 어느 묶음인지, 굵기가 어느 갈래인지 말해 준다. 낱글자가 굵고 문제가 보통이다.
+ *
+ * 누르는 자리는 그대로 44dp 정사각이고, 글자는 그 왼쪽에 붙는다.
  */
 @Composable
 private fun Chip(n: Int, color: Color, solid: Boolean, onClick: () -> Unit) {
     val on = n > 0
-    val face = if (on) color else Hak3.Knob
-    val ink = when {
-        !on -> Hak3.TextDim
-        solid -> Color.Black
-        else -> color
-    }
     Box(
         Modifier
             .size(CHIP)
-            .then(
-                if (solid) Modifier.background(face, CircleShape)
-                else Modifier.border(RING, face, CircleShape)
-            )
             .clickable(enabled = on, onClick = onClick),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.CenterStart,
     ) {
-        Text("$n", fontSize = 15.sp, color = ink, maxLines = 1)
+        Text(
+            "$n",
+            fontSize = 15.sp,
+            fontWeight = if (solid) FontWeight.Bold else FontWeight.Normal,
+            color = if (on) color else Hak3.TextDim,
+            maxLines = 1,
+        )
     }
 }
 
