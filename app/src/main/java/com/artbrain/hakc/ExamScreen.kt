@@ -1050,6 +1050,23 @@ private fun BottomBar(
     }
 }
 
+/**
+ * ✕ 는 글자라 줄 상자 안에서 밑선 위에 앉는다. 상자를 한가운데 놓아도 잉크는
+ * 그만큼 처져 보이므로 이만큼 끌어올린다 — 화면에서 재어 잡았다(22sp 에서 5px).
+ */
+private val CROSS_LIFT = 1.7.dp
+
+/** 원 한가운데에 앉는 ✕. 닫기와 묶음에서 빼기가 같은 잉크를 쓴다. */
+@Composable
+private fun Cross(color: Color) {
+    Text(
+        "✕",
+        fontSize = 22.sp,
+        color = color,
+        modifier = Modifier.offset(y = -CROSS_LIFT),
+    )
+}
+
 /** 회차를 닫는다. 노랑 단추 건너편에 같은 크기로, 슬라이더와 같은 바탕으로 선다. */
 @Composable
 private fun CloseDot(onClick: () -> Unit) {
@@ -1060,7 +1077,7 @@ private fun CloseDot(onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text("✕", fontSize = 22.sp, color = Hak3.Text)
+        Cross(Hak3.Text)
     }
 }
 
@@ -1081,7 +1098,7 @@ private fun PickDot(enabled: Boolean, hue: Color?, onPick: () -> Unit) {
             .clickable(enabled = enabled, onClick = onPick),
         contentAlignment = Alignment.Center,
     ) {
-        Text("✕", fontSize = 22.sp, color = if (enabled) Color.Black else Hak3.TextDim)
+        Cross(if (enabled) Color.Black else Hak3.TextDim)
     }
 }
 
