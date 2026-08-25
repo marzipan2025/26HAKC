@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.animation.core.AnimationSpec
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animate
 import kotlinx.coroutines.Job
@@ -53,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.input.pointer.pointerInput
@@ -272,6 +274,7 @@ fun WordScreen(
     morph: Modifier = Modifier,
     veil: Modifier = Modifier,
     morphLit: () -> Float = { 0f },
+    leaving: Boolean = false,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -314,7 +317,8 @@ fun WordScreen(
         morph = morph,
         veil = veil,
         morphLit = morphLit,
-        face = true,
+        face = if (bin == Mark.AMBER) Hak3.Amber else Hak3.Green,
+        leaving = leaving,
         onMark = { p, m ->
             if (chars) {
                 Collect.keep(context, db, p.id, bin, m != null)
@@ -344,7 +348,10 @@ private fun Deck(
     morph: Modifier,
     veil: Modifier,
     morphLit: () -> Float,
-    face: Boolean = false,
+    /** 단어장이면 그 묶음의 색. 회차면 null 이고 카드는 판 색 그대로다. */
+    face: Color? = null,
+    /** 이 화면이 지금 빠져나가는 중인가. 색을 되돌리며 줄어들게 하려고 본다. */
+    leaving: Boolean = false,
     onMark: (Page, Mark?) -> Unit,
     onSeen: (Page) -> Unit,
     onBack: () -> Unit,
@@ -384,13 +391,24 @@ private fun Deck(
         // 목록의 판이 늘어나 앉는 자리. 카드와 똑같은 사각형이라 넘어오는 동안
         // 이어져 보인다. 넘어온 뒤에는 지운다 — 카드를 들추면 그 뒤로 이것이
         // 비쳐 카드가 겹쳐 있는 것처럼 보인다.
+        //
+        // 단어장으로 갈 때는 늘어나는 동안 색도 함께 바뀐다. 다 늘어난 뒤에 색이
+        // 갈리면 카드가 두 장인 것처럼 보인다 — 판이 서고 그 위에 색 카드가
+        // 얹히는 꼴이다. 늘어나는 결과 같은 시간을 쓴다.
+        // 들어올 때는 판 색에서 묶음 색으로, 나갈 때는 거꾸로. 줄어들면서 색이
+        // 도로 돌아와야 돌아가는 길도 카드 한 장으로 보인다.
+        val grown = remember { Animatable(0f) }
+        LaunchedEffect(leaving) {
+            grown.animateTo(if (leaving) 0f else 1f, tween(GROW, easing = FastOutSlowInEasing))
+        }
+        val plate = if (face == null) Hak3.Surface else lerp(Hak3.Surface, face, grown.value)
         Box(
             Modifier
                 .fillMaxSize()
                 .padding(inset)
                 .then(morph)
                 .graphicsLayer { alpha = morphLit() }
-                .background(Hak3.Surface, RoundedCornerShape(radius))
+                .background(plate, RoundedCornerShape(radius))
         )
         if (pages.isEmpty()) {
             EmptyList(filter, Modifier.fillMaxSize().padding(inset).then(veil), radius)
@@ -406,7 +424,7 @@ private fun Deck(
                             page = p,
                             revealed = open[p.id] == true,
                             mark = marks[p.id],
-                            face = face,
+                            face = face != null,
                             radius = radius,
                             onLifted = { lifted = it },
                             // 담기든 풀리든 자리가 바뀌면 딸깍
@@ -436,7 +454,7 @@ private fun Deck(
             title = title,
             sub = page?.let(subOf),
             filter = filter,
-            hollow = face,
+            hollow = face != null,
             amber = marks.count { it.value == Mark.AMBER },
             known = marks.count { it.value == Mark.KNOWN },
             onFilter = { f ->
@@ -451,7 +469,7 @@ private fun Deck(
         BottomBar(
             modifier = Modifier.align(Alignment.BottomStart).then(veil),
             // 단어장에서 이미 풀린 카드는 뺄 것이 없으니 단추도 물러난다
-            enabled = page != null && (!face || marks[page.id] != null),
+            enabled = page != null && (face == null || marks[page.id] != null),
             markOnLeft = markOnLeft,
             label = page?.item?.label ?: "",
             lastNo = if (numbered && filter == null) all.lastOrNull()?.item?.spanEnd else null,
@@ -460,10 +478,10 @@ private fun Deck(
             onSeek = { scope.launch { pager.scrollToPage(it) } },
             onBack = onBack,
             // 단어장에서는 그 카드의 색을 그대로 입고 서서 묶음에서 빼는 자리가 된다
-            hue = if (face) page?.let { marks[it.id] }?.let(::borderColor) ?: Hak3.Knob else null,
+            hue = if (face != null) page?.let { marks[it.id] }?.let(::borderColor) ?: Hak3.Knob else null,
         ) {
             val p = page ?: return@BottomBar
-            if (face) {
+            if (face != null) {
                 // 묶음에서 뺀다. 카드는 그 자리에 남아 색만 벗는다 — 무엇이
                 // 풀렸는지 보고 나서 넘어가라고 자리를 옮기지 않는다.
                 if (marks[p.id] == null) sound.no() else sound.yes()

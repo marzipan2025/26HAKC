@@ -156,6 +156,10 @@ private fun Root() {
                     exit = ExitTransition.None,
                     boundsTransform = { _, _ -> tween(GROW, easing = FastOutSlowInEasing) },
                     resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                    // 넘어가는 동안 둘이 같은 자리에 겹친다. 목록의 판을 아래에
+                    // 두어야 카드 쪽 판이 색을 바꾸는 것이 보인다 — 위에 있는
+                    // 것만 눈에 들기 때문이다.
+                    zIndexInOverlay = if (w is Where.List) 0f else 1f,
                 )
                 // 나가는 것이 다 지워진 뒤에 들어오는 것이 뜬다
                 val veil = Modifier.animateEnterExit(
@@ -168,6 +172,8 @@ private fun Root() {
                         WordScreen(
                             ready, w.bin, w.kind,
                             morph, veil, { if (isTransitionActive) 1f else 0f },
+                            // 이 조각이 지금 자리를 내주는 중인가
+                            leaving = w != where,
                         ) { words = null }
                     }
                     w is Where.Round && ready != null -> {
@@ -200,7 +206,9 @@ private sealed interface Where {
 
 /** 지우고 띄우는 데 걸리는 참, 그리고 판이 늘어나는 참. (ms) */
 private const val WIPE = 150
-private const val GROW = 340
+
+/** 판이 카드 자리까지 늘어나는 참. 판의 색이 바뀌는 것도 이 시간을 함께 쓴다. */
+const val GROW = 340
 
 @Composable
 private fun Picker(
