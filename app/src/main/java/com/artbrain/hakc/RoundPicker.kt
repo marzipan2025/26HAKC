@@ -484,7 +484,7 @@ fun RoundPicker(
                 if (!sunk) Column(
                     Modifier
                         .align(Alignment.TopStart)
-                        .padding(start = ledge, top = ROOF)
+                        .padding(start = ledge, top = ROOF + CHIP_DROP)
                         .zIndex(1f),
                     verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
                 ) {
@@ -513,7 +513,7 @@ fun RoundPicker(
                     }
                     items(exams, key = { it.round }) { e ->
                         // 번호는 단추 자리 오른쪽으로 30dp 떨어져 왼쪽으로 정렬한다
-                        RoundRow(e, e.round == last, wide / 3, ledge + CHIP + 30.dp) {
+                        RoundRow(e, e.round == last, wide / 3, ledge + CHIP + 14.dp) {
                             last = it
                             Settings.setLastRound(context, it)
                             onPick(it)
@@ -559,8 +559,11 @@ private val CAPSULE = 14.dp
  */
 private val INK = (-3).dp
 
-/** 번호의 글자 상자 위끝에서 잉크 위끝까지. 옆의 수를 그 선에 맞출 때 쓴다. */
-private val SHOULDER = 5.4.dp
+/**
+ * 번호의 글자 상자 위끝에서 잉크 위끝까지. 옆의 수를 그 선에 맞출 때 쓴다.
+ * 코레일체에서 5.4dp 였는데, 번호가 Source Han 으로 바뀌며 8dp 더 내려앉았다.
+ */
+private val SHOULDER = 13.4.dp
 
 /** 번호 옆의 작은 수. 줄 상자를 글자에 바짝 붙여 위아래 여백을 없앤다. */
 private val COUNT = TextStyle(
@@ -721,8 +724,14 @@ private val CHIP = 44.dp
 /** 단추끼리 벌어지는 만큼. */
 private val CHIP_GAP = 8.dp
 
-/** 회차 목록이 판 위에서 물러나는 만큼. 단추의 위 여백도 이 자에 맞춘다. */
+/** 회차 목록이 판 위에서 물러나는 만큼. 단추의 위 여백도 이 자에서 잰다. */
 private val ROOF = 18.dp
+
+/**
+ * 첫 단추가 첫 회차 번호와 윗선을 맞추려고 더 내려앉는 만큼. 재어 보니 단추의
+ * 잉크가 번호의 잉크보다 4dp 위에 있었다 — 서체가 서로 다른 탓이다.
+ */
+private val CHIP_DROP = 4.dp
 
 /**
  * 목록 판의 어깨에 서는 단어장 단추. 색면도 테도 없이 담긴 수만 적는다 —
