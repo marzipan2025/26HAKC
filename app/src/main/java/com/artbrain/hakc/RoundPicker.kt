@@ -58,6 +58,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -313,32 +314,8 @@ fun RoundPicker(
         Box(Modifier.fillMaxSize().offset { IntOffset(shift.value.roundToInt(), 0) }) {
             // 서랍 둘은 판의 양옆에 붙어 함께 밀린다. 제자리에 두면 판이 그 위를
             // 덮고 지나가는데, 덮는 것이 아니라 밀려나야 한다.
-            // 왼쪽 서랍 — 단어장이 여기 산다
-            Box(Modifier.offset(x = -roomDp).width(roomDp).fillMaxHeight()) {
-                // 단어장은 넷이다. 좌우로 색이 갈리고, 위아래로 갈래가 갈린다 —
-                // 윗줄은 낱글자, 아랫줄은 문제.
-                Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-                    Spacer(Modifier.height(4.dp))
-                    // 문제가 위, 낱글자가 아래다. 문제 쪽은 테만 두르고 속을
-                    // 비워 두 갈래가 한눈에 갈린다.
-                    for (kind in listOf(Collect.Kind.CARDS, Collect.Kind.CHARS)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            for (bin in Mark.entries) {
-                                val n = counts[bin]?.get(kind) ?: 0
-                                Cell(
-                                    big = "$n",
-                                    small = if (kind == Collect.Kind.CHARS) "Letters" else "Cards",
-                                    color = if (bin == Mark.AMBER) Hak3.Amber else Hak3.Green,
-                                    enabled = n > 0,
-                                    solid = kind == Collect.Kind.CHARS,
-                                    modifier = Modifier.weight(1f),
-                                ) { onWords(bin, kind) }
-                            }
-                        }
-                        Spacer(Modifier.height(10.dp))
-                    }
-                }
-            }
+            // 왼쪽 서랍 — 단어장은 목록 판의 어깨로 옮겨 갔다. 지금은 비어 있다.
+            Box(Modifier.offset(x = -roomDp).width(roomDp).fillMaxHeight())
             Box(Modifier.offset(x = wide).width(roomDp).fillMaxHeight()) {
                 SettingsPanel(
                     built = built,
@@ -497,6 +474,31 @@ fun RoundPicker(
                 // 비우면 미끄러지기도 전에 글자가 사라져 버린다.
                 val sunk = typing &&
                     with(density) { (4.dp + band).toPx() } + height >= usable
+
+                // 단어장 넷은 목록 판의 왼쪽 어깨에 작게 선다. 회차 번호는 판
+                // 가운데 1/3 에만 서므로 이 자리는 늘 비어 있다.
+                // 위에서부터 노랑 문제 · 노랑 낱글자 · 초록 문제 · 초록 낱글자다.
+                if (!sunk) Column(
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(start = 12.dp, top = 12.dp)
+                        .zIndex(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    for (bin in Mark.entries) {
+                        for (kind in listOf(Collect.Kind.CARDS, Collect.Kind.CHARS)) {
+                            val n = counts[bin]?.get(kind) ?: 0
+                            Chip(
+                                n = n,
+                                color = if (bin == Mark.AMBER) Hak3.Amber else Hak3.Green,
+                                // 문제는 테만 두르고 낱글자는 속을 채운다 —
+                                // 서랍에서 쓰던 그 규칙 그대로다.
+                                solid = kind == Collect.Kind.CHARS,
+                            ) { onWords(bin, kind) }
+                        }
+                    }
+                }
+
                 if (!sunk) LazyColumn(
                     Modifier.fillMaxSize().then(veil).nestedScroll(nested),
                     state = rounds,
@@ -695,6 +697,40 @@ private fun Cell(
             color = ink.copy(alpha = if (enabled) 0.55f else 1f),
             textAlign = TextAlign.Center,
         )
+    }
+}
+
+/** 단어장 단추의 높이. 설정 서랍의 단추(약 44dp)의 절반이다. */
+private val CHIP = 22.dp
+
+/**
+ * 목록 판의 어깨에 서는 단어장 단추. 담긴 수만 적는다 — 이만한 자리에 이름까지
+ * 넣을 수는 없고, 색과 테가 어느 묶음인지 이미 말해 준다.
+ *
+ * 세 자리 수도 있으므로 정원이 아니라 알약이다. 한 자리 수일 때만 원이 된다.
+ */
+@Composable
+private fun Chip(n: Int, color: Color, solid: Boolean, onClick: () -> Unit) {
+    val on = n > 0
+    val face = if (on) color else Hak3.Knob
+    val ink = when {
+        !on -> Hak3.TextDim
+        solid -> Color.Black
+        else -> color
+    }
+    Box(
+        Modifier
+            .height(CHIP)
+            .defaultMinSize(minWidth = CHIP)
+            .then(
+                if (solid) Modifier.background(face, CircleShape)
+                else Modifier.border(1.dp, face, CircleShape)
+            )
+            .clickable(enabled = on, onClick = onClick)
+            .padding(horizontal = 7.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("$n", fontSize = 13.sp, color = ink)
     }
 }
 
