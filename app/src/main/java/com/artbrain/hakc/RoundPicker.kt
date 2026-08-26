@@ -3,6 +3,7 @@ package com.artbrain.hakc
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.delay
@@ -506,6 +507,11 @@ fun RoundPicker(
                         .clipToBounds()
                         .padding(start = SIDE, top = ROOF)
                         .then(veil)
+                        // 어깨를 끌어도 목록이 굴러가고 판이 함께 자란다 —
+                        // 오른쪽 목록에서 끄는 것과 똑같이 움직인다. 끌기는
+                        // 이렇게 넘기고, 단추를 빗나간 톡 소리만 삼킨다.
+                        .nestedScroll(nested)
+                        .scrollable(rounds, Orientation.Vertical, reverseDirection = true)
                         .pointerInput(Unit) { detectTapGestures { } }
                         .zIndex(1f),
                 ) {
@@ -597,8 +603,11 @@ private val COUNT_GAP = 11.dp
 /** 어깨의 수가 서는 자리의 너비. 세 자리까지 든다. */
 private val COUNT_W = 20.dp
 
-/** 회차 덩이가 판 오른벽에서 물러나는 만큼. */
-private val WALL = 28.dp
+/**
+ * 회차 덩이가 판 오른벽에서 물러나는 만큼. 왼쪽에서 한자가 물러난 26dp 와 같은
+ * 값이다 — 판의 두 여백이 같은 자로 선다.
+ */
+private val WALL = 26.dp
 
 /** 눈금의 바탕. 경계선에서 한 겹 더 물러난다. */
 private val GAUGE_TRACK = Hak3.Rule.copy(alpha = Hak3.Rule.alpha / 2)
@@ -779,8 +788,19 @@ private fun Cell(
 /** 회차 목록이 판 위에서 물러나는 만큼. 어깨의 위 여백도 이 자에서 잰다. */
 private val ROOF = 18.dp
 
-/** 왼쪽 어깨가 판 벽에서 물러나는 만큼. 등과 단추가 이 선에 함께 선다. */
+/**
+ * 왼쪽 어깨가 판 벽에서 물러나는 만큼. 여기에 등의 여백 10dp 가 더해져 등의
+ * 글자 상자가 사전 판의 한자와 같은 26dp 선에 선다 — 두 판의 한자가 한 줄로
+ * 떨어지는 자리다. 폰에서 재어 보니 잉크도 둘 다 벽에서 29.7dp 였다.
+ */
 private val SIDE = 16.dp
+
+/**
+ * 등의 글자가 첫 회차 번호와 윗선을 맞추려고 올라앉는 만큼. 폰에서 재어 잡았다 —
+ * 번호의 잉크는 판 위끝에서 29.3dp, 한자의 잉크는 40.3dp 에 있었다.
+ * 올리는 것은 그리는 자리뿐이라 아래 단추는 따라 오르지 않는다.
+ */
+private val LANTERN_LIFT = 11.dp
 
 /** 등과 첫 단추 사이. */
 private val TALLY_TOP = 22.dp
@@ -843,10 +863,10 @@ private val TALLY_NUM = TextStyle(
 
 /** 단추에 적는 이름. 어느 묶음인지와 무엇이 담겼는지를 그대로 적는다. */
 private fun tallyName(bin: Mark, kind: Collect.Kind): String = when {
-    bin == Mark.AMBER && kind == Collect.Kind.CHARS -> "letters to check"
-    bin == Mark.AMBER -> "cards to check"
-    kind == Collect.Kind.CHARS -> "letters learned"
-    else -> "cards learned"
+    bin == Mark.AMBER && kind == Collect.Kind.CHARS -> "unsure letters"
+    bin == Mark.AMBER -> "unsure cards"
+    kind == Collect.Kind.CHARS -> "known letters"
+    else -> "known cards"
 }
 
 /**
@@ -875,6 +895,7 @@ private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit)
     Box(
         Modifier
             .size(side)
+            .offset(y = -LANTERN_LIFT)
             .clickable(enabled = open && han.isNotEmpty()) { onOpen(han) },
         contentAlignment = Alignment.Center,
     ) {
