@@ -537,22 +537,23 @@ private fun copy(c: Context, han: String) {
  * 높이는 1물리픽셀 — Dp.Hairline 은 0dp 라서 칸으로 쓰면 아무것도 안 그려진다.
  */
 @Composable
-private fun Rule(color: Color = Hak3.Rule) {
+private fun Rule(color: Color = Hak3.Rule, thick: Dp? = null) {
     val one = with(LocalDensity.current) { 1.toDp() }
     Box(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = WALL)
-            .height(one)
-            .background(color)
+            .height(thick ?: one)
+            // 두께가 있으면 양 끝이 둥글게 말린다. 한 픽셀짜리에서는 보이지 않는다.
+            .background(color, CircleShape)
     )
 }
 
 /**
- * 입력 칸 바로 위의 실선. 다른 실선보다 30% 짙다 — 적는 자리를 가르는 선이라
- * 한 겹 또렷하게 둔다. 색이 비쳐 있으므로 짙기는 알파로 올린다.
+ * 입력 칸 바로 위의 실선. 적는 자리를 가르는 선이라 또렷하게 둔다.
+ * 다른 실선은 비치는 14% 인데, 이 선만 40% 로 짙다.
  */
-private val INPUT_RULE = Hak3.Rule.copy(alpha = Hak3.Rule.alpha * 1.3f)
+private val INPUT_RULE = Hak3.Rule.copy(alpha = 0.40f)
 
 /**
  * 표기 하나의 풀이 — 글자마다 `음 : 급수 훈`, 그 아래 뜻.
