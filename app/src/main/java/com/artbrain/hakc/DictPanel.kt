@@ -485,10 +485,10 @@ fun DictPanel(
 }
 
 /** 지우개가 차지하는 폭 — 표와 그 둘레의 여백, 그리고 엔터와의 사이. */
-private val WIPE_ROOM = 36.dp
+private val WIPE_ROOM = 40.dp
 
-/** 지우개를 엔터에서 이만큼 더 떼어 놓는다. 폰에서 재어 6px 이다. */
-private val WIPE_SHIFT = 2.dp
+/** 지우개를 엔터에서 이만큼 더 떼어 놓는다. */
+private val WIPE_SHIFT = 6.dp
 
 /** 지우개의 잉크. 곁들이는 글보다 한 겹 더 물러난다. */
 private val WIPE_INK = Hak3.TextDim.copy(alpha = Hak3.TextDim.alpha / 2)
