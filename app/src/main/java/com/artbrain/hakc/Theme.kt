@@ -31,7 +31,7 @@ import android.view.RoundedCorner
  */
 object Hak3 {
     // 바탕
-    val Ground = Color(0xFFFF69B4)          // 바탕 — 자리를 보려고 잠시 핫핑크
+    val Ground = Color(0xFF000000)          // 기기 화면과 이어지는 검은 바탕
     val Surface = Color(0xFF21252D)         // 캡슐·바닥 줄처럼 판 위에 얹히는 것
     val Panel = Color(0xFF121522)           // 위의 사전 판
     val Card = Color(0xFF141B1C)            // 아래의 회차 판, 그리고 그것이 늘어난 카드

@@ -508,14 +508,14 @@ fun RoundPicker(
                     }
                 }
 
-                // 오른쪽 판 — 회차가 굴러가는 자리. 폭은 120dp 로 못 박는다.
+                // 오른쪽 판 — 회차가 굴러가는 자리. 폭은 136dp 로 못 박는다.
                 Box(
                     Modifier
                         .width(RIGHT)
                         .fillMaxHeight()
                         .graphicsLayer(dim)
                         .then(morph)
-                        .background(Hak3.Card, RoundedCornerShape(radius))
+                        .background(RIGHT_FACE, RoundedCornerShape(radius))
                 ) {
                 if (!sunk) LazyColumn(
                     Modifier.fillMaxSize().then(veil).nestedScroll(nested),
@@ -745,7 +745,10 @@ private val CHIP = 44.dp
 private val CHIP_GAP = 8.dp
 
 /** 회차가 굴러가는 오른쪽 판의 폭. 왼쪽 판이 남는 자리를 가져간다. */
-private val RIGHT = 120.dp
+private val RIGHT = 136.dp
+
+/** 오른쪽 판의 바탕 — 어떻게 보이는지 보려고 잠시 핫핑크다. */
+private val RIGHT_FACE = Color(0xFFFF69B4)
 
 /** 단어장 단추가 제 판의 왼벽에서 물러나는 만큼. */
 private val LEDGE = 37.dp
@@ -816,7 +819,7 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                     // 회차 번호는 큰 한자와 같은 서체·같은 얇기로 선다
                     fontFamily = ThinHanja,
                     fontWeight = FontWeight.ExtraLight,
-                    fontSize = 44.sp,
+                    fontSize = 42.sp,
                     color = if (live) Hak3.Hanja else Hak3.HanjaDim,
                     modifier = Modifier.offset(y = INK),
                 )
