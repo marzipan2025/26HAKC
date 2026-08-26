@@ -43,7 +43,7 @@ object Hak3 {
     val TextSoft = Color(0x92FFFFFF)        // 뜻풀이처럼 읽히되 물러나는 글 (57%)
     val TextDim = Color(0x61FFFFFF)         // 곁들이는 글 — 날짜·판 번호·라벨 (38%)
 
-    // 한자
+    // 한자 — 어두운 판(기출 카드·회차 판) 위에 서는 색
     val Hanja = Color(0xD9A8BAD6)           // 한자 (#A8BAD6 @85%)
     val HanjaDim = Color(0xCC647185)        // 고르지 않은 한자
 
@@ -83,16 +83,18 @@ fun screenCornerRadius(fallback: Dp = 32.dp): Dp {
 }
 
 /**
- * 자주 찾은 한자가 오르는 밝기 계단. 열 번마다 한 단이고 넉 단이 끝이다.
+ * 자주 찾은 한자가 오르는 짙기 계단. 열 번마다 한 단이고 넉 단이 끝이다.
  * 01HAKA 는 같은 계단을 굵기로 올렸는데, 크게 띄운 한자는 얇은 맛으로 서 있는 것이라
  * 굵기를 건드리면 그 맛이 사라진다.
+ *
+ * 판이 노랑이 되며 계단을 뒤집었다 — 밝아지는 대신 짙어진다. 끝은 온전한 검정이다.
  */
 private val LIT = listOf(
-    Hak3.Hanja,             // 0 — 처음 만나는 글자
-    Color(0xE6BECCE2),      // 10회
-    Color(0xF2D5DEEE),      // 20회
-    Color(0xFFEAF0F9),      // 30회
-    Color(0xFFFFFFFF),      // 40회 넘게
+    Color.Black.copy(alpha = 0.75f),        // 0 — 처음 만나는 글자
+    Color.Black.copy(alpha = 0.82f),        // 10회
+    Color.Black.copy(alpha = 0.89f),        // 20회
+    Color.Black.copy(alpha = 0.95f),        // 30회
+    Color.Black,                            // 40회 넘게
 )
 
 /** 찾은 횟수에 맞는 한자 밝기. */

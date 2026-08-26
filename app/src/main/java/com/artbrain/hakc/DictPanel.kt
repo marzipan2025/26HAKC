@@ -115,11 +115,23 @@ private val GRADE_ICON = listOf(
 private fun gradeIcon(grade: Int?) =
     if (grade == null) R.drawable.ic_grade_none else GRADE_ICON[grade.coerceIn(0, 8)]
 
+/**
+ * 노랑 판 위의 잉크 한 벌. 어두운 판에서 쓰던 흰 글씨를 그대로 뒤집었다 — 짙기는
+ * 그대로 두고 색만 검정으로 바꾼다. 노랑 위의 흰 글씨는 대비가 1.6:1 밖에 되지
+ * 않아 읽히지 않는다. 어두운 판(회차 판·기출 카드)은 팔레트의 흰 잉크를 그대로 쓴다.
+ */
+private val INK = Color.Black.copy(alpha = 0.95f)           // 본문 · 적는 글자
+private val INK_SOFT = Color.Black.copy(alpha = 0.57f)      // 뜻풀이
+private val INK_DIM = Color.Black.copy(alpha = 0.38f)       // 곁들이는 글
+private val INK_RULE = Color.Black.copy(alpha = 0.14f)      // 실선 · 꺼진 것
+private val INK_HANJA = Color.Black.copy(alpha = 0.75f)     // 한자
+private val INK_HANJA_DIM = Color.Black.copy(alpha = 0.40f) // 훑고 지나가는 한자
+
 /** 訓 앞에 끼워 넣는 급수 표시의 이름. 글 흐름을 타야 해서 인라인으로 둔다. */
 private const val GRADE_SLOT = "grade"
 
 private fun gradeColor(grade: Int?) = when (grade) {
-    null -> Hak3.Text.copy(alpha = 0.3f)       // 급수를 모르는 글자는 흐리게
+    null -> INK.copy(alpha = 0.3f)             // 급수를 모르는 글자는 흐리게
     0 -> Color.White
     1 -> Color(0xFF2999D1)
     2 -> Color(0xFFFFEB3B)
@@ -322,7 +334,7 @@ fun DictPanel(
                                 fontFamily = ThinHanja,
                                 fontWeight = FontWeight.ExtraLight,
                                 fontSize = glyph,
-                                color = Hak3.HanjaDim,
+                                color = INK_HANJA_DIM,
                                 maxLines = 1,
                                 softWrap = false,
                                 modifier = Modifier.padding(horizontal = TEXT_WALL),
@@ -364,7 +376,7 @@ fun DictPanel(
                                                             bin != null && i == active -> binColor(bin)
                                                             bin != null ->
                                                                 binColor(bin).copy(alpha = 0.45f)
-                                                            i != active -> Hak3.HanjaDim
+                                                            i != active -> INK_HANJA_DIM
                                                             else -> hanjaLit(seen[ch.toString()] ?: 0)
                                                         }
                                                     )
@@ -386,8 +398,8 @@ fun DictPanel(
                                             color = when {
                                                 s.index == 0 && i == active -> Hak3.Red
                                                 s.index == 0 -> Hak3.Red.copy(alpha = 0.45f)
-                                                i == active -> Hak3.Hanja
-                                                else -> Hak3.HanjaDim
+                                                i == active -> INK_HANJA
+                                                else -> INK_HANJA_DIM
                                             },
                                             modifier = Modifier
                                                 .align(Alignment.Top)
@@ -426,7 +438,7 @@ fun DictPanel(
                     value = text,
                     onValueChange = { DictInput.text = it },
                     singleLine = true,
-                    textStyle = TextStyle(color = Hak3.Text, fontSize = 22.sp, fontFamily = Korail),
+                    textStyle = TextStyle(color = INK, fontSize = 22.sp, fontFamily = Korail),
                     cursorBrush = SolidColor(Hak3.Pink),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     // 키보드의 찾기 단추도 엔터와 같은 일을 한다
@@ -470,7 +482,7 @@ fun DictPanel(
                     Icon(
                         painterResource(R.drawable.ic_enter),
                         contentDescription = null,
-                        tint = if (text.isEmpty()) Hak3.Rule else Hak3.Text,
+                        tint = if (text.isEmpty()) INK_RULE else INK,
                         modifier = Modifier
                             .size(sole * 0.42f)
                             .clickable {
@@ -498,7 +510,7 @@ private val WIPE_ROOM = 40.dp
 private val WIPE_SHIFT = 6.dp
 
 /** 지우개의 잉크. 곁들이는 글보다 한 겹 더 물러난다. */
-private val WIPE_INK = Hak3.TextDim.copy(alpha = Hak3.TextDim.alpha / 2)
+private val WIPE_INK = INK_DIM.copy(alpha = INK_DIM.alpha / 2)
 
 /**
  * 적은 것을 통째로 지우는 표. 면을 채우고 그 위에 ✕ 를 도려낸다 — 흔히 보는
@@ -544,7 +556,7 @@ private fun copy(c: Context, han: String) {
  * 높이는 1물리픽셀 — Dp.Hairline 은 0dp 라서 칸으로 쓰면 아무것도 안 그려진다.
  */
 @Composable
-private fun Rule(color: Color = Hak3.Rule, thick: Dp? = null) {
+private fun Rule(color: Color = INK_RULE, thick: Dp? = null) {
     val one = with(LocalDensity.current) { 1.toDp() }
     Box(
         Modifier
@@ -560,7 +572,7 @@ private fun Rule(color: Color = Hak3.Rule, thick: Dp? = null) {
  * 입력 칸 바로 위의 실선. 적는 자리를 가르는 선이라 또렷하게 둔다.
  * 다른 실선은 비치는 14% 인데, 이 선만 40% 로 짙다.
  */
-private val INPUT_RULE = Hak3.Rule.copy(alpha = 0.40f)
+private val INPUT_RULE = Color.Black.copy(alpha = 0.40f)
 
 /**
  * 표기 하나의 풀이 — 글자마다 `음 : 급수 훈`, 그 아래 뜻.
@@ -581,7 +593,7 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                     // 흰 글씨는 판에서 가장 밝아 한자보다 앞으로 나온다.
                     // 訓音은 한자에 딸린 말이니 한자와 같은 색을 쓴다.
                     // 담아 둔 글자만 노랑으로 도드라진다.
-                    color = kept[ch.toString()]?.let(::binColor) ?: Hak3.Hanja,
+                    color = kept[ch.toString()]?.let(::binColor) ?: INK_HANJA,
                     // 너비를 못 채우면 줄이 갈리므로 한 줄로 못 박는다
                     maxLines = 1,
                     modifier = Modifier.width(EUM).alignByBaseline(),
@@ -608,7 +620,7 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                     },
                     fontSize = 19.sp,
                     lineHeight = 27.sp,
-                    color = Hak3.Hanja,
+                    color = INK_HANJA,
                     modifier = Modifier.alignByBaseline(),
                     inlineContent = mapOf(
                         GRADE_SLOT to InlineTextContent(
@@ -640,7 +652,7 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                 Text(
                     if (!long) "" else if (open) "−" else "+",
                     fontSize = 15.sp,
-                    color = Hak3.TextDim,
+                    color = INK_DIM,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.width(14.dp),
                 )
@@ -649,7 +661,7 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                     body,
                     fontSize = 19.sp,
                     lineHeight = 27.sp,
-                    color = Hak3.TextSoft,
+                    color = INK_SOFT,
                     maxLines = if (open) Int.MAX_VALUE else 1,
                     overflow = TextOverflow.Ellipsis,
                     // 접힌 채로만 잰다. 펼치고 나면 넘칠 일이 없어 그때의 답은 늘

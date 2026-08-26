@@ -174,6 +174,8 @@ fun RoundPicker(
     val pool = remember(pink, dict) {
         if (pink.size > LANTERN_MIN) pink else dict?.grade3 ?: emptyList()
     }
+    // 핑크 묶음에 담긴 것이 하나라도 있는가 — 낱글자든 문제든.
+    val hasPink = (counts[Mark.AMBER]?.values?.sum() ?: 0) > 0
 
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf<Updater.Status>(Updater.Status.Checking) }
@@ -508,7 +510,9 @@ fun RoundPicker(
                         .zIndex(1f),
                 ) {
                     Column {
-                        Lantern(pool, open = pink.isNotEmpty()) { han ->
+                        // 핑크 묶음이 둘 다 비었으면 등은 자리째 빠진다 —
+                        // 돌려 보일 것도, 눌러 갈 데도 없는 자리다.
+                        if (hasPink) Lantern(pool, open = pink.isNotEmpty()) { han ->
                             // 등에 뜬 그 글자가 선 자리로 곧장 편다. 묶음 밖의
                             // 글자면(아직 몇 자 안 될 때다) 첫 장부터 편다.
                             onWords(
@@ -517,7 +521,7 @@ fun RoundPicker(
                                 pink.indexOf(han).coerceAtLeast(0),
                             )
                         }
-                        Spacer(Modifier.height(TALLY_TOP))
+                        if (hasPink) Spacer(Modifier.height(TALLY_TOP))
                         Column(verticalArrangement = Arrangement.spacedBy(TALLY_GAP)) {
                             for (bin in Mark.entries) {
                                 // 색마다 둘씩 — 낱글자가 먼저, 문제가 뒤다
@@ -591,7 +595,7 @@ private val COUNT_GAP = 11.dp
 private val COUNT_W = 20.dp
 
 /** 회차 덩이가 판 오른벽에서 물러나는 만큼. */
-private val WALL = 48.dp
+private val WALL = 28.dp
 
 /** 눈금의 바탕. 경계선에서 한 겹 더 물러난다. */
 private val GAUGE_TRACK = Hak3.Rule.copy(alpha = Hak3.Rule.alpha / 2)
@@ -848,13 +852,15 @@ private fun tallyName(bin: Mark, kind: Collect.Kind): String = when {
  * 뜬 글자를 누르면 그 글자가 선 자리로 낱글자 묶음이 펴진다. 펼 묶음이 비어
  * 있으면([open] 이 거짓이면) 등은 보이기만 하고 눌리지 않는다.
  *
- * 글자는 HAKA 의 한자가 가장 클 때와 같은 크기다. 등은 그 글자 상자에서
- * 사방으로 물러난 만큼만 서므로, 글자가 커지면 등도 따라 커진다.
+ * 글자는 HAKA 의 한자가 가장 클 때와 같은 크기다. 등은 그 글자 상자에 사방
+ * 여백을 더한 정사각이라, 글자가 커지면 등도 따라 커진다.
  */
 @Composable
 private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit) {
     val square = LocalConfiguration.current.screenWidthDp.dp - CARD * 2
     val glyph = (square.value * DICT_HEAD * 0.68f).sp
+    // 글자 상자에 사방 여백을 더한 만큼 — 한자는 가로세로가 같으니 등도 정사각이다
+    val side = with(LocalDensity.current) { glyph.toDp() } + LANTERN_PAD * 2
     var han by remember(pool) { mutableStateOf(pool.firstOrNull().orEmpty()) }
     LaunchedEffect(pool) {
         while (pool.isNotEmpty()) {
@@ -865,9 +871,9 @@ private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit)
     }
     Box(
         Modifier
+            .size(side)
             .background(LANTERN_FACE, RoundedCornerShape(LANTERN_ROUND))
-            .clickable(enabled = open && han.isNotEmpty()) { onOpen(han) }
-            .padding(LANTERN_PAD),
+            .clickable(enabled = open && han.isNotEmpty()) { onOpen(han) },
         contentAlignment = Alignment.Center,
     ) {
         Text(
