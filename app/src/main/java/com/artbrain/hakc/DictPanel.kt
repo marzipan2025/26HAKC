@@ -279,8 +279,9 @@ fun DictPanel(
             .fillMaxWidth()
             .clip(RoundedCornerShape(radius))
             .background(Hak3.Panel)
-            .background(Hak3.Rule)          // 01HAKA 의 패널 바탕 한 겹
-            .background(GLOW)               // 위쪽에 얹히는 아주 옅은 빛 한 겹
+            // 판 색 위에 겹을 얹지 않는다 — 얹으면 노랑이 그만큼 흐려진다.
+            // 위쪽의 아주 옅은 빛 한 겹만 그대로 둔다.
+            .background(GLOW)
     ) {
         val square = maxWidth                       // 정사각형이었을 때의 한 변
         // 입력 칸은 재어 잡은 높이보다 2dp 더 자란다 — 자라는 쪽은 위다. 실선이
