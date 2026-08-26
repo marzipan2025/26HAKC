@@ -276,7 +276,7 @@ fun DictPanel(
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(radius))
-            .background(Hak3.Surface)
+            .background(Hak3.Panel)
             .background(Hak3.Rule)          // 01HAKA 의 패널 바탕 한 겹
             .background(GLOW)               // 위쪽에 얹히는 아주 옅은 빛 한 겹
     ) {

@@ -470,7 +470,7 @@ fun RoundPicker(
                     .padding(horizontal = 8.dp)
                     .graphicsLayer(dim)
                     .then(morph)
-                    .background(Hak3.Surface, RoundedCornerShape(radius))
+                    .background(Hak3.Card, RoundedCornerShape(radius))
             ) {
                 // 목록이 키보드 밑으로 다 내려간 뒤에야 알맹이를 비운다. 판이 딱
                 // 맞아떨어지지 않아 한 줄쯤 삐져나올 때가 있는데, 그때 글자가 반쯤

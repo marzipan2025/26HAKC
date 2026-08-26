@@ -401,7 +401,7 @@ private fun Deck(
         LaunchedEffect(leaving) {
             grown.animateTo(if (leaving) 0f else 1f, tween(GROW, easing = FastOutSlowInEasing))
         }
-        val plate = if (face == null) Hak3.Surface else lerp(Hak3.Surface, face, grown.value)
+        val plate = if (face == null) Hak3.Card else lerp(Hak3.Card, face, grown.value)
         Box(
             Modifier
                 .fillMaxSize()
@@ -789,7 +789,7 @@ private fun QuestionPage(
                 translationY = lift
                 rotationZ = spin
             }
-            .background(Hak3.Surface, RoundedCornerShape(radius))
+            .background(Hak3.Card, RoundedCornerShape(radius))
             // 단어장에서는 테두리만이 아니라 앞면까지 그 색이다 — 테두리와 같은
             // 색, 같은 짙기로. 그 위에 놓이는 색 글씨는 검정으로 뒤집는다.
             .then(
