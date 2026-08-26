@@ -373,6 +373,8 @@ fun DictPanel(
                                     if (s.many) {
                                         Text(
                                             if (s.index == 0) "●" else "${s.index}",
+                                            fontFamily = Mono,
+                                            fontWeight = FontWeight.Medium,
                                             fontSize = glyph * 0.16f,
                                             // 표시는 제 글자를 따라 밝아진다 — 훑고
                                             // 지나가는 표기에서는 글자와 함께 물러난다
@@ -587,7 +589,12 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                         // 여러 표기가 있을 때, 첫 글자에 어느 표기인지 표시를 단다
                         if (s.many && i == 0) {
                             withStyle(
-                                SpanStyle(fontSize = 13.sp, baselineShift = BaselineShift(0.5f))
+                                SpanStyle(
+                                    fontFamily = Mono,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 13.sp,
+                                    baselineShift = BaselineShift(0.5f),
+                                )
                             ) { append(if (s.index == 0) "  ●" else "  ${s.index}") }
                         }
                     },

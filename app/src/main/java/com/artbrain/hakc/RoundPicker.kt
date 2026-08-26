@@ -576,10 +576,12 @@ private val INK = (-3).dp
  * 코레일체에서 5.4dp 였는데, 번호가 Source Han 으로 바뀌며 8dp 더 내려앉았다.
  * 거기서 3dp 더 — 눈으로 보고 잡은 자리다. 깜박이는 점도 이 자를 함께 본다.
  */
-private val SHOULDER = 16.4.dp
+private val SHOULDER = 7.4.dp
 
 /** 번호 옆의 작은 수. 줄 상자를 글자에 바짝 붙여 위아래 여백을 없앤다. */
 private val COUNT = TextStyle(
+    fontFamily = Mono,
+    fontWeight = FontWeight.Medium,
     fontSize = 13.sp,
     lineHeight = 11.sp,
     platformStyle = PlatformTextStyle(includeFontPadding = false),
@@ -747,7 +749,7 @@ private val ROOF = 18.dp
  * 첫 단추가 첫 회차 번호와 윗선을 맞추려고 더 내려앉는 만큼. 재어 보니 단추의
  * 잉크가 번호의 잉크보다 4dp 위에 있었다 — 서체가 서로 다른 탓이다.
  */
-private val CHIP_DROP = 6.dp
+private val CHIP_DROP = (-5.7).dp
 
 /**
  * 목록 판의 어깨에 서는 단어장 단추. 색면도 테도 없이 담긴 수만 적는다 —
@@ -766,8 +768,10 @@ private fun Chip(n: Int, color: Color, solid: Boolean, onClick: () -> Unit) {
     ) {
         Text(
             "$n",
+            fontFamily = Mono,
             fontSize = 15.sp,
-            fontWeight = if (solid) FontWeight.Bold else FontWeight.Normal,
+            // 굵기로 갈래를 가른다 — 낱글자가 굵고 문제가 보통이다
+            fontWeight = if (solid) FontWeight.Bold else FontWeight.Medium,
             color = if (on) color else Hak3.TextDim,
             maxLines = 1,
         )
@@ -802,9 +806,9 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                 // 올려 잉크가 줄 한가운데에 오게 한다.
                 Text(
                     "${e.round}",
-                    // 회차 번호는 큰 한자와 같은 서체·같은 얇기로 선다
-                    fontFamily = ThinHanja,
-                    fontWeight = FontWeight.ExtraLight,
+                    // 숫자만 서는 자리라 폭이 고른 서체로
+                    fontFamily = Mono,
+                    fontWeight = FontWeight.Medium,
                     fontSize = 42.sp,
                     color = if (live) Hak3.Hanja else Hak3.HanjaDim,
                     modifier = Modifier.offset(y = INK),

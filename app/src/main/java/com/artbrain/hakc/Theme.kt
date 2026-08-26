@@ -112,6 +112,15 @@ fun hanjaLit(count: Int) = LIT[(count / 10).coerceIn(0, LIT.lastIndex)]
 val ThinHanja = FontFamily(Font(R.font.source_han_kr, FontWeight.ExtraLight))
 
 /**
+ * 수만 적히는 자리의 글씨 — SF Mono Medium.
+ *
+ * 회차 번호와 그 어깨의 수, 단어장 단추, 사전의 표기 번호처럼 숫자만 서는 자리에
+ * 쓴다. 폭이 고른 서체라 줄이 바뀌어도 자리가 흔들리지 않는다. 라틴 글자만 든
+ * 111KB 짜리다 — 한글·한자는 하나도 없으므로 이 자리 밖에서는 쓰지 않는다.
+ */
+val Mono = FontFamily(Font(R.font.sf_mono_medium, FontWeight.Medium))
+
+/**
  * 앱의 기본 글씨 — 코레일체.
  *
  * 한자 글리프가 하나도 없는 한글 서체다(한글 11,172자와 숫자뿐). 글 속의 한자는
