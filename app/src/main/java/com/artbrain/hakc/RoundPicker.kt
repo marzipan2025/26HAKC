@@ -63,6 +63,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -464,59 +465,59 @@ fun RoundPicker(
                 val i = exams.indexOfFirst { it.round == last }
                 if (i >= 0) rounds.scrollToItem((i - 2).coerceAtLeast(0))
             }
-            Box(
+            // 아래 판은 둘로 갈린다 — 왼쪽 넷(단어장)과 오른쪽 여섯(회차 목록).
+            // 회차 쪽이 넓다. 늘어나 카드가 되는 것도 그쪽이다.
+            Row(
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
-                    .graphicsLayer(dim)
-                    .then(morph)
-                    .background(Hak3.Card, RoundedCornerShape(radius))
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(GAP),
             ) {
                 // 목록이 키보드 밑으로 다 내려간 뒤에야 알맹이를 비운다. 판이 딱
                 // 맞아떨어지지 않아 한 줄쯤 삐져나올 때가 있는데, 그때 글자가 반쯤
-                // 잘려 보이느니 판 색 한 겹으로 서는 편이 낫다. 내려가는 동안까지
-                // 비우면 미끄러지기도 전에 글자가 사라져 버린다.
+                // 잘려 보이느니 판 색 한 겹으로 서는 편이 낫다.
                 val sunk = typing &&
                     with(density) { (4.dp + band).toPx() } + height >= usable
 
-                // 단어장 넷은 목록 판의 왼쪽 어깨에 작게 선다. 회차 번호는 판
-                // 가운데 1/3 에만 서므로 이 자리는 늘 비어 있다.
-                // 위에서부터 노랑 문제 · 노랑 낱글자 · 초록 문제 · 초록 낱글자다.
-                // 왼쪽 여백은 오른쪽 눈금이 벽에서 물러난 만큼에서 2dp 당긴 자리다.
-                // 위 여백은 회차 목록이 판 위에서 물러난 만큼(ROOF)을 그대로 쓴다.
-                val ledge = ((wide - 16.dp - wide / 3) / 2) * 0.35f - 2.dp
-                // 단추를 빗나간 손짓은 이 자리에서 삼킨다. 그러지 않으면 단추
-                // 사이나 그 왼쪽을 스친 손짓이 목록으로 새어 회차가 열린다 —
-                // 단어장을 열었다고 여긴 채 회차를 보고 있게 된다.
-                if (!sunk) Box(
+                // 왼쪽 판 — 단어장 넷. 위에서부터 노랑 낱글자 · 노랑 문제 ·
+                // 초록 낱글자 · 초록 문제다.
+                Box(
                     Modifier
-                        .align(Alignment.TopStart)
-                        .padding(top = ROOF + CHIP_DROP)
-                        .width(ledge + CHIP)
-                        .pointerInput(Unit) { detectTapGestures { } }
-                        .zIndex(1f),
+                        .weight(4f)
+                        .fillMaxHeight()
+                        .graphicsLayer(dim)
+                        .background(Hak3.Card, RoundedCornerShape(radius))
                 ) {
-                    Column(
-                        Modifier.padding(start = ledge),
+                    if (!sunk) Column(
+                        Modifier
+                            .then(veil)
+                            .padding(start = LEDGE, top = ROOF + CHIP_DROP),
                         verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
                     ) {
-                    for (bin in Mark.entries) {
-                        // 색마다 둘씩 — 속을 채운 낱글자가 먼저, 테만 두른 문제가 뒤다
-                        for (kind in listOf(Collect.Kind.CHARS, Collect.Kind.CARDS)) {
-                            val n = counts[bin]?.get(kind) ?: 0
-                            Chip(
-                                n = n,
-                                color = if (bin == Mark.AMBER) Hak3.Amber else Hak3.Green,
-                                // 문제는 테만 두르고 낱글자는 속을 채운다 —
-                                // 서랍에서 쓰던 그 규칙 그대로다.
-                                solid = kind == Collect.Kind.CHARS,
-                            ) { onWords(bin, kind) }
+                        for (bin in Mark.entries) {
+                            // 색마다 둘씩 — 속을 채운 낱글자가 먼저, 테만 두른 문제가 뒤다
+                            for (kind in listOf(Collect.Kind.CHARS, Collect.Kind.CARDS)) {
+                                val n = counts[bin]?.get(kind) ?: 0
+                                Chip(
+                                    n = n,
+                                    color = if (bin == Mark.AMBER) Hak3.Amber else Hak3.Green,
+                                    solid = kind == Collect.Kind.CHARS,
+                                ) { onWords(bin, kind) }
+                            }
                         }
-                    }
                     }
                 }
 
+                // 오른쪽 판 — 회차가 굴러가는 자리
+                Box(
+                    Modifier
+                        .weight(6f)
+                        .fillMaxHeight()
+                        .graphicsLayer(dim)
+                        .then(morph)
+                        .background(Hak3.Card, RoundedCornerShape(radius))
+                ) {
                 if (!sunk) LazyColumn(
                     Modifier.fillMaxSize().then(veil).nestedScroll(nested),
                     state = rounds,
@@ -526,13 +527,13 @@ fun RoundPicker(
                         item(key = "setup") { Setup(radius, trouble, onFolder, onFile) }
                     }
                     items(exams, key = { it.round }) { e ->
-                        // 번호는 단추 자리 오른쪽으로 30dp 떨어져 왼쪽으로 정렬한다
-                        RoundRow(e, e.round == last, wide / 3, ledge + CHIP + 14.dp) {
+                        RoundRow(e, e.round == last, radius) {
                             last = it
                             Settings.setLastRound(context, it)
                             onPick(it)
                         }
                     }
+                }
                 }
             }
         }
@@ -564,25 +565,9 @@ private val GAUGE_FILL = Hak3.HanjaDim.copy(alpha = Hak3.HanjaDim.alpha * 0.6f)
 /** 끝까지 간 것. 흰빛이되 반만 — 온전한 흰색은 이 자리에 너무 세다. */
 private val GAUGE_DONE = Color.White.copy(alpha = 0.5f)
 
-/** 깜박이는 점의 지름과, 번호에서 왼쪽으로 물러나는 만큼. */
-private val BEACON = 5.dp
-private val BEACON_GAP = 15.dp
+/** 마지막으로 열어 본 줄의 바닥이 판 벽에서 물러나는 만큼. */
+private val INSET = 8.dp
 
-/** 점이 한 번 사그라들었다 돌아오는 데 걸리는 참. (ms) */
-private const val BLINK = 1000
-
-/** 마지막으로 열어 본 줄에 서는 점. 흰빛이 천천히 옅어졌다 짙어진다. */
-@Composable
-private fun Beacon(modifier: Modifier) {
-    val clock = rememberInfiniteTransition(label = "beacon")
-    val lit by clock.animateFloat(
-        initialValue = 1f,
-        targetValue = 0.12f,
-        animationSpec = infiniteRepeatable(tween(BLINK, easing = LinearEasing), RepeatMode.Reverse),
-        label = "lit",
-    )
-    Box(modifier.size(BEACON).background(Color.White.copy(alpha = lit), CircleShape))
-}
 
 /**
  * 회차 숫자를 알약 한가운데에 앉히는 값. 잉크의 가운데를 재어 잡았다.
@@ -756,6 +741,9 @@ private val CHIP = 44.dp
 /** 단추끼리 벌어지는 만큼. */
 private val CHIP_GAP = 8.dp
 
+/** 단어장 단추가 제 판의 왼벽에서 물러나는 만큼. */
+private val LEDGE = 37.dp
+
 /** 회차 목록이 판 위에서 물러나는 만큼. 단추의 위 여백도 이 자에서 잰다. */
 private val ROOF = 18.dp
 
@@ -795,30 +783,38 @@ private fun Chip(n: Int, color: Color, solid: Boolean, onClick: () -> Unit) {
  * 마지막으로 열어 본 줄에는 번호 왼쪽 위에 흰 점이 천천히 깜박인다.
  */
 @Composable
-private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, start: Dp, onPick: (Int) -> Unit) {
+private fun RoundRow(e: ExamRow, on: Boolean, radius: Dp, onPick: (Int) -> Unit) {
     val context = LocalContext.current
     val counts = remember(e.round) { Marks.counts(context, e.round) }
     // 그 회차에서 마지막으로 보고 있던 문항. 한 번도 안 들어갔으면 0 이다.
     val seen = remember(e.round) { Marks.lastSeen(context, e.round) }
     val live = e.complete || e.items > 0
-    BoxWithConstraints(
+    Box(
         Modifier
             .fillMaxWidth()
             .clickable(enabled = live) { onPick(e.round) }
             .padding(vertical = 1.dp),
         contentAlignment = Alignment.Center,
     ) {
-        // 번호는 왼쪽으로 정렬한다 — 단추 자리에서 떨어진 그 선이다.
-        Row(
-            Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = start, top = 6.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.Top,
+        // 마지막으로 열어 본 줄에는 바닥을 깐다. 판의 좌우 벽에서 같은 만큼
+        // 물러나 있으므로 모서리도 그만큼 작다 — 판의 모서리와 동심원이다.
+        if (on) {
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .padding(horizontal = INSET)
+                    .background(Hak3.Rule, RoundedCornerShape(radius - INSET))
+            )
+        }
+        // 번호와 그 어깨의 수, 그 아래 눈금. 셋이 한 덩이로 판 한가운데 선다.
+        // 눈금의 너비는 위 덩이의 너비를 그대로 따른다.
+        Column(
+            Modifier.width(IntrinsicSize.Max).padding(vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // 숫자는 글자 상자 안에서 위로 쏠려 앉는다(내림자가 없다). 잰 만큼
-            // 올려 잉크가 줄 한가운데에 오게 한다. 자리는 그대로다 — offset 은
-            // 그리는 자리만 옮기므로 줄 높이가 흔들리지 않는다.
-            Box {
+            Row(verticalAlignment = Alignment.Top) {
+                // 숫자는 글자 상자 안에서 위로 쏠려 앉는다(내림자가 없다). 잰 만큼
+                // 올려 잉크가 줄 한가운데에 오게 한다.
                 Text(
                     "${e.round}",
                     // 회차 번호는 큰 한자와 같은 서체·같은 얇기로 선다
@@ -828,57 +824,44 @@ private fun RoundRow(e: ExamRow, on: Boolean, pill: Dp, start: Dp, onPick: (Int)
                     color = if (live) Hak3.Hanja else Hak3.HanjaDim,
                     modifier = Modifier.offset(y = INK),
                 )
-                // 마지막으로 열어 본 줄임을 알리는 점. 번호의 왼쪽 위 어깨에서
-                // 천천히 깜박인다 — 알약처럼 자리를 차지하지 않고 눈만 끈다.
-                if (on) Beacon(Modifier.align(Alignment.TopStart).offset(x = -BEACON_GAP, y = INK + SHOULDER))
-            }
-            Spacer(Modifier.width(11.dp))
-            // 담아 둔 수는 번호의 윗선에 맞춘다 — 한 개든 두 개든 같은 자리에서
-            // 시작한다. 둘일 때는 아래 것을 3dp 끌어올려 한 덩이로 보이게 한다.
-            Column(Modifier.offset(y = INK).padding(top = SHOULDER)) {
-                // 줄 상자를 글자에 바짝 붙여 둘이 한 덩이로 보이게 한다
-                if (counts.amber > 0) {
-                    // 노란 수만 2dp 더 올라간다. 자리는 그대로라 초록은 따라오지 않는다.
-                    Text(
-                        "${counts.amber}",
-                        style = COUNT,
-                        color = Hak3.Amber,
-                        modifier = Modifier.offset(y = (-2).dp),
-                    )
+                Spacer(Modifier.width(11.dp))
+                // 담아 둔 수는 번호의 윗선에 맞춘다 — 한 개든 두 개든 같은 자리에서
+                // 시작한다.
+                Column(Modifier.offset(y = INK).padding(top = SHOULDER)) {
+                    if (counts.amber > 0) {
+                        // 노란 수만 2dp 더 올라간다. 자리는 그대로라 초록은 따라오지 않는다.
+                        Text(
+                            "${counts.amber}",
+                            style = COUNT,
+                            color = Hak3.Amber,
+                            modifier = Modifier.offset(y = (-2).dp),
+                        )
+                    }
+                    if (counts.known > 0) {
+                        Text("${counts.known}", style = COUNT, color = Hak3.Green)
+                    }
+                    if (!live) Text("no text", fontSize = 13.sp, color = Hak3.TextDim)
                 }
-                if (counts.known > 0) {
-                    Text("${counts.known}", style = COUNT, color = Hak3.Green)
-                }
-                if (!live) Text("no text", fontSize = 13.sp, color = Hak3.TextDim)
             }
-        }
-
-        // 어디까지 갔는지를 알약 오른쪽에 눈금 하나로. 알약 끝에서 카드 벽까지의
-        // 자리에서 25% 부터 65% 까지를 쓴다 — 알약에도 벽에도 붙지 않는다.
-        // 한 번도 들어가지 않은 회차에는 눈금 자체가 서지 않는다.
-        if (seen > 0 && e.items > 0) {
-            val room = (maxWidth - pill) / 2
-            // 화면 폭의 56.5% 자리에서 시작해, 예전 오른쪽 끝에서 4dp 더 뻗는다.
-            // 이 폰에서 204dp 인 자리다 — 어깨의 수에서 23dp 떨어져 선다.
-            // 세로는 회차 번호의 윗선 — 어깨의 수도 깜박이는 점도 그 선에 선다.
-            val far = room * 0.35f - 4.dp
-            val near = (maxWidth + 16.dp) * 0.565f - 8.dp
-            Box(
-                Modifier
-                    .align(Alignment.TopStart)
-                    .padding(start = near, top = 6.dp + INK + SHOULDER + 1.dp)
-                    .width((maxWidth - far - near).coerceAtLeast(0.dp))
-                    .height(GAUGE)
-                    .background(GAUGE_TRACK, CircleShape)
-            ) {
-                // 끝까지 간 회차만 흰빛으로 선다 — 다 봤다는 말은 그만한 값이다
-                val done = seen >= e.items
+            // 어디까지 갔는지 — 번호 덩이 바로 아래, 그 너비만큼.
+            // 한 번도 들어가지 않은 회차에는 눈금 자체가 서지 않는다.
+            if (seen > 0 && e.items > 0) {
+                Spacer(Modifier.height(6.dp))
                 Box(
                     Modifier
-                        .fillMaxWidth((seen.toFloat() / e.items).coerceIn(0f, 1f))
-                        .fillMaxHeight()
-                        .background(if (done) GAUGE_DONE else GAUGE_FILL, CircleShape)
-                )
+                        .fillMaxWidth()
+                        .height(GAUGE)
+                        .background(GAUGE_TRACK, CircleShape)
+                ) {
+                    // 끝까지 간 회차만 흰빛으로 선다 — 다 봤다는 말은 그만한 값이다
+                    val done = seen >= e.items
+                    Box(
+                        Modifier
+                            .fillMaxWidth((seen.toFloat() / e.items).coerceIn(0f, 1f))
+                            .fillMaxHeight()
+                            .background(if (done) GAUGE_DONE else GAUGE_FILL, CircleShape)
+                    )
+                }
             }
         }
     }
