@@ -436,7 +436,9 @@ fun RoundPicker(
                         .then(veil)
                         .padding(horizontal = 8.dp)
                         .graphicsLayer(dim)
-                        .background(Hak3.Surface, RoundedCornerShape(radius))
+                        // 아래 판과 같은 얼굴이다 — 회차 칸과 같은 꼴로 서되
+                        // 제 영역에 따로 선다
+                        .background(Hak3.Card, RoundedCornerShape(radius))
                 ) {
                     UpdateRow(
                         label = when {
@@ -693,7 +695,8 @@ private fun Setup(radius: Dp, trouble: String, onFolder: () -> Unit, onFile: () 
     Column(
         Modifier
             .fillMaxWidth()
-            .background(Hak3.Surface, RoundedCornerShape(radius))
+            // 판 위에 얹히는 자리라 판보다 한 겹 어둡게 판다
+            .background(SETUP_FACE, RoundedCornerShape(radius))
             .padding(20.dp),
     ) {
         Text("No exam data yet", fontSize = 22.sp, color = Hak3.Text)
@@ -711,27 +714,29 @@ private fun Setup(radius: Dp, trouble: String, onFolder: () -> Unit, onFile: () 
         }
         Spacer(Modifier.height(14.dp))
         Row {
-            Text(
-                "Choose folder",
-                fontSize = 15.sp,
-                color = Hak3.Pink,
-                modifier = Modifier
-                    .border(1.dp, Hak3.Pink, RoundedCornerShape(10.dp))
-                    .clickable(onClick = onFolder)
-                    .padding(horizontal = 16.dp, vertical = 11.dp),
-            )
+            // 폴더 쪽이 제 길이라 색면으로, 파일 쪽은 물러난 색면으로 선다
+            Capsule("Choose folder", Hak3.Pink, Color.Black, onFolder)
             Spacer(Modifier.width(8.dp))
-            Text(
-                "Choose file",
-                fontSize = 15.sp,
-                color = Hak3.TextDim,
-                modifier = Modifier
-                    .border(1.dp, Hak3.Rule, RoundedCornerShape(10.dp))
-                    .clickable(onClick = onFile)
-                    .padding(horizontal = 16.dp, vertical = 11.dp),
-            )
+            Capsule("Choose file", Hak3.Knob, Hak3.TextDim, onFile)
         }
     }
+}
+
+/** 자료를 고르는 칸의 바탕 — 판보다 한 겹 어둡다. */
+private val SETUP_FACE = Color.Black.copy(alpha = 0.18f)
+
+/** 색면 캡슐 단추. 기출 화면의 단추와 같은 꼴이다. */
+@Composable
+private fun Capsule(label: String, face: Color, ink: Color, onClick: () -> Unit) {
+    Text(
+        label,
+        fontSize = 15.sp,
+        color = ink,
+        modifier = Modifier
+            .background(face, CircleShape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+    )
 }
 
 /** 회차 칸과 같은 얼굴을 한 칸. 큰 줄과 작은 줄만 밖에서 정한다. */
@@ -824,7 +829,7 @@ private val TALLY_TIGHT = 4.dp
 private val LANTERN_PAD = 10.dp
 
 /** 등에 한 글자가 머무는 참. (ms) */
-private const val BEAT = 800L
+private const val BEAT = 1500L
 
 /** 못 외운 낱글자가 이보다 많을 때만 그 안에서 뽑는다. 그 아래로는 3급 전체에서. */
 private const val LANTERN_MIN = 10
@@ -1057,10 +1062,19 @@ private fun UpdateRow(label: String, note: String, enabled: Boolean, onClick: ()
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.Top) {
-            Text(label, fontFamily = Korail, fontSize = 44.sp, color = Hak3.Pink, maxLines = 1)
+            Text(
+                label,
+                // 받는 동안 뜨는 몫(72% 같은)은 수만 서는 자리라 폭이 고른 서체로
+                fontFamily = if (label.endsWith("%")) Mono else Korail,
+                fontSize = 44.sp,
+                color = Hak3.Pink,
+                maxLines = 1,
+            )
             Spacer(Modifier.width(7.dp))
             Text(
                 note,
+                // 곁의 글은 판 번호이거나 안내 문구다. 번호일 때만 고른 폭으로.
+                fontFamily = if (note.firstOrNull()?.isDigit() == true) Mono else Korail,
                 fontSize = 13.sp,
                 color = Hak3.Pink,
                 modifier = Modifier.padding(top = 9.dp),
