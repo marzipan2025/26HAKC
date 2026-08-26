@@ -522,7 +522,10 @@ fun RoundPicker(
                             )
                         }
                         if (hasPink) Spacer(Modifier.height(TALLY_TOP))
-                        Column(verticalArrangement = Arrangement.spacedBy(TALLY_GAP)) {
+                        Column(
+                            Modifier.padding(start = TALLY_SHIFT, top = TALLY_DROP),
+                            verticalArrangement = Arrangement.spacedBy(TALLY_GAP),
+                        ) {
                             for (bin in Mark.entries) {
                                 // 색마다 둘씩 — 낱글자가 먼저, 문제가 뒤다
                                 for (kind in Collect.Kind.entries) {
@@ -783,19 +786,19 @@ private val SIDE = 16.dp
 private val TALLY_TOP = 22.dp
 
 /** 단추끼리 벌어지는 만큼. */
-private val TALLY_GAP = 14.dp
+private val TALLY_GAP = 18.dp
+
+/** 단추 묶음이 등의 선에서 더 오른쪽으로 물러나는 만큼. */
+private val TALLY_SHIFT = 12.dp
+
+/** 단추 묶음이 제 자리에서 더 내려앉는 만큼. */
+private val TALLY_DROP = 4.dp
 
 /** 이름과 수 사이. 한 덩이로 읽히도록 바짝 붙인다. */
 private val TALLY_TIGHT = 4.dp
 
-/** 등 안쪽 여백. 글자 상자에서 이만큼 물러난 자리가 등의 테다. */
+/** 등의 글자가 제 자리에서 두르는 여백. 바탕은 두지 않고 자리만 잡는다. */
 private val LANTERN_PAD = 10.dp
-
-/** 등의 모서리. */
-private val LANTERN_ROUND = 14.dp
-
-/** 등의 바탕 — 판보다 한 겹 어둡다. */
-private val LANTERN_FACE = Color.Black.copy(alpha = 0.18f)
 
 /** 등에 한 글자가 머무는 참. (ms) */
 private const val BEAT = 800L
@@ -829,8 +832,8 @@ private val TALLY_NAME = TextStyle(
 /** 단추의 수. 이름 바로 아래에 한 뼘 크게 선다. */
 private val TALLY_NUM = TextStyle(
     fontFamily = Mono,
-    fontSize = 24.sp,
-    lineHeight = 24.sp,
+    fontSize = 32.sp,
+    lineHeight = 32.sp,
     platformStyle = PlatformTextStyle(includeFontPadding = false),
     lineHeightStyle = LineHeightStyle(
         alignment = LineHeightStyle.Alignment.Center,
@@ -872,14 +875,14 @@ private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit)
     Box(
         Modifier
             .size(side)
-            .background(LANTERN_FACE, RoundedCornerShape(LANTERN_ROUND))
             .clickable(enabled = open && han.isNotEmpty()) { onOpen(han) },
         contentAlignment = Alignment.Center,
     ) {
         Text(
             han,
             style = LANTERN_INK.copy(fontSize = glyph, lineHeight = glyph),
-            color = Hak3.Hanja,
+            // 못 외운 글자를 돌려 보이는 자리라, 그 묶음의 색으로 선다
+            color = Hak3.Pink,
             maxLines = 1,
         )
     }
@@ -895,7 +898,13 @@ private fun Tally(title: String, n: Int, color: Color, solid: Boolean, onClick: 
     val on = n > 0
     val ink = if (on) color else Hak3.TextDim
     Column(Modifier.clickable(enabled = on, onClick = onClick)) {
-        Text(title, style = TALLY_NAME, color = ink, maxLines = 1)
+        // 이름은 회차 번호와 같은 잉크다 — 색은 수에만 준다
+        Text(
+            title,
+            style = TALLY_NAME,
+            color = if (on) Hak3.Hanja else Hak3.TextDim,
+            maxLines = 1,
+        )
         Spacer(Modifier.height(TALLY_TIGHT))
         Text(
             "$n",

@@ -132,11 +132,13 @@ private const val GRADE_SLOT = "grade"
 
 private fun gradeColor(grade: Int?) = when (grade) {
     null -> INK.copy(alpha = 0.3f)             // 급수를 모르는 글자는 흐리게
-    0 -> Color.White
+    // 흰 표시는 노랑 판 위에서 뜨지 않는다 — 글씨와 같이 뒤집는다.
+    // 색이 있는 급수(1·2·3급)는 제 색 그대로 둔다.
+    0 -> INK
     1 -> Color(0xFF2999D1)
     2 -> Color(0xFFFFEB3B)
     3 -> Color(0xFF507D2A)
-    else -> Hak3.Text
+    else -> INK
 }
 
 // 01HAKA 의 창은 310×270 이고 그 안이 한자 84 · 訓音 나머지 · 입력 50 으로 나뉜다.
