@@ -558,8 +558,11 @@ private val GAUGE_FILL = Hak3.HanjaDim.copy(alpha = Hak3.HanjaDim.alpha * 0.6f)
 private val GAUGE_TRACK_ON = Hak3.Rule.copy(alpha = 1f)
 private val GAUGE_FILL_ON = Hak3.HanjaDim.copy(alpha = 1f)
 
-/** 끝까지 간 것. 흰빛이되 반만 — 온전한 흰색은 이 자리에 너무 세다. */
-private val GAUGE_DONE = Color.White.copy(alpha = 0.5f)
+/** 끝까지 간 것. 흰빛이되 옅게 — 온전한 흰색은 이 자리에 너무 세다. */
+private val GAUGE_DONE = Color.White.copy(alpha = 0.4f)
+
+/** 마지막으로 열어 본 줄이 끝까지 갔을 때. 흐림 없이 서되 온전한 흰색은 아니다. */
+private val GAUGE_DONE_ON = Color.White.copy(alpha = 0.8f)
 
 /** 마지막으로 열어 본 줄의 바닥이 판 벽에서 물러나는 만큼. */
 private val INSET = 8.dp
@@ -835,6 +838,10 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                 Box(
                     Modifier
                         .fillMaxWidth()
+                        // 위 덩이보다 좌우로 2dp 씩 물러나고, 3dp 올라앉는다.
+                        // 올리는 것은 그리는 자리만이라 줄 높이는 그대로다.
+                        .padding(horizontal = 2.dp)
+                        .offset(y = (-3).dp)
                         .height(GAUGE)
                         // 마지막으로 열어 본 줄에서는 눈금이 흐림 없이 선다
                         .background(if (on) GAUGE_TRACK_ON else GAUGE_TRACK, CircleShape)
@@ -847,7 +854,7 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                             .fillMaxHeight()
                             .background(
                             when {
-                                done && on -> Color.White
+                                done && on -> GAUGE_DONE_ON
                                 done -> GAUGE_DONE
                                 on -> GAUGE_FILL_ON
                                 else -> GAUGE_FILL
