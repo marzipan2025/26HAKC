@@ -121,7 +121,13 @@ private fun gradeIcon(grade: Int?) =
  * 않아 읽히지 않는다. 어두운 판(회차 판·기출 카드)은 팔레트의 흰 잉크를 그대로 쓴다.
  */
 private val INK = Color.Black.copy(alpha = 0.95f)           // 본문 · 적는 글자
-private val INK_SOFT = Color.Black.copy(alpha = 0.57f)      // 뜻풀이
+private val INK_SOFT = Color.Black.copy(alpha = 0.57f)      // 물러나 읽히는 글
+/**
+ * 訓音 아랫줄의 뜻풀이. 검은 겹을 덮는 대신 판 색을 그대로 깊게 내린 갈색이다 —
+ * 바탕 노랑과 같은 색상(41°)에 채도를 올리고 밝기를 0.40 으로 눌렀다.
+ * 노랑 위에서 4.98:1 로, 검정 57% 를 덮었을 때(4.41:1)보다 또렷하다.
+ */
+private val INK_GLOSS = Color(0xFF66490A)
 private val INK_DIM = Color.Black.copy(alpha = 0.38f)       // 곁들이는 글
 private val INK_RULE = Color.Black.copy(alpha = 0.14f)      // 실선 · 꺼진 것
 /** 입력 칸 오른쪽의 들임표. 실선보다 짙어 빈 칸에서도 눈에 든다. */
@@ -667,7 +673,7 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                     body,
                     fontSize = 19.sp,
                     lineHeight = 27.sp,
-                    color = INK_SOFT,
+                    color = INK_GLOSS,
                     maxLines = if (open) Int.MAX_VALUE else 1,
                     overflow = TextOverflow.Ellipsis,
                     // 접힌 채로만 잰다. 펼치고 나면 넘칠 일이 없어 그때의 답은 늘
