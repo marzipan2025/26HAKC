@@ -546,7 +546,7 @@ fun RoundPicker(
 private val RING = 2.dp
 
 /** 진행 눈금의 두께와 길이. 길이는 세 자리 번호에 한 자리 수가 붙은 줄에서 쟀다. */
-private val GAUGE = 2.dp
+private val GAUGE = 1.dp
 private val GAUGE_W = 88.dp
 
 /** 눈금의 바탕. 경계선에서 한 겹 더 물러난다. */
@@ -555,11 +555,8 @@ private val GAUGE_TRACK = Hak3.Rule.copy(alpha = Hak3.Rule.alpha / 2)
 /** 차오르는 쪽. 다 차기 전까지는 물러나 있다. */
 private val GAUGE_FILL = Hak3.HanjaDim.copy(alpha = Hak3.HanjaDim.alpha * 0.6f)
 
-/** 마지막으로 열어 본 줄의 눈금 바탕 — 흐림 없이 선다. 차오르는 쪽은 샛노랑이다. */
-private val GAUGE_TRACK_ON = Hak3.Rule.copy(alpha = 1f)
-
 /** 끝까지 간 것. 흰빛이되 옅게 — 온전한 흰색은 이 자리에 너무 세다. */
-private val GAUGE_DONE = Color.White.copy(alpha = 0.4f)
+private val GAUGE_DONE = Color.White.copy(alpha = 0.32f)
 
 /** 마지막으로 열어 본 줄의 바닥이 판 벽에서 물러나는 만큼. */
 private val INSET = 8.dp
@@ -808,9 +805,13 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                     // 숫자만 서는 자리라 폭이 고른 서체로
                     fontFamily = Mono,
                     fontSize = 42.sp,
-                    // 회차 번호는 흰빛 그대로 선다. 아직 문항이 없는 회차만
-                    // 물러나 앉는다.
-                    color = if (live) Color.White else Hak3.HanjaDim,
+                    // 마지막으로 열어 본 회차만 온전한 흰빛으로 선다. 나머지는
+                    // 한 겹 물러나고, 아직 문항이 없는 회차는 더 물러난다.
+                    color = when {
+                        !live -> Hak3.HanjaDim
+                        on -> Color.White
+                        else -> Hak3.Hanja
+                    },
                     modifier = Modifier.offset(y = INK),
                 )
                 Spacer(Modifier.width(11.dp))
@@ -844,11 +845,10 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                         // 줄 높이는 그대로다.
                         .width(GAUGE_W)
                         .offset(y = (-3).dp)
-                        // 마지막으로 열어 본 줄의 눈금만 두껍다 — 나머지는
-                        // 한 눈금 더 얇게 깔려, 그 줄이 두 눈금 차로 도드라진다
-                        .height(if (on) GAUGE + 1.dp else GAUGE - 1.dp)
-                        // 마지막으로 열어 본 줄에서는 눈금이 흐림 없이 선다
-                        .background(if (on) GAUGE_TRACK_ON else GAUGE_TRACK, CircleShape)
+                        // 눈금은 어느 줄에서나 같은 규칙으로 선다 — 어디까지
+                        // 갔는지만 말하고, 어느 줄인지는 번호가 말한다
+                        .height(GAUGE)
+                        .background(GAUGE_TRACK, CircleShape)
                 ) {
                     // 끝까지 간 회차만 흰빛으로 선다 — 다 봤다는 말은 그만한 값이다
                     val done = seen >= e.items
@@ -857,13 +857,7 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                             .fillMaxWidth((seen.toFloat() / e.items).coerceIn(0f, 1f))
                             .fillMaxHeight()
                             .background(
-                            when {
-                                // 마지막으로 열어 본 줄은 샛노랑으로 — 다 봤든
-                                // 아니든 그 줄임을 색이 먼저 말한다
-                                on -> Hak3.Sun
-                                done -> GAUGE_DONE
-                                else -> GAUGE_FILL
-                            },
+                            if (done) GAUGE_DONE else GAUGE_FILL,
                             CircleShape,
                         )
                     )
