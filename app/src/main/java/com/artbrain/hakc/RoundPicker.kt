@@ -480,11 +480,10 @@ fun RoundPicker(
                 val sunk = typing &&
                     with(density) { (4.dp + band).toPx() } + height >= usable
 
-                // 왼쪽 판 — 단어장 넷. 위에서부터 노랑 낱글자 · 노랑 문제 ·
-                // 초록 낱글자 · 초록 문제다.
+                // 왼쪽 판 — 단어장 넷. 남는 자리를 다 쓴다.
                 Box(
                     Modifier
-                        .weight(4f)
+                        .weight(1f)
                         .fillMaxHeight()
                         .graphicsLayer(dim)
                         .background(Hak3.Card, RoundedCornerShape(radius))
@@ -509,10 +508,10 @@ fun RoundPicker(
                     }
                 }
 
-                // 오른쪽 판 — 회차가 굴러가는 자리
+                // 오른쪽 판 — 회차가 굴러가는 자리. 폭은 120dp 로 못 박는다.
                 Box(
                     Modifier
-                        .weight(6f)
+                        .width(RIGHT)
                         .fillMaxHeight()
                         .graphicsLayer(dim)
                         .then(morph)
@@ -527,7 +526,7 @@ fun RoundPicker(
                         item(key = "setup") { Setup(radius, trouble, onFolder, onFile) }
                     }
                     items(exams, key = { it.round }) { e ->
-                        RoundRow(e, e.round == last, radius) {
+                        RoundRow(e, e.round == last) {
                             last = it
                             Settings.setLastRound(context, it)
                             onPick(it)
@@ -561,6 +560,10 @@ private val GAUGE_TRACK = Hak3.Rule.copy(alpha = Hak3.Rule.alpha / 2)
 
 /** 차오르는 쪽. 다 차기 전까지는 물러나 있다. */
 private val GAUGE_FILL = Hak3.HanjaDim.copy(alpha = Hak3.HanjaDim.alpha * 0.6f)
+
+/** 마지막으로 열어 본 줄의 눈금 — 바탕도 차오르는 쪽도 흐림 없이 선다. */
+private val GAUGE_TRACK_ON = Hak3.Rule.copy(alpha = 1f)
+private val GAUGE_FILL_ON = Hak3.HanjaDim.copy(alpha = 1f)
 
 /** 끝까지 간 것. 흰빛이되 반만 — 온전한 흰색은 이 자리에 너무 세다. */
 private val GAUGE_DONE = Color.White.copy(alpha = 0.5f)
@@ -741,6 +744,9 @@ private val CHIP = 44.dp
 /** 단추끼리 벌어지는 만큼. */
 private val CHIP_GAP = 8.dp
 
+/** 회차가 굴러가는 오른쪽 판의 폭. 왼쪽 판이 남는 자리를 가져간다. */
+private val RIGHT = 120.dp
+
 /** 단어장 단추가 제 판의 왼벽에서 물러나는 만큼. */
 private val LEDGE = 37.dp
 
@@ -783,7 +789,7 @@ private fun Chip(n: Int, color: Color, solid: Boolean, onClick: () -> Unit) {
  * 마지막으로 열어 본 줄에는 번호 왼쪽 위에 흰 점이 천천히 깜박인다.
  */
 @Composable
-private fun RoundRow(e: ExamRow, on: Boolean, radius: Dp, onPick: (Int) -> Unit) {
+private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
     val context = LocalContext.current
     val counts = remember(e.round) { Marks.counts(context, e.round) }
     // 그 회차에서 마지막으로 보고 있던 문항. 한 번도 안 들어갔으면 0 이다.
@@ -796,16 +802,6 @@ private fun RoundRow(e: ExamRow, on: Boolean, radius: Dp, onPick: (Int) -> Unit)
             .padding(vertical = 1.dp),
         contentAlignment = Alignment.Center,
     ) {
-        // 마지막으로 열어 본 줄에는 바닥을 깐다. 판의 좌우 벽에서 같은 만큼
-        // 물러나 있으므로 모서리도 그만큼 작다 — 판의 모서리와 동심원이다.
-        if (on) {
-            Box(
-                Modifier
-                    .matchParentSize()
-                    .padding(horizontal = INSET)
-                    .background(Hak3.Rule, RoundedCornerShape(radius - INSET))
-            )
-        }
         // 번호와 그 어깨의 수, 그 아래 눈금. 셋이 한 덩이로 판 한가운데 선다.
         // 눈금의 너비는 위 덩이의 너비를 그대로 따른다.
         Column(
@@ -846,12 +842,13 @@ private fun RoundRow(e: ExamRow, on: Boolean, radius: Dp, onPick: (Int) -> Unit)
             // 어디까지 갔는지 — 번호 덩이 바로 아래, 그 너비만큼.
             // 한 번도 들어가지 않은 회차에는 눈금 자체가 서지 않는다.
             if (seen > 0 && e.items > 0) {
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(2.dp))
                 Box(
                     Modifier
                         .fillMaxWidth()
                         .height(GAUGE)
-                        .background(GAUGE_TRACK, CircleShape)
+                        // 마지막으로 열어 본 줄에서는 눈금이 흐림 없이 선다
+                        .background(if (on) GAUGE_TRACK_ON else GAUGE_TRACK, CircleShape)
                 ) {
                     // 끝까지 간 회차만 흰빛으로 선다 — 다 봤다는 말은 그만한 값이다
                     val done = seen >= e.items
@@ -859,7 +856,15 @@ private fun RoundRow(e: ExamRow, on: Boolean, radius: Dp, onPick: (Int) -> Unit)
                         Modifier
                             .fillMaxWidth((seen.toFloat() / e.items).coerceIn(0f, 1f))
                             .fillMaxHeight()
-                            .background(if (done) GAUGE_DONE else GAUGE_FILL, CircleShape)
+                            .background(
+                            when {
+                                done && on -> Color.White
+                                done -> GAUGE_DONE
+                                on -> GAUGE_FILL_ON
+                                else -> GAUGE_FILL
+                            },
+                            CircleShape,
+                        )
                     )
                 }
             }
