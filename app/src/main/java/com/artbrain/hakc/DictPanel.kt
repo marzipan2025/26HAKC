@@ -204,7 +204,7 @@ object DictInput {
 }
 
 /** 단어장 묶음의 색. */
-private fun binColor(m: Mark) = if (m == Mark.AMBER) Hak3.Amber else Hak3.Green
+private fun binColor(m: Mark) = if (m == Mark.AMBER) Hak3.Pink else Hak3.Green
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -420,7 +420,7 @@ fun DictPanel(
                     onValueChange = { DictInput.text = it },
                     singleLine = true,
                     textStyle = TextStyle(color = Hak3.Text, fontSize = 22.sp, fontFamily = Korail),
-                    cursorBrush = SolidColor(Hak3.Amber),
+                    cursorBrush = SolidColor(Hak3.Pink),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     // 키보드의 찾기 단추도 엔터와 같은 일을 한다
                     keyboardActions = KeyboardActions(onSearch = {

@@ -503,7 +503,7 @@ fun RoundPicker(
                                 val n = counts[bin]?.get(kind) ?: 0
                                 Chip(
                                     n = n,
-                                    color = if (bin == Mark.AMBER) Hak3.Amber else Hak3.Green,
+                                    color = if (bin == Mark.AMBER) Hak3.Pink else Hak3.Green,
                                     solid = kind == Collect.Kind.CHARS,
                                 ) { onWords(bin, kind) }
                             }
@@ -554,15 +554,11 @@ private val GAUGE_TRACK = Hak3.Rule.copy(alpha = Hak3.Rule.alpha / 2)
 /** 차오르는 쪽. 다 차기 전까지는 물러나 있다. */
 private val GAUGE_FILL = Hak3.HanjaDim.copy(alpha = Hak3.HanjaDim.alpha * 0.6f)
 
-/** 마지막으로 열어 본 줄의 눈금 — 바탕도 차오르는 쪽도 흐림 없이 선다. */
+/** 마지막으로 열어 본 줄의 눈금 바탕 — 흐림 없이 선다. 차오르는 쪽은 샛노랑이다. */
 private val GAUGE_TRACK_ON = Hak3.Rule.copy(alpha = 1f)
-private val GAUGE_FILL_ON = Hak3.HanjaDim.copy(alpha = 1f)
 
 /** 끝까지 간 것. 흰빛이되 옅게 — 온전한 흰색은 이 자리에 너무 세다. */
 private val GAUGE_DONE = Color.White.copy(alpha = 0.4f)
-
-/** 마지막으로 열어 본 줄이 끝까지 갔을 때. 흐림 없이 서되 온전한 흰색은 아니다. */
-private val GAUGE_DONE_ON = Color.White.copy(alpha = 0.8f)
 
 /** 마지막으로 열어 본 줄의 바닥이 판 벽에서 물러나는 만큼. */
 private val INSET = 8.dp
@@ -659,9 +655,9 @@ private fun Setup(radius: Dp, trouble: String, onFolder: () -> Unit, onFile: () 
             Text(
                 "Choose folder",
                 fontSize = 15.sp,
-                color = Hak3.Amber,
+                color = Hak3.Pink,
                 modifier = Modifier
-                    .border(1.dp, Hak3.Amber, RoundedCornerShape(10.dp))
+                    .border(1.dp, Hak3.Pink, RoundedCornerShape(10.dp))
                     .clickable(onClick = onFolder)
                     .padding(horizontal = 16.dp, vertical = 11.dp),
             )
@@ -821,7 +817,7 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                         Text(
                             "${counts.amber}",
                             style = COUNT,
-                            color = Hak3.Amber,
+                            color = Hak3.Pink,
                             modifier = Modifier.offset(y = (-2).dp),
                         )
                     }
@@ -842,7 +838,8 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                         // 올리는 것은 그리는 자리만이라 줄 높이는 그대로다.
                         .padding(horizontal = 2.dp)
                         .offset(y = (-3).dp)
-                        .height(GAUGE)
+                        // 마지막으로 열어 본 줄의 눈금만 한 눈금 더 두껍다
+                        .height(if (on) GAUGE + 1.dp else GAUGE)
                         // 마지막으로 열어 본 줄에서는 눈금이 흐림 없이 선다
                         .background(if (on) GAUGE_TRACK_ON else GAUGE_TRACK, CircleShape)
                 ) {
@@ -854,9 +851,10 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                             .fillMaxHeight()
                             .background(
                             when {
-                                done && on -> GAUGE_DONE_ON
+                                // 마지막으로 열어 본 줄은 샛노랑으로 — 다 봤든
+                                // 아니든 그 줄임을 색이 먼저 말한다
+                                on -> Hak3.Sun
                                 done -> GAUGE_DONE
-                                on -> GAUGE_FILL_ON
                                 else -> GAUGE_FILL
                             },
                             CircleShape,
@@ -879,12 +877,12 @@ private fun UpdateRow(label: String, note: String, enabled: Boolean, onClick: ()
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.Top) {
-            Text(label, fontFamily = Korail, fontSize = 44.sp, color = Hak3.Amber, maxLines = 1)
+            Text(label, fontFamily = Korail, fontSize = 44.sp, color = Hak3.Pink, maxLines = 1)
             Spacer(Modifier.width(7.dp))
             Text(
                 note,
                 fontSize = 13.sp,
-                color = Hak3.Amber,
+                color = Hak3.Pink,
                 modifier = Modifier.padding(top = 9.dp),
             )
         }

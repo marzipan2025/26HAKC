@@ -138,7 +138,7 @@ private val OUTER = 8.dp
 private class Page(val round: Int, val section: Section, val item: Item, val id: String)
 
 private fun borderColor(m: Mark?) = when (m) {
-    Mark.AMBER -> Hak3.Amber
+    Mark.AMBER -> Hak3.Pink
     Mark.KNOWN -> Hak3.Green
     null -> Hak3.Rule
 }
@@ -308,7 +308,7 @@ fun WordScreen(
     Deck(
         all = all,
         // 서랍의 이름과 같은 꼴로 적는다 — 거기서 눌러 온 자리다
-        title = (if (bin == Mark.AMBER) "Yellow " else "Green ") + if (chars) "Letters" else "Cards",
+        title = (if (bin == Mark.AMBER) "Pink " else "Green ") + if (chars) "Letters" else "Cards",
         // 문제 묶음의 카드는 제 회차에서 온 것이라 어느 회차인지 밝혀 둔다
         subOf = { p -> if (chars) null else "第 ${p.round} 回" },
         marks = marks,
@@ -317,7 +317,7 @@ fun WordScreen(
         morph = morph,
         veil = veil,
         morphLit = morphLit,
-        face = if (bin == Mark.AMBER) Hak3.Amber else Hak3.Green,
+        face = if (bin == Mark.AMBER) Hak3.Pink else Hak3.Green,
         leaving = leaving,
         onMark = { p, m ->
             if (chars) {
@@ -613,7 +613,7 @@ private fun Key(label: String, face: Color, ink: Color, onPick: () -> Unit) {
 private fun Side(label: String, on: Boolean, onPick: () -> Unit) {
     Key(
         label,
-        face = if (on) Hak3.Amber else Hak3.Knob,
+        face = if (on) Hak3.Pink else Hak3.Knob,
         ink = if (on) Color.Black else Hak3.TextDim,
         onPick = onPick,
     )
@@ -644,7 +644,7 @@ private fun TopBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             FilterDot(
-                if (amber > 0) Hak3.Amber else Hak3.Knob,
+                if (amber > 0) Hak3.Pink else Hak3.Knob,
                 filter == Mark.AMBER,
                 amber,
                 hollow,
@@ -1133,7 +1133,7 @@ private fun AmberDot(enabled: Boolean, onPick: () -> Unit) {
     Box(
         Modifier
             .size(BAR)
-            .background(if (enabled) Hak3.Amber else Hak3.Amber.copy(alpha = 0.2f), CircleShape)
+            .background(if (enabled) Hak3.Pink else Hak3.Pink.copy(alpha = 0.2f), CircleShape)
             .clickable(enabled = enabled, onClick = onPick)
     )
 }
