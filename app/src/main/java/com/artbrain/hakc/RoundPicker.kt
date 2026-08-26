@@ -529,7 +529,7 @@ fun RoundPicker(
                         }
                         if (hasPink) Spacer(Modifier.height(TALLY_TOP))
                         Column(
-                            Modifier.padding(start = TALLY_SHIFT, top = TALLY_DROP),
+                            Modifier.padding(start = TALLY_SHIFT).offset(y = -TALLY_LIFT),
                             verticalArrangement = Arrangement.spacedBy(TALLY_GAP),
                         ) {
                             for (bin in Mark.entries) {
@@ -604,10 +604,10 @@ private val COUNT_GAP = 11.dp
 private val COUNT_W = 20.dp
 
 /**
- * 회차 덩이가 판 오른벽에서 물러나는 만큼. 왼쪽에서 한자가 물러난 26dp 와 같은
- * 값이다 — 판의 두 여백이 같은 자로 선다.
+ * 회차 덩이가 판 오른벽에서 물러나는 만큼. 왼쪽에서 한자가 물러난 26dp 보다
+ * 6dp 더 붙어 선다 — 어깨의 수가 한두 자리라 잉크는 그보다 더 안쪽에서 끝난다.
  */
-private val WALL = 26.dp
+private val WALL = 20.dp
 
 /** 눈금의 바탕. 경계선에서 한 겹 더 물러난다. */
 private val GAUGE_TRACK = Hak3.Rule.copy(alpha = Hak3.Rule.alpha / 2)
@@ -800,7 +800,7 @@ private val SIDE = 16.dp
  * 번호의 잉크는 판 위끝에서 29.3dp, 한자의 잉크는 40.3dp 에 있었다.
  * 올리는 것은 그리는 자리뿐이라 아래 단추는 따라 오르지 않는다.
  */
-private val LANTERN_LIFT = 11.dp
+private val LANTERN_LIFT = 13.dp
 
 /** 등과 첫 단추 사이. */
 private val TALLY_TOP = 22.dp
@@ -811,8 +811,11 @@ private val TALLY_GAP = 18.dp
 /** 단추 묶음이 등의 선에서 더 오른쪽으로 물러나는 만큼. */
 private val TALLY_SHIFT = 12.dp
 
-/** 단추 묶음이 제 자리에서 더 내려앉는 만큼. */
-private val TALLY_DROP = 4.dp
+/** 단추 묶음이 제 자리에서 올라앉는 만큼. 올리는 것은 그리는 자리뿐이다. */
+private val TALLY_LIFT = 12.dp
+
+/** 단추 이름의 잉크. 회차 번호와 같은 색을 한 겹 더 물린다. */
+private val TALLY_INK = Hak3.Hanja.copy(alpha = Hak3.Hanja.alpha * 0.7f)
 
 /** 이름과 수 사이. 한 덩이로 읽히도록 바짝 붙인다. */
 private val TALLY_TIGHT = 4.dp
@@ -923,7 +926,7 @@ private fun Tally(title: String, n: Int, color: Color, solid: Boolean, onClick: 
         Text(
             title,
             style = TALLY_NAME,
-            color = if (on) Hak3.Hanja else Hak3.TextDim,
+            color = if (on) TALLY_INK else Hak3.TextDim,
             maxLines = 1,
         )
         Spacer(Modifier.height(TALLY_TIGHT))
