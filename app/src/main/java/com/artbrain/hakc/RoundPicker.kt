@@ -545,8 +545,9 @@ fun RoundPicker(
 /** 속을 비운 묶음이 두르는 테의 두께. */
 private val RING = 2.dp
 
-/** 진행 눈금의 두께. */
+/** 진행 눈금의 두께와 길이. 길이는 세 자리 번호에 한 자리 수가 붙은 줄에서 쟀다. */
 private val GAUGE = 2.dp
+private val GAUGE_W = 68.dp
 
 /** 눈금의 바탕. 경계선에서 한 겹 더 물러난다. */
 private val GAUGE_TRACK = Hak3.Rule.copy(alpha = Hak3.Rule.alpha / 2)
@@ -833,10 +834,11 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                 Spacer(Modifier.height(2.dp))
                 Box(
                     Modifier
-                        .fillMaxWidth()
-                        // 위 덩이보다 좌우로 2dp 씩 물러나고, 3dp 올라앉는다.
-                        // 올리는 것은 그리는 자리만이라 줄 높이는 그대로다.
-                        .padding(horizontal = 2.dp)
+                        // 줄마다 같은 길이로 선다 — 어깨의 수가 한 자리든 두
+                        // 자리든 눈금은 흔들리지 않는다. 113 회차에서 재어 잡은
+                        // 68dp 다. 3dp 올라앉되 올리는 것은 그리는 자리만이라
+                        // 줄 높이는 그대로다.
+                        .width(GAUGE_W)
                         .offset(y = (-3).dp)
                         // 마지막으로 열어 본 줄의 눈금만 한 눈금 더 두껍다
                         .height(if (on) GAUGE + 1.dp else GAUGE)
