@@ -547,7 +547,7 @@ private val RING = 2.dp
 
 /** 진행 눈금의 두께와 길이. 길이는 세 자리 번호에 한 자리 수가 붙은 줄에서 쟀다. */
 private val GAUGE = 2.dp
-private val GAUGE_W = 68.dp
+private val GAUGE_W = 88.dp
 
 /** 눈금의 바탕. 경계선에서 한 겹 더 물러난다. */
 private val GAUGE_TRACK = Hak3.Rule.copy(alpha = Hak3.Rule.alpha / 2)
@@ -581,7 +581,6 @@ private val SHOULDER = 7.4.dp
 /** 번호 옆의 작은 수. 줄 상자를 글자에 바짝 붙여 위아래 여백을 없앤다. */
 private val COUNT = TextStyle(
     fontFamily = Mono,
-    fontWeight = FontWeight.Medium,
     fontSize = 13.sp,
     lineHeight = 11.sp,
     platformStyle = PlatformTextStyle(includeFontPadding = false),
@@ -771,7 +770,7 @@ private fun Chip(n: Int, color: Color, solid: Boolean, onClick: () -> Unit) {
             fontFamily = Mono,
             fontSize = 15.sp,
             // 굵기로 갈래를 가른다 — 낱글자가 굵고 문제가 보통이다
-            fontWeight = if (solid) FontWeight.Bold else FontWeight.Medium,
+            fontWeight = if (solid) FontWeight.Bold else FontWeight.Normal,
             color = if (on) color else Hak3.TextDim,
             maxLines = 1,
         )
@@ -808,7 +807,6 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                     "${e.round}",
                     // 숫자만 서는 자리라 폭이 고른 서체로
                     fontFamily = Mono,
-                    fontWeight = FontWeight.Medium,
                     fontSize = 42.sp,
                     color = if (live) Hak3.Hanja else Hak3.HanjaDim,
                     modifier = Modifier.offset(y = INK),
@@ -840,7 +838,7 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                     Modifier
                         // 줄마다 같은 길이로 선다 — 어깨의 수가 한 자리든 두
                         // 자리든 눈금은 흔들리지 않는다. 113 회차에서 재어 잡은
-                        // 68dp 다. 3dp 올라앉되 올리는 것은 그리는 자리만이라
+                        // 68dp 에 20dp 를 더한 값이다. 3dp 올라앉되 올리는 것은 그리는 자리만이라
                         // 줄 높이는 그대로다.
                         .width(GAUGE_W)
                         .offset(y = (-3).dp)

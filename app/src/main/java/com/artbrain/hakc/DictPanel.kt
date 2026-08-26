@@ -131,6 +131,8 @@ private fun gradeColor(grade: Int?) = when (grade) {
 // 창 단추 자리(26)는 안드로이드에 올 것이 없으니 뺀 244 를 기준으로 삼는다.
 private const val HEAD = 84f / 244f
 private const val FOOT = 50f / 244f * 0.72f    // 입력 칸
+/** 訓 오른쪽 표기 번호가 앉는 높이. 글자 위로 얼마나 뜨는지의 비율이다. */
+private const val MARK_LIFT = 0.34f
 
 /**
  * 판 위쪽에 얹는 빛. 흰빛 5% 로 시작해 판 높이의 75% 에서 스러진다.
@@ -281,7 +283,10 @@ fun DictPanel(
             .background(GLOW)               // 위쪽에 얹히는 아주 옅은 빛 한 겹
     ) {
         val square = maxWidth                       // 정사각형이었을 때의 한 변
-        val foot = square * FOOT
+        // 입력 칸은 재어 잡은 높이보다 2dp 더 자란다 — 자라는 쪽은 위다. 실선이
+        // 그만큼 따라 오르고, 칸 안에 세로로 가운데 선 것들은 그 절반인 1dp 오른다.
+        val sole = square * FOOT               // 지우개와 들임표는 이 높이를 따른다
+        val foot = sole + 2.dp
         val full = square * HEAD                    // 한자 자리의 제 높이
         // 판이 줄면 訓音 자리부터 좁히고, 그 자리가 최소에 닿으면 한자 자리가 줄어든다
         val room = (maxHeight - foot - 2.dp).coerceAtLeast(0.dp)
@@ -374,8 +379,7 @@ fun DictPanel(
                                         Text(
                                             if (s.index == 0) "●" else "${s.index}",
                                             fontFamily = Mono,
-                                            fontWeight = FontWeight.Medium,
-                                            fontSize = glyph * 0.16f,
+                                            fontSize = (glyph.value * 0.16f + 2f).sp,
                                             // 표시는 제 글자를 따라 밝아진다 — 훑고
                                             // 지나가는 표기에서는 글자와 함께 물러난다
                                             color = when {
@@ -460,14 +464,14 @@ fun DictPanel(
                                     bottom = 7.dp,
                                     end = 7.dp + WIPE_SHIFT,
                                 )
-                        ) { Wipe(foot * 0.34f) }
+                        ) { Wipe(sole * 0.34f) }
                     }
                     Icon(
                         painterResource(R.drawable.ic_enter),
                         contentDescription = null,
                         tint = if (text.isEmpty()) Hak3.Rule else Hak3.Text,
                         modifier = Modifier
-                            .size(foot * 0.42f)
+                            .size(sole * 0.42f)
                             .clickable {
                                 Seen.record(
                                     context,
@@ -588,14 +592,17 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                         append(if (g.hun.isEmpty()) "訓 없음" else g.hun)
                         // 여러 표기가 있을 때, 첫 글자에 어느 표기인지 표시를 단다
                         if (s.many && i == 0) {
+                            // 앞의 빈 칸 둘을 글자 사이 간격으로 각각 2sp 씩 줄여
+                            // 표시를 4sp 왼쪽으로 당긴다 — 빈 칸을 하나 지우면
+                            // 서체 폭만큼(7.8sp) 통째로 움직여 너무 붙는다.
+                            withStyle(SpanStyle(letterSpacing = (-2).sp)) { append("  ") }
                             withStyle(
                                 SpanStyle(
                                     fontFamily = Mono,
-                                    fontWeight = FontWeight.Medium,
                                     fontSize = 13.sp,
-                                    baselineShift = BaselineShift(0.5f),
+                                    baselineShift = BaselineShift(MARK_LIFT),
                                 )
-                            ) { append(if (s.index == 0) "  ●" else "  ${s.index}") }
+                            ) { append(if (s.index == 0) "●" else "${s.index}") }
                         }
                     },
                     fontSize = 19.sp,

@@ -34,7 +34,7 @@ object Hak3 {
     val Ground = Color(0xFF000000)          // 기기 화면과 이어지는 검은 바탕
     val Surface = Color(0xFF21252D)         // 캡슐·바닥 줄처럼 판 위에 얹히는 것
     val Panel = Color(0xFF111634)           // 위의 사전 판 — 남색 쪽으로
-    val Card = Color(0xFF0D177F)            // 아래의 회차 판, 그리고 그것이 늘어난 카드
+    val Card = Color(0xFF161E72)            // 아래의 회차 판, 그리고 그것이 늘어난 카드
     val Knob = Color(0xFF2E323A)            // 그 위에 얹히는 것 — 바탕보다 6% 밝다
     val Rule = Color(0x24BAD0E2)            // 경계선·손잡이·꺼진 것 (#BAD0E2 @14%)
 
@@ -116,9 +116,13 @@ val ThinHanja = FontFamily(Font(R.font.source_han_kr, FontWeight.ExtraLight))
  *
  * 회차 번호와 그 어깨의 수, 단어장 단추, 사전의 표기 번호처럼 숫자만 서는 자리에
  * 쓴다. 폭이 고른 서체라 줄이 바뀌어도 자리가 흔들리지 않는다. 라틴 글자만 든
- * 111KB 짜리다 — 한글·한자는 하나도 없으므로 이 자리 밖에서는 쓰지 않는다.
+ * 파일이라 둘을 합쳐도 220KB 다 — 한글·한자는 하나도 없으므로 이 자리 밖에서는
+ * 쓰지 않는다. 굵은 쪽은 단어장 단추가 갈래를 가를 때 쓴다.
  */
-val Mono = FontFamily(Font(R.font.sf_mono_medium, FontWeight.Medium))
+val Mono = FontFamily(
+    Font(R.font.sf_mono, FontWeight.Normal),
+    Font(R.font.sf_mono_bold, FontWeight.Bold),
+)
 
 /**
  * 앱의 기본 글씨 — 코레일체.
