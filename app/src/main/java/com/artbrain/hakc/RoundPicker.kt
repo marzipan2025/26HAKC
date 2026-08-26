@@ -98,8 +98,8 @@ import androidx.compose.ui.unit.sp
  * 된다. 최대는 화면의 60%, 최소는 한자 한 줄과 訓音 두 줄이 남는 높이다. 입력 칸에
  * 포커스가 가면 키보드 바로 위까지 자란다.
  */
-/** 판과 목록이 벌어지는 만큼. 기출 상세의 카드와 바닥 줄 사이와 같은 값이다. */
-private val GAP = 8.dp
+/** 판과 목록이 벌어지는 만큼. */
+private val GAP = 6.dp
 
 /** 판이 화면 가장자리에서 물러나 있는 만큼. */
 private val CARD = 8.dp
@@ -205,7 +205,8 @@ fun RoundPicker(
         val maxH = dictMax(with(density) { screenPx.toDp() })
         val minPx = with(density) { minH.toPx() }
         val maxPx = with(density) { maxH.toPx() }
-        var height by remember(square) { mutableFloatStateOf(with(density) { square.toPx() }) }
+        // 앱을 열면 사전 판이 다 펼쳐진 채로 선다. 목록을 굴리면 그때부터 줄어든다.
+        var height by remember(square) { mutableFloatStateOf(with(density) { maxH.toPx() }) }
         LaunchedEffect(minPx, maxPx) { height = height.coerceIn(minPx, maxPx) }
 
         // 입력 칸에 포커스가 가면 판을 키워 목록을 키보드 아래로 완전히 밀어낸다.
