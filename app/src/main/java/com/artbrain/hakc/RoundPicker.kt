@@ -607,7 +607,7 @@ private val COUNT_W = 20.dp
  * 회차 덩이가 판 오른벽에서 물러나는 만큼. 왼쪽에서 한자가 물러난 26dp 보다
  * 6dp 더 붙어 선다 — 어깨의 수가 한두 자리라 잉크는 그보다 더 안쪽에서 끝난다.
  */
-private val WALL = 20.dp
+private val WALL = 18.dp
 
 /** 눈금의 바탕. 경계선에서 한 겹 더 물러난다. */
 private val GAUGE_TRACK = Hak3.Rule.copy(alpha = Hak3.Rule.alpha / 2)

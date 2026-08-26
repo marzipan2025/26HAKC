@@ -124,6 +124,8 @@ private val INK = Color.Black.copy(alpha = 0.95f)           // 본문 · 적는 
 private val INK_SOFT = Color.Black.copy(alpha = 0.57f)      // 뜻풀이
 private val INK_DIM = Color.Black.copy(alpha = 0.38f)       // 곁들이는 글
 private val INK_RULE = Color.Black.copy(alpha = 0.14f)      // 실선 · 꺼진 것
+/** 입력 칸 오른쪽의 들임표. 실선보다 짙어 빈 칸에서도 눈에 든다. */
+private val INK_ICON = Color.Black.copy(alpha = 0.40f)
 private val INK_HANJA = Color.Black.copy(alpha = 0.75f)     // 한자
 private val INK_HANJA_DIM = Color.Black.copy(alpha = 0.40f) // 훑고 지나가는 한자
 
@@ -484,7 +486,7 @@ fun DictPanel(
                     Icon(
                         painterResource(R.drawable.ic_enter),
                         contentDescription = null,
-                        tint = if (text.isEmpty()) INK_RULE else INK,
+                        tint = if (text.isEmpty()) INK_ICON else INK,
                         modifier = Modifier
                             .size(sole * 0.42f)
                             .clickable {
@@ -572,9 +574,10 @@ private fun Rule(color: Color = INK_RULE, thick: Dp? = null) {
 
 /**
  * 입력 칸 바로 위의 실선. 적는 자리를 가르는 선이라 또렷하게 둔다.
- * 다른 실선은 비치는 14% 인데, 이 선만 40% 로 짙다.
+ * 다른 실선은 비치는 14% 인데, 이 선만 58% 로 짙다 — 노랑 위에 앉은 색이
+ * 전보다 30% 어두워지는 자리다.
  */
-private val INPUT_RULE = Color.Black.copy(alpha = 0.40f)
+private val INPUT_RULE = Color.Black.copy(alpha = 0.58f)
 
 /**
  * 표기 하나의 풀이 — 글자마다 `음 : 급수 훈`, 그 아래 뜻.
