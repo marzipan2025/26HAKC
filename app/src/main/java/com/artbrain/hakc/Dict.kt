@@ -275,6 +275,17 @@ class Dict private constructor(private val db: SQLiteDatabase) {
             ?.takeIf { it.isNotEmpty() }
     }
 
+    /**
+     * 3급 배정한자 모두. 못 외운 글자가 아직 몇 안 될 때 판 어깨의 등에 띄울
+     * 글자를 여기서 뽑는다. 사전은 앱 안에 든 자료라 판이 도는 동안 바뀌지
+     * 않으므로 한 번만 읽어 둔다.
+     */
+    val grade3: List<String> by lazy {
+        db.rawQuery("SELECT han FROM chars WHERE grade=3", null).use { c ->
+            buildList { while (c.moveToNext()) add(c.getString(0)) }
+        }
+    }
+
     /** 글자 하나의 訓音과 급수. */
     private fun glyph(han: String): Glyph = db.rawQuery(
         "SELECT hun, eum, grade FROM chars WHERE han=?", arrayOf(han)

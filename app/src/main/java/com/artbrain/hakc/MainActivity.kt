@@ -97,7 +97,7 @@ private fun Root() {
     var state by remember { mutableStateOf<DataFile.Result?>(null) }
     var reload by remember { mutableStateOf(0) }
     var open by remember { mutableStateOf<Int?>(null) }
-    var words by remember { mutableStateOf<Pair<Mark, Collect.Kind>?>(null) }
+    var words by remember { mutableStateOf<Triple<Mark, Collect.Kind, Int>?>(null) }
     // 묶음을 닫고 돌아오면 왼쪽 서랍이 열린 채로 선다 — 방금 있던 자리다.
     // 한 번 쓰고 잊는다. 그러지 않으면 회차를 보고 돌아올 때도 서랍이 열린다.
     var back by remember { mutableStateOf(Drawer.NONE) }
@@ -134,7 +134,7 @@ private fun Root() {
     // 지금 어느 자리에 서 있는가. 셋 다 판 하나를 나눠 가지므로 한 자리에서 갈린다.
     val where = when {
         ready == null -> Where.List
-        book != null -> Where.Book(book.first, book.second)
+        book != null -> Where.Book(book.first, book.second, book.third)
         round != null -> Where.Round(round)
         else -> Where.List
     }
@@ -170,7 +170,7 @@ private fun Root() {
                     w is Where.Book && ready != null -> {
                         BackHandler { words = null }
                         WordScreen(
-                            ready, w.bin, w.kind,
+                            ready, w.bin, w.kind, w.start,
                             morph, veil, { if (isTransitionActive) 1f else 0f },
                             // 이 조각이 지금 자리를 내주는 중인가
                             leaving = w != where,
@@ -188,7 +188,7 @@ private fun Root() {
                     else -> {
                         Picker(state, reload, ready, dict, pickFolder, pickFile, morph, veil,
                             onPick = { open = it },
-                            onWords = { bin, kind -> words = bin to kind },
+                            onWords = { bin, kind, at -> words = Triple(bin, kind, at) },
                             startDrawer = back)
                         LaunchedEffect(Unit) { back = Drawer.NONE }
                     }
@@ -201,7 +201,8 @@ private fun Root() {
 private sealed interface Where {
     data object List : Where
     data class Round(val no: Int) : Where
-    data class Book(val bin: Mark, val kind: Collect.Kind) : Where
+    /** [start] 는 묶음에서 먼저 펴 볼 자리. 어깨의 등에서 눌러 오면 그 글자다. */
+    data class Book(val bin: Mark, val kind: Collect.Kind, val start: Int = 0) : Where
 }
 
 /** 지우고 띄우는 데 걸리는 참, 그리고 판이 늘어나는 참. (ms) */
@@ -221,7 +222,7 @@ private fun Picker(
     morph: Modifier,
     veil: Modifier,
     onPick: (Int) -> Unit,
-    onWords: (Mark, Collect.Kind) -> Unit,
+    onWords: (Mark, Collect.Kind, Int) -> Unit,
     startDrawer: Drawer,
 ) {
     RoundPicker(

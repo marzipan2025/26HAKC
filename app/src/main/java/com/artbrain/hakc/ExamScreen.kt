@@ -271,6 +271,8 @@ fun WordScreen(
     db: ExamDb,
     bin: Mark,
     kind: Collect.Kind,
+    /** 묶음에서 먼저 펴 볼 자리. 묶음이 그새 줄었으면 있는 데까지만 간다. */
+    start: Int = 0,
     morph: Modifier = Modifier,
     veil: Modifier = Modifier,
     morphLit: () -> Float = { 0f },
@@ -313,7 +315,7 @@ fun WordScreen(
         subOf = { p -> if (chars) null else "第 ${p.round} 回" },
         marks = marks,
         numbered = false,
-        start = 0,
+        start = start.coerceIn(0, (all.size - 1).coerceAtLeast(0)),
         morph = morph,
         veil = veil,
         morphLit = morphLit,

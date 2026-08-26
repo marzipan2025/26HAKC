@@ -3,6 +3,9 @@ package com.artbrain.hakc
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.platform.LocalConfiguration
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
@@ -143,7 +146,7 @@ fun RoundPicker(
     onFolder: () -> Unit,
     onFile: () -> Unit,
     onPick: (Int) -> Unit,
-    onWords: (Mark, Collect.Kind) -> Unit,
+    onWords: (Mark, Collect.Kind, Int) -> Unit,
     startDrawer: Drawer = Drawer.NONE,
     morph: Modifier = Modifier,
     veil: Modifier = Modifier,
@@ -165,6 +168,12 @@ fun RoundPicker(
     }
     // 사전에서 알릴 글자 — 어느 묶음의 글자인지까지 함께 본다
     val bins = remember(db) { db?.let { Collect.bins(context, it) } ?: emptyMap() }
+    // 어깨의 등에 띄울 글자. 못 외운 낱글자가 열 자를 넘으면 그 안에서 뽑아 제
+    // 글자를 돌려 보이고, 아직 몇 자 안 되면 3급 배정한자 전체에서 뽑는다.
+    val pink = remember(db) { db?.let { Collect.list(context, it, Mark.AMBER) } ?: emptyList() }
+    val pool = remember(pink, dict) {
+        if (pink.size > LANTERN_MIN) pink else dict?.grade3 ?: emptyList()
+    }
 
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf<Updater.Status>(Updater.Status.Checking) }
@@ -482,30 +491,44 @@ fun RoundPicker(
                 val sunk = typing &&
                     with(density) { (4.dp + band).toPx() } + height >= usable
 
-                // 단어장 넷 — 왼쪽 어깨에. 단추를 빗나간 손짓은 이 자리에서 삼킨다.
-                // 그러지 않으면 그 손짓이 목록으로 새어 회차가 열린다.
+                // 왼쪽 어깨 — 등 하나와 단추 넷. 단추를 빗나간 손짓은 이 자리에서
+                // 삼킨다. 그러지 않으면 그 손짓이 목록으로 새어 회차가 열린다.
+                // 아래로 흘러 판 밖으로 나가는 단추는 그대로 둔다 — 판이 커지면
+                // 그만큼 더 보인다.
                 if (!sunk) Box(
                     Modifier
                         .align(Alignment.TopStart)
-                        .padding(top = ROOF + CHIP_DROP)
-                        .width(LEDGE + CHIP)
+                        // 판 아래로 흘러나간 단추는 판 밖으로 삐져나오지 않고
+                        // 판 끝에서 잘린다 — 판이 커지면 그만큼 더 보인다
+                        .fillMaxHeight()
+                        .clipToBounds()
+                        .padding(start = SIDE, top = ROOF)
                         .then(veil)
                         .pointerInput(Unit) { detectTapGestures { } }
                         .zIndex(1f),
                 ) {
-                    Column(
-                        Modifier.padding(start = LEDGE),
-                        verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
-                    ) {
-                        for (bin in Mark.entries) {
-                            // 색마다 둘씩 — 속을 채운 낱글자가 먼저, 테만 두른 문제가 뒤다
-                            for (kind in listOf(Collect.Kind.CHARS, Collect.Kind.CARDS)) {
-                                val n = counts[bin]?.get(kind) ?: 0
-                                Chip(
-                                    n = n,
-                                    color = if (bin == Mark.AMBER) Hak3.Pink else Hak3.Green,
-                                    solid = kind == Collect.Kind.CHARS,
-                                ) { onWords(bin, kind) }
+                    Column {
+                        Lantern(pool, open = pink.isNotEmpty()) { han ->
+                            // 등에 뜬 그 글자가 선 자리로 곧장 편다. 묶음 밖의
+                            // 글자면(아직 몇 자 안 될 때다) 첫 장부터 편다.
+                            onWords(
+                                Mark.AMBER,
+                                Collect.Kind.CHARS,
+                                pink.indexOf(han).coerceAtLeast(0),
+                            )
+                        }
+                        Spacer(Modifier.height(TALLY_TOP))
+                        Column(verticalArrangement = Arrangement.spacedBy(TALLY_GAP)) {
+                            for (bin in Mark.entries) {
+                                // 색마다 둘씩 — 낱글자가 먼저, 문제가 뒤다
+                                for (kind in Collect.Kind.entries) {
+                                    Tally(
+                                        title = tallyName(bin, kind),
+                                        n = counts[bin]?.get(kind) ?: 0,
+                                        color = if (bin == Mark.AMBER) Hak3.Pink else Hak3.Green,
+                                        solid = kind == Collect.Kind.CHARS,
+                                    ) { onWords(bin, kind, 0) }
+                                }
                             }
                         }
                     }
@@ -563,6 +586,12 @@ private val NUM_W = 64.dp
 
 /** 번호 자리와 그 어깨의 수 사이. */
 private val COUNT_GAP = 11.dp
+
+/** 어깨의 수가 서는 자리의 너비. 세 자리까지 든다. */
+private val COUNT_W = 20.dp
+
+/** 회차 덩이가 판 오른벽에서 물러나는 만큼. */
+private val WALL = 48.dp
 
 /** 눈금의 바탕. 경계선에서 한 겹 더 물러난다. */
 private val GAUGE_TRACK = Hak3.Rule.copy(alpha = Hak3.Rule.alpha / 2)
@@ -740,50 +769,134 @@ private fun Cell(
     }
 }
 
-/**
- * 단어장 단추의 지름. 네 자리 수(7,374 자가 낱글자의 끝이다)까지 들어가는 크기다.
- * 수가 몇 자리든 원은 늘 같은 크기로 선다 — 넷이 나란히 서는 자리라 크기가
- * 들쭉날쭉하면 줄이 흔들린다.
- */
-private val CHIP = 44.dp
-
-/** 단추끼리 벌어지는 만큼. */
-private val CHIP_GAP = 8.dp
-
-/** 단어장 단추가 제 판의 왼벽에서 물러나는 만큼. */
-private val LEDGE = 37.dp
-
-/** 회차 목록이 판 위에서 물러나는 만큼. 단추의 위 여백도 이 자에서 잰다. */
+/** 회차 목록이 판 위에서 물러나는 만큼. 어깨의 위 여백도 이 자에서 잰다. */
 private val ROOF = 18.dp
 
-/**
- * 첫 단추가 첫 회차 번호와 윗선을 맞추려고 더 내려앉는 만큼. 재어 보니 단추의
- * 잉크가 번호의 잉크보다 4dp 위에 있었다 — 서체가 서로 다른 탓이다.
- */
-private val CHIP_DROP = (-5.7).dp
+/** 왼쪽 어깨가 판 벽에서 물러나는 만큼. 등과 단추가 이 선에 함께 선다. */
+private val SIDE = 16.dp
+
+/** 등과 첫 단추 사이. */
+private val TALLY_TOP = 22.dp
+
+/** 단추끼리 벌어지는 만큼. */
+private val TALLY_GAP = 14.dp
+
+/** 이름과 수 사이. 한 덩이로 읽히도록 바짝 붙인다. */
+private val TALLY_TIGHT = 4.dp
+
+/** 등 안쪽 여백. 글자 상자에서 이만큼 물러난 자리가 등의 테다. */
+private val LANTERN_PAD = 10.dp
+
+/** 등의 모서리. */
+private val LANTERN_ROUND = 14.dp
+
+/** 등의 바탕 — 판보다 한 겹 어둡다. */
+private val LANTERN_FACE = Color.Black.copy(alpha = 0.18f)
+
+/** 등에 한 글자가 머무는 참. (ms) */
+private const val BEAT = 800L
+
+/** 못 외운 낱글자가 이보다 많을 때만 그 안에서 뽑는다. 그 아래로는 3급 전체에서. */
+private const val LANTERN_MIN = 10
+
+/** 등의 글자. 줄 상자를 글자에 바짝 붙여 등이 글자만큼만 서게 한다. */
+private val LANTERN_INK = TextStyle(
+    fontFamily = ThinHanja,
+    fontWeight = FontWeight.ExtraLight,
+    platformStyle = PlatformTextStyle(includeFontPadding = false),
+    lineHeightStyle = LineHeightStyle(
+        alignment = LineHeightStyle.Alignment.Center,
+        trim = LineHeightStyle.Trim.Both,
+    ),
+)
+
+/** 단추의 이름. */
+private val TALLY_NAME = TextStyle(
+    fontFamily = Korail,
+    fontSize = 13.sp,
+    lineHeight = 13.sp,
+    platformStyle = PlatformTextStyle(includeFontPadding = false),
+    lineHeightStyle = LineHeightStyle(
+        alignment = LineHeightStyle.Alignment.Center,
+        trim = LineHeightStyle.Trim.Both,
+    ),
+)
+
+/** 단추의 수. 이름 바로 아래에 한 뼘 크게 선다. */
+private val TALLY_NUM = TextStyle(
+    fontFamily = Mono,
+    fontSize = 24.sp,
+    lineHeight = 24.sp,
+    platformStyle = PlatformTextStyle(includeFontPadding = false),
+    lineHeightStyle = LineHeightStyle(
+        alignment = LineHeightStyle.Alignment.Center,
+        trim = LineHeightStyle.Trim.Both,
+    ),
+)
+
+/** 단추에 적는 이름. 어느 묶음인지와 무엇이 담겼는지를 그대로 적는다. */
+private fun tallyName(bin: Mark, kind: Collect.Kind): String = when {
+    bin == Mark.AMBER && kind == Collect.Kind.CHARS -> "letters to check"
+    bin == Mark.AMBER -> "cards to check"
+    kind == Collect.Kind.CHARS -> "letters learned"
+    else -> "cards learned"
+}
 
 /**
- * 목록 판의 어깨에 서는 단어장 단추. 색면도 테도 없이 담긴 수만 적는다 —
- * 색이 어느 묶음인지, 굵기가 어느 갈래인지 말해 준다. 낱글자가 굵고 문제가 보통이다.
+ * 판 어깨의 등. 못 외운 낱글자를 0.8초에 한 자씩 돌려 보인다 — 아직 몇 자 안
+ * 될 때는 3급 배정한자에서 아무 글자나 뽑아 그 자리를 채운다.
+ * 뜬 글자를 누르면 그 글자가 선 자리로 낱글자 묶음이 펴진다. 펼 묶음이 비어
+ * 있으면([open] 이 거짓이면) 등은 보이기만 하고 눌리지 않는다.
  *
- * 누르는 자리는 그대로 44dp 정사각이고, 글자는 그 왼쪽에 붙는다.
+ * 글자는 HAKA 의 한자가 가장 클 때와 같은 크기다. 등은 그 글자 상자에서
+ * 사방으로 물러난 만큼만 서므로, 글자가 커지면 등도 따라 커진다.
  */
 @Composable
-private fun Chip(n: Int, color: Color, solid: Boolean, onClick: () -> Unit) {
-    val on = n > 0
+private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit) {
+    val square = LocalConfiguration.current.screenWidthDp.dp - CARD * 2
+    val glyph = (square.value * DICT_HEAD * 0.68f).sp
+    var han by remember(pool) { mutableStateOf(pool.firstOrNull().orEmpty()) }
+    LaunchedEffect(pool) {
+        while (pool.isNotEmpty()) {
+            delay(BEAT)
+            // 같은 글자가 두 번 이어 서면 등이 멈춘 것처럼 보인다
+            han = if (pool.size > 1) (pool - han).random() else pool.first()
+        }
+    }
     Box(
         Modifier
-            .size(CHIP)
-            .clickable(enabled = on, onClick = onClick),
-        contentAlignment = Alignment.CenterStart,
+            .background(LANTERN_FACE, RoundedCornerShape(LANTERN_ROUND))
+            .clickable(enabled = open && han.isNotEmpty()) { onOpen(han) }
+            .padding(LANTERN_PAD),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
+            han,
+            style = LANTERN_INK.copy(fontSize = glyph, lineHeight = glyph),
+            color = Hak3.Hanja,
+            maxLines = 1,
+        )
+    }
+}
+
+/**
+ * 단어장 단추. 무엇이 담겼는지를 작은 영문으로 적고, 그 바로 아래에 담긴 수를
+ * 한 뼘 크게 세운다. 둘이 한 덩이로 눌린다 — 색이 어느 묶음인지, 굵기가 어느
+ * 갈래인지 말해 준다. 낱글자가 굵고 문제가 보통이다.
+ */
+@Composable
+private fun Tally(title: String, n: Int, color: Color, solid: Boolean, onClick: () -> Unit) {
+    val on = n > 0
+    val ink = if (on) color else Hak3.TextDim
+    Column(Modifier.clickable(enabled = on, onClick = onClick)) {
+        Text(title, style = TALLY_NAME, color = ink, maxLines = 1)
+        Spacer(Modifier.height(TALLY_TIGHT))
+        Text(
             "$n",
-            fontFamily = Mono,
-            fontSize = 15.sp,
-            // 굵기로 갈래를 가른다 — 낱글자가 굵고 문제가 보통이다
-            fontWeight = if (solid) FontWeight.Bold else FontWeight.Normal,
-            color = if (on) color else Hak3.TextDim,
+            style = TALLY_NUM.copy(
+                fontWeight = if (solid) FontWeight.Bold else FontWeight.Normal,
+            ),
+            color = ink,
             maxLines = 1,
         )
     }
@@ -804,12 +917,17 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
         Modifier
             .fillMaxWidth()
             .clickable(enabled = live) { onPick(e.round) },
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.CenterEnd,
     ) {
-        // 번호가 판 한가운데에 선다. 어깨의 수는 번호 자리 오른쪽에서 늘 같은
-        // 거리로 왼쪽 맞춤으로 서고, 눈금은 번호 아래에 번호만큼 깔린다.
+        // 번호와 어깨의 수가 한 덩이로 판 오른벽에서 48dp 물러나 선다. 덩이의
+        // 너비가 고정이라 수가 몇 자리든 번호는 늘 같은 자리에 있다. 어깨의
+        // 수는 번호 자리 오른쪽에서 늘 같은 거리로 왼쪽 맞춤으로 서고, 눈금은
+        // 번호 아래에 번호만큼 깔린다.
         Column(
-            Modifier.width(NUM_W).padding(vertical = 6.dp),
+            Modifier
+                .padding(end = COUNT_GAP + COUNT_W + WALL)
+                .width(NUM_W)
+                .padding(vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(Modifier.fillMaxWidth()) {
