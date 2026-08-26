@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.core.Animatable
@@ -63,7 +64,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -545,9 +545,24 @@ fun RoundPicker(
 /** 속을 비운 묶음이 두르는 테의 두께. */
 private val RING = 2.dp
 
-/** 진행 눈금의 두께와 길이. 길이는 세 자리 번호에 한 자리 수가 붙은 줄에서 쟀다. */
+/** 진행 눈금의 두께. */
 private val GAUGE = 1.dp
-private val GAUGE_W = 88.dp
+
+/**
+ * 눈금의 길이. 세 자리 번호의 잉크가 가장 넓게 서는 줄(111)을 폰에서 재어
+ * 잡은 60dp 다. 어느 줄에서나 이 길이로 서서, 번호 아래에 번호만큼 깔린다.
+ */
+private val GAUGE_W = 60.dp
+
+/**
+ * 번호가 서는 자리의 너비. 세 자리 번호의 글자 상자를 재어 잡았다. 줄마다 이
+ * 자리를 그대로 쓰므로 어깨의 수가 늘 같은 x 에서 왼쪽 맞춤으로 선다. 번호가
+ * 이 자리보다 넓어져도 잘리지 않고 양쪽으로 고르게 넘친다.
+ */
+private val NUM_W = 64.dp
+
+/** 번호 자리와 그 어깨의 수 사이. */
+private val COUNT_GAP = 11.dp
 
 /** 눈금의 바탕. 경계선에서 한 겹 더 물러난다. */
 private val GAUGE_TRACK = Hak3.Rule.copy(alpha = Hak3.Rule.alpha / 2)
@@ -791,13 +806,13 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
             .clickable(enabled = live) { onPick(e.round) },
         contentAlignment = Alignment.Center,
     ) {
-        // 번호와 그 어깨의 수, 그 아래 눈금. 셋이 한 덩이로 판 한가운데 선다.
-        // 눈금의 너비는 위 덩이의 너비를 그대로 따른다.
+        // 번호가 판 한가운데에 선다. 어깨의 수는 번호 자리 오른쪽에서 늘 같은
+        // 거리로 왼쪽 맞춤으로 서고, 눈금은 번호 아래에 번호만큼 깔린다.
         Column(
-            Modifier.width(IntrinsicSize.Max).padding(vertical = 6.dp),
+            Modifier.width(NUM_W).padding(vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Row(verticalAlignment = Alignment.Top) {
+            Box(Modifier.fillMaxWidth()) {
                 // 숫자는 글자 상자 안에서 위로 쏠려 앉는다(내림자가 없다). 잰 만큼
                 // 올려 잉크가 줄 한가운데에 오게 한다.
                 Text(
@@ -812,12 +827,21 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                         on -> Color.White
                         else -> Hak3.Hanja
                     },
-                    modifier = Modifier.offset(y = INK),
+                    maxLines = 1,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .wrapContentWidth(unbounded = true)
+                        .offset(y = INK),
                 )
-                Spacer(Modifier.width(11.dp))
                 // 담아 둔 수는 번호의 윗선에 맞춘다 — 한 개든 두 개든 같은 자리에서
-                // 시작한다.
-                Column(Modifier.offset(y = INK).padding(top = SHOULDER)) {
+                // 시작한다. 옆으로 미는 것은 그리는 자리만이라 번호 자리의 너비는
+                // 그대로고, 번호는 한가운데를 지킨다.
+                Column(
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .offset(x = NUM_W + COUNT_GAP, y = INK)
+                        .padding(top = SHOULDER)
+                ) {
                     if (counts.amber > 0) {
                         // 노란 수만 2dp 더 올라간다. 자리는 그대로라 초록은 따라오지 않는다.
                         Text(
@@ -839,10 +863,8 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                 Spacer(Modifier.height(2.dp))
                 Box(
                     Modifier
-                        // 줄마다 같은 길이로 선다 — 어깨의 수가 한 자리든 두
-                        // 자리든 눈금은 흔들리지 않는다. 113 회차에서 재어 잡은
-                        // 68dp 에 20dp 를 더한 값이다. 3dp 올라앉되 올리는 것은 그리는 자리만이라
-                        // 줄 높이는 그대로다.
+                        // 줄마다 같은 길이로 선다. 3dp 올라앉되 올리는 것은
+                        // 그리는 자리만이라 줄 높이는 그대로다.
                         .width(GAUGE_W)
                         .offset(y = (-3).dp)
                         // 눈금은 어느 줄에서나 같은 규칙으로 선다 — 어디까지
