@@ -808,7 +808,9 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                     // 숫자만 서는 자리라 폭이 고른 서체로
                     fontFamily = Mono,
                     fontSize = 42.sp,
-                    color = if (live) Hak3.Hanja else Hak3.HanjaDim,
+                    // 회차 번호는 흰빛 그대로 선다. 아직 문항이 없는 회차만
+                    // 물러나 앉는다.
+                    color = if (live) Color.White else Hak3.HanjaDim,
                     modifier = Modifier.offset(y = INK),
                 )
                 Spacer(Modifier.width(11.dp))
@@ -842,8 +844,9 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                         // 줄 높이는 그대로다.
                         .width(GAUGE_W)
                         .offset(y = (-3).dp)
-                        // 마지막으로 열어 본 줄의 눈금만 한 눈금 더 두껍다
-                        .height(if (on) GAUGE + 1.dp else GAUGE)
+                        // 마지막으로 열어 본 줄의 눈금만 두껍다 — 나머지는
+                        // 한 눈금 더 얇게 깔려, 그 줄이 두 눈금 차로 도드라진다
+                        .height(if (on) GAUGE + 1.dp else GAUGE - 1.dp)
                         // 마지막으로 열어 본 줄에서는 눈금이 흐림 없이 선다
                         .background(if (on) GAUGE_TRACK_ON else GAUGE_TRACK, CircleShape)
                 ) {
