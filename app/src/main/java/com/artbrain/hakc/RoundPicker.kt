@@ -465,14 +465,16 @@ fun RoundPicker(
                 val i = exams.indexOfFirst { it.round == last }
                 if (i >= 0) rounds.scrollToItem((i - 2).coerceAtLeast(0))
             }
-            // 아래 판은 둘로 갈린다 — 왼쪽 넷(단어장)과 오른쪽 여섯(회차 목록).
-            // 회차 쪽이 넓다. 늘어나 카드가 되는 것도 그쪽이다.
-            Row(
+            // 아래는 판 하나다. 단어장 넷이 왼쪽 어깨에 얹히고, 회차가 그 아래로
+            // 굴러간다. 늘어나 카드가 되는 것도 이 판이다.
+            Box(
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(GAP),
+                    .padding(horizontal = 8.dp)
+                    .graphicsLayer(dim)
+                    .then(morph)
+                    .background(Hak3.Card, RoundedCornerShape(radius))
             ) {
                 // 목록이 키보드 밑으로 다 내려간 뒤에야 알맹이를 비운다. 판이 딱
                 // 맞아떨어지지 않아 한 줄쯤 삐져나올 때가 있는데, 그때 글자가 반쯤
@@ -480,18 +482,19 @@ fun RoundPicker(
                 val sunk = typing &&
                     with(density) { (4.dp + band).toPx() } + height >= usable
 
-                // 왼쪽 판 — 단어장 넷. 남는 자리를 다 쓴다.
-                Box(
+                // 단어장 넷 — 왼쪽 어깨에. 단추를 빗나간 손짓은 이 자리에서 삼킨다.
+                // 그러지 않으면 그 손짓이 목록으로 새어 회차가 열린다.
+                if (!sunk) Box(
                     Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .graphicsLayer(dim)
-                        .background(Hak3.Card, RoundedCornerShape(radius))
+                        .align(Alignment.TopStart)
+                        .padding(top = ROOF + CHIP_DROP)
+                        .width(LEDGE + CHIP)
+                        .then(veil)
+                        .pointerInput(Unit) { detectTapGestures { } }
+                        .zIndex(1f),
                 ) {
-                    if (!sunk) Column(
-                        Modifier
-                            .then(veil)
-                            .padding(start = LEDGE, top = ROOF + CHIP_DROP),
+                    Column(
+                        Modifier.padding(start = LEDGE),
                         verticalArrangement = Arrangement.spacedBy(CHIP_GAP),
                     ) {
                         for (bin in Mark.entries) {
@@ -508,15 +511,6 @@ fun RoundPicker(
                     }
                 }
 
-                // 오른쪽 판 — 회차가 굴러가는 자리. 폭은 136dp 로 못 박는다.
-                Box(
-                    Modifier
-                        .width(RIGHT)
-                        .fillMaxHeight()
-                        .graphicsLayer(dim)
-                        .then(morph)
-                        .background(RIGHT_FACE, RoundedCornerShape(radius))
-                ) {
                 if (!sunk) LazyColumn(
                     Modifier.fillMaxSize().then(veil).nestedScroll(nested),
                     state = rounds,
@@ -532,7 +526,6 @@ fun RoundPicker(
                             onPick(it)
                         }
                     }
-                }
                 }
             }
         }
@@ -744,12 +737,6 @@ private val CHIP = 44.dp
 /** 단추끼리 벌어지는 만큼. */
 private val CHIP_GAP = 8.dp
 
-/** 회차가 굴러가는 오른쪽 판의 폭. 왼쪽 판이 남는 자리를 가져간다. */
-private val RIGHT = 136.dp
-
-/** 오른쪽 판의 바탕 — 어떻게 보이는지 보려고 잠시 핫핑크다. */
-private val RIGHT_FACE = Color(0xFFFF69B4)
-
 /** 단어장 단추가 제 판의 왼벽에서 물러나는 만큼. */
 private val LEDGE = 37.dp
 
@@ -801,8 +788,7 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
     Box(
         Modifier
             .fillMaxWidth()
-            .clickable(enabled = live) { onPick(e.round) }
-            .padding(vertical = 1.dp),
+            .clickable(enabled = live) { onPick(e.round) },
         contentAlignment = Alignment.Center,
     ) {
         // 번호와 그 어깨의 수, 그 아래 눈금. 셋이 한 덩이로 판 한가운데 선다.
