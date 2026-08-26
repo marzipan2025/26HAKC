@@ -443,7 +443,8 @@ fun DictPanel(
                     onValueChange = { DictInput.text = it },
                     singleLine = true,
                     textStyle = TextStyle(color = INK, fontSize = 22.sp, fontFamily = Korail),
-                    cursorBrush = SolidColor(Hak3.Pink),
+                    // 커서는 적히는 글자와 같은 색이다
+                    cursorBrush = SolidColor(INK),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     // 키보드의 찾기 단추도 엔터와 같은 일을 한다
                     keyboardActions = KeyboardActions(onSearch = {

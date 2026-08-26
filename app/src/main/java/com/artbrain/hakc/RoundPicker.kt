@@ -722,6 +722,9 @@ private fun Setup(radius: Dp, trouble: String, onFolder: () -> Unit, onFile: () 
     }
 }
 
+/** 새 판 안내의 잉크. 알림이되 소리치지 않는 자리라 흰빛에서 한 겹 물러난다. */
+private val UPDATE_INK = Color(0xFFDDDDDD)
+
 /** 자료를 고르는 칸의 바탕 — 판보다 한 겹 어둡다. */
 private val SETUP_FACE = Color.Black.copy(alpha = 0.18f)
 
@@ -1067,7 +1070,7 @@ private fun UpdateRow(label: String, note: String, enabled: Boolean, onClick: ()
                 // 받는 동안 뜨는 몫(72% 같은)은 수만 서는 자리라 폭이 고른 서체로
                 fontFamily = if (label.endsWith("%")) Mono else Korail,
                 fontSize = 44.sp,
-                color = Hak3.Pink,
+                color = UPDATE_INK,
                 maxLines = 1,
             )
             Spacer(Modifier.width(7.dp))
@@ -1076,7 +1079,7 @@ private fun UpdateRow(label: String, note: String, enabled: Boolean, onClick: ()
                 // 곁의 글은 판 번호이거나 안내 문구다. 번호일 때만 고른 폭으로.
                 fontFamily = if (note.firstOrNull()?.isDigit() == true) Mono else Korail,
                 fontSize = 13.sp,
-                color = Hak3.Pink,
+                color = UPDATE_INK,
                 modifier = Modifier.padding(top = 9.dp),
             )
         }
