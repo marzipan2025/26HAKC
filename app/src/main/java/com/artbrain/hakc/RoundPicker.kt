@@ -472,13 +472,11 @@ fun RoundPicker(
                 Spacer(Modifier.height(GAP))
             }
 
-            // 회차는 칸을 늘어놓지 않고 큰 판 하나 안에서 굴러간다
+            // 회차는 칸을 늘어놓지 않고 큰 판 하나 안에서 굴러간다. 열면 늘
+            // 맨 위 — 가장 최근 회차부터다. 마지막으로 열어 본 회차를 찾아가
+            // 앉히던 것은 걷었다: 어디에 서 있는지 알 수 없게 어중간히 굴러
+            // 있었고, 그 회차가 어느 줄인지는 흰 번호가 이미 말해 준다.
             val rounds = rememberLazyListState()
-            LaunchedEffect(exams.size) {
-                // 마지막으로 열어 본 회차가 보이게. 맨 위에 붙이지 않고 두 줄쯤 내려서 앉힌다.
-                val i = exams.indexOfFirst { it.round == last }
-                if (i >= 0) rounds.scrollToItem((i - 2).coerceAtLeast(0))
-            }
             // 아래는 판 하나다. 단어장 넷이 왼쪽 어깨에 얹히고, 회차가 그 아래로
             // 굴러간다. 늘어나 카드가 되는 것도 이 판이다.
             Box(
@@ -895,7 +893,8 @@ private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit)
     val glyph = (square.value * DICT_HEAD * 0.68f).sp
     // 글자 상자에 사방 여백을 더한 만큼 — 한자는 가로세로가 같으니 등도 정사각이다
     val side = with(LocalDensity.current) { glyph.toDp() } + LANTERN_PAD * 2
-    var han by remember(pool) { mutableStateOf(pool.firstOrNull().orEmpty()) }
+    // 첫 글자부터 아무 글자다 — 처음 뜨는 것이 늘 묶음의 첫 자면 돌리는 맛이 없다
+    var han by remember(pool) { mutableStateOf(pool.randomOrNull().orEmpty()) }
     LaunchedEffect(pool) {
         while (pool.isNotEmpty()) {
             delay(BEAT)
