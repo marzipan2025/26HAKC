@@ -807,16 +807,16 @@ private val SIDE = 16.dp
  * 번호의 잉크는 판 위끝에서 29.3dp, 한자의 잉크는 40.3dp 에 있었다.
  * 올리는 것은 그리는 자리뿐이라 아래 단추는 따라 오르지 않는다.
  */
-private val LANTERN_LIFT = 17.dp
+private val LANTERN_LIFT = 5.dp
 
-/** 등이 제 자리에서 왼쪽으로 물러나는 만큼. */
-private val LANTERN_SHIFT = 4.dp
+/** 등이 제 자리에서 오른쪽으로 물러나는 만큼. */
+private val LANTERN_SHIFT = 8.dp
 
 /**
  * 등의 글자가 사전 판의 한자보다 더 큰 만큼(sp). 자리가 차지하는 크기는 그대로
  * 두고 글자만 키운다 — 자리까지 자라면 아래 단추가 그만큼 밀려 내려간다.
  */
-private const val LANTERN_MORE = 8f
+private const val LANTERN_MORE = 12f
 
 /** 등과 첫 단추 사이. */
 private val TALLY_TOP = 22.dp
@@ -917,7 +917,7 @@ private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit)
     Box(
         Modifier
             .size(side)
-            .offset(x = -LANTERN_SHIFT, y = -LANTERN_LIFT)
+            .offset(x = LANTERN_SHIFT, y = -LANTERN_LIFT)
             .clickable(enabled = open && han.isNotEmpty()) { onOpen(han) },
         contentAlignment = Alignment.Center,
     ) {
