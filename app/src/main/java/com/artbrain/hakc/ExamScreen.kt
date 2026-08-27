@@ -59,6 +59,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.PlatformTextStyle
@@ -240,7 +242,7 @@ fun ExamScreen(
     }
     Deck(
         all = all,
-        title = "Round $round",
+        title = "Round ${roundNo(round)}",
         subOf = { p -> "問 ${p.section.start}–${p.section.end}" },
         marks = marks,
         numbered = true,
@@ -312,7 +314,7 @@ fun WordScreen(
         // 서랍의 이름과 같은 꼴로 적는다 — 거기서 눌러 온 자리다
         title = (if (bin == Mark.AMBER) "Pink " else "Green ") + if (chars) "Letters" else "Cards",
         // 문제 묶음의 카드는 제 회차에서 온 것이라 어느 회차인지 밝혀 둔다
-        subOf = { p -> if (chars) null else "第 ${p.round} 回" },
+        subOf = { p -> if (chars) null else "第 ${roundNo(p.round)} 回" },
         marks = marks,
         numbered = false,
         start = start.coerceIn(0, (all.size - 1).coerceAtLeast(0)),
@@ -360,6 +362,7 @@ private fun Deck(
 ) {
     val context = LocalContext.current
     val sound = rememberClicks()
+    val haptic = LocalHapticFeedback.current
     var filter by remember(all) { mutableStateOf<Mark?>(null) }
     val open = remember(all) { mutableStateMapOf<String, Boolean>() }
 
@@ -374,6 +377,14 @@ private fun Deck(
     // 카드를 들고 있는 동안만 카드층을 맨 위로. 그동안 두 줄은 눌리지 않는다.
     var lifted by remember(all) { mutableStateOf(false) }
     var markOnLeft by remember(all) { mutableStateOf(Settings.markOnLeft(context)) }
+    // 카드에 핑크나 초록이 얹히는 순간에는 손끝에도 가볍게 한 번 — 푸는 쪽은
+    // 소리만으로 넉넉하다. 이미 그 색이면 바뀐 것이 없으니 울리지 않는다.
+    val mark: (Page, Mark?) -> Unit = { p, m ->
+        if (m != null && marks[p.id] != m) {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+        onMark(p, m)
+    }
     val index = pager.currentPage.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
     val page = pages.getOrNull(index)
     // 다음에 열 때 여기서부터 보여 준다
@@ -432,7 +443,7 @@ private fun Deck(
                             // 담기든 풀리든 자리가 바뀌면 딸깍
                             onMark = { m ->
                                 sound.yes()
-                                onMark(p, m)
+                                mark(p, m)
                             },
                             // 축의 끝에서 더 밀었다 — 갈 데가 없다고 알린다
                             onEnd = sound::no,
@@ -487,12 +498,12 @@ private fun Deck(
                 // 묶음에서 뺀다. 카드는 그 자리에 남아 색만 벗는다 — 무엇이
                 // 풀렸는지 보고 나서 넘어가라고 자리를 옮기지 않는다.
                 if (marks[p.id] == null) sound.no() else sound.yes()
-                onMark(p, null)
+                mark(p, null)
                 return@BottomBar
             }
             // 이미 노랑이면 단추를 눌러도 자리가 바뀌지 않는다
             if (marks[p.id] == Mark.AMBER) sound.no() else sound.yes()
-            onMark(p, Mark.AMBER)
+            mark(p, Mark.AMBER)
             if (index < pages.size - 1) {
                 scope.launch { pager.animateScrollToPage(index + 1) }
             }

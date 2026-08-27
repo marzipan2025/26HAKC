@@ -5,6 +5,12 @@ import java.text.Normalizer
 
 data class ExamRow(val round: Int, val date: String?, val items: Int, val complete: Boolean)
 
+/**
+ * 회차를 적는 꼴 — 늘 세 자리다. 23 회는 023 으로 선다. 자릿수가 들쭉날쭉하면
+ * 줄마다 번호의 폭이 달라져 목록이 흔들린다.
+ */
+fun roundNo(round: Int): String = "%03d".format(round)
+
 data class Item(
     val no: Int,
     val spanEnd: Int,

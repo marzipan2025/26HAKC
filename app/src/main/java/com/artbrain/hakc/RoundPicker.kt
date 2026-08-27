@@ -980,7 +980,7 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                 // 숫자는 글자 상자 안에서 위로 쏠려 앉는다(내림자가 없다). 잰 만큼
                 // 올려 잉크가 줄 한가운데에 오게 한다.
                 Text(
-                    "${e.round}",
+                    roundNo(e.round),
                     // 숫자만 서는 자리라 폭이 고른 서체로
                     fontFamily = Mono,
                     fontSize = 42.sp,

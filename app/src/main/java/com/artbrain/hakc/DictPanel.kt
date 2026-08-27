@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -274,26 +275,40 @@ fun DictPanel(
     }
     val top = rememberLazyListState()
     val mid = rememberLazyListState()
-    // 위 한자 줄과 아래 訓音 줄은 한 자리를 함께 본다. 어느 쪽을 끌든 다른 쪽이
-    // 따라온다 — 끄는 쪽이 자리를 정하고, 정해진 자리로 나머지가 움직인다.
-    // 손으로 끄는 것만 자리를 정할 수 있다. 따라가는 움직임까지 자리를 정하면
-    // 둘이 서로를 밀어 끝없이 튄다.
+    // 위 한자 줄과 아래 訓音 줄은 한 자리를 함께 본다. 손이 닿은 쪽이 앞장서고
+    // 나머지가 그 자리로 따라온다.
+    //
+    // **앞장선 쪽은 어떤 일이 있어도 프로그램으로 건드리지 않는다.** 손을 뗀 뒤
+    // 목록이 흐르는(fling) 동안에도 마찬가지다. 전에는 손이 얹혔는지만 보고
+    // 따라가게 두었는데, 톡 튀기면 손을 떼는 그 참에 남아 있던 자리로 되돌리는
+    // 명령이 흐름과 맞부딪쳐 목록이 제멋대로 튀었다. 앞장선 쪽을 끝까지 놓아
+    // 두면 부딪칠 일 자체가 없다.
     var active by remember(slots) { mutableIntStateOf(0) }
     val topHeld by top.interactionSource.collectIsDraggedAsState()
     val midHeld by mid.interactionSource.collectIsDraggedAsState()
+    // 손이 닿는 순간 그쪽이 앞장선다. 흐름이 잦아들어도 다음에 다른 쪽을 잡기
+    // 전까지는 그 쪽이 앞장선 채다.
+    var lead by remember(slots) { mutableStateOf<LazyListState?>(null) }
+    LaunchedEffect(slots) { snapshotFlow { topHeld }.collect { if (it) lead = top } }
+    LaunchedEffect(slots) { snapshotFlow { midHeld }.collect { if (it) lead = mid } }
+    // 앞장선 쪽이 어디에 있든 그 자리를 따라간다 — 끄는 동안에도, 흐르는 동안에도.
     LaunchedEffect(slots) {
-        snapshotFlow { topHeld to top.firstVisibleItemIndex }
-            .collect { (held, i) -> if (held) active = i }
+        snapshotFlow { lead?.firstVisibleItemIndex }.collect { i ->
+            val boss = lead
+            if (boss == null || i == null || slots.isEmpty()) return@collect
+            active = i.coerceIn(slots.indices)
+            val other = if (boss === top) mid else top
+            if (other.firstVisibleItemIndex != active) other.scrollToItem(active)
+        }
     }
-    LaunchedEffect(slots) {
-        snapshotFlow { midHeld to mid.firstVisibleItemIndex }
-            .collect { (held, i) -> if (held) active = i }
-    }
+    // 손이 아니라 톡 눌러 자리를 옮겼을 때(또는 새로 찾았을 때)만 둘을 함께 옮긴다.
+    // 어느 한쪽이라도 움직이는 중이면 그것이 정하는 중이니 비켜선다.
     LaunchedEffect(active, slots) {
         if (slots.isEmpty()) return@LaunchedEffect
+        if (top.isScrollInProgress || mid.isScrollInProgress) return@LaunchedEffect
         val i = active.coerceIn(slots.indices)
-        if (!topHeld && top.firstVisibleItemIndex != i) top.animateScrollToItem(i)
-        if (!midHeld && mid.firstVisibleItemIndex != i) mid.animateScrollToItem(i)
+        if (top.firstVisibleItemIndex != i) top.animateScrollToItem(i)
+        if (mid.firstVisibleItemIndex != i) mid.animateScrollToItem(i)
     }
 
     BoxWithConstraints(
