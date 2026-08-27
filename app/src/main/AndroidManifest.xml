@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <!-- 스토어를 거치지 않는 배포라 앱이 직접 갱신을 챙긴다 -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 

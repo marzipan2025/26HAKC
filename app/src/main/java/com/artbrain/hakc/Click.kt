@@ -2,6 +2,11 @@ package com.artbrain.hakc
 
 import android.media.AudioAttributes
 import android.media.SoundPool
+import android.os.Build
+import android.os.VibrationAttributes
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
@@ -55,4 +60,47 @@ fun rememberClicks(): Clicks {
     }
     DisposableEffect(Unit) { onDispose { pool.release() } }
     return Clicks(pool, ids, ready)
+}
+
+
+/**
+ * 손끝의 톡. 카드에 색이 얹히는 그 순간에만 한 번 울린다.
+ *
+ * 처음에는 컴포즈의 `TextHandleMove` 햅틱을 썼는데 아무것도 울리지 않았다.
+ * 기기의 진동 기록(`dumpsys vibrator_manager`)을 보니 그 신호가
+ * `ignored_unsupported` 로 버려지고 있었다 — 이 폰이 실제로 지원하는 것은
+ * CLICK·TICK 처럼 미리 짜인 효과뿐이다. 그래서 진동기를 직접 불러 그중 가장
+ * 가벼운 TICK 을 낸다. 쓰임새를 TOUCH 로 밝혀 두어 기기의 '터치 진동' 세기를
+ * 그대로 따른다.
+ */
+class Buzz(private val vib: Vibrator?) {
+    fun tick() {
+        val v = vib ?: return
+        if (!v.hasVibrator()) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val effect = VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                v.vibrate(effect, VibrationAttributes.createForUsage(VibrationAttributes.USAGE_TOUCH))
+            } else {
+                v.vibrate(effect)
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            v.vibrate(15)
+        }
+    }
+}
+
+@Composable
+fun rememberBuzz(): Buzz {
+    val context = LocalContext.current
+    return remember {
+        val v = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            context.getSystemService(VibratorManager::class.java)?.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Vibrator::class.java)
+        }
+        Buzz(v)
+    }
 }

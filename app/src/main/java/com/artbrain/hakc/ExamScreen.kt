@@ -59,8 +59,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.PlatformTextStyle
@@ -362,7 +360,7 @@ private fun Deck(
 ) {
     val context = LocalContext.current
     val sound = rememberClicks()
-    val haptic = LocalHapticFeedback.current
+    val buzz = rememberBuzz()
     var filter by remember(all) { mutableStateOf<Mark?>(null) }
     val open = remember(all) { mutableStateMapOf<String, Boolean>() }
 
@@ -380,9 +378,7 @@ private fun Deck(
     // 카드에 핑크나 초록이 얹히는 순간에는 손끝에도 가볍게 한 번 — 푸는 쪽은
     // 소리만으로 넉넉하다. 이미 그 색이면 바뀐 것이 없으니 울리지 않는다.
     val mark: (Page, Mark?) -> Unit = { p, m ->
-        if (m != null && marks[p.id] != m) {
-            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-        }
+        if (m != null && marks[p.id] != m) buzz.tick()
         onMark(p, m)
     }
     val index = pager.currentPage.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
