@@ -514,14 +514,9 @@ fun RoundPicker(
                             ) { drawer = Drawer.SETTINGS },
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            painterResource(R.drawable.ic_settings),
-                            contentDescription = "Settings",
-                            tint = TALLY_INK,
-                            modifier = Modifier.size(GEAR),
-                        )
+                        Box(Modifier.size(GEAR).rotate(45f).background(TALLY_INK))
                         Spacer(Modifier.width(GEAR_GAP))
-                        Text("Settings", style = TALLY_NAME, color = TALLY_INK, maxLines = 1)
+                        Text("SETTINGS", style = TALLY_NAME, color = TALLY_INK, maxLines = 1)
                     }
                 }
 
@@ -801,13 +796,18 @@ private val TALLY_GAP = 14.dp
 /** 단추 묶음이 등의 선에서 더 오른쪽으로 물러나는 만큼. */
 private val TALLY_SHIFT = 12.dp
 
-/** 설정 문의 톱니 크기와 이름까지의 사이, 그리고 판 바닥에서 뜨는 만큼. */
-private val GEAR = 15.dp
+/**
+ * 설정 문 앞에 서는 표. 예전에 두 판 사이에 박혀 있던 그 표다 — 네모를 45도
+ * 돌려 세운 마름모, 한 변은 점 지름 8.4dp 의 80% 다.
+ */
+private val GEAR = 8.4.dp * 0.8f
 private val GEAR_GAP = 6.dp
-private val GEAR_FOOT = 18.dp
+// 오른쪽 목록을 끝까지 올렸을 때 마지막 회차(035)의 잉크 아랫선과 같은 높이다.
+// 폰에서 재어 잡았다 — 회차는 판 아래에서 35dp, 문은 18dp 였다.
+private val GEAR_FOOT = 33.3.dp
 
 /** 설정 문이 차지하는 자리. 어깨의 단추는 이 위에서 잘린다. */
-private val GEAR_ROOM = 42.dp
+private val GEAR_ROOM = 54.dp
 
 /** 단추 이름의 잉크. 회차 번호와 같은 색을 한 겹 더 물린다. */
 private val TALLY_INK = Hak3.Hanja.copy(alpha = Hak3.Hanja.alpha * 0.7f)
