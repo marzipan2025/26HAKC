@@ -462,14 +462,6 @@ fun RoundPicker(
                     // 다 받지 못해 판 끝보다 한참 위에서 잘린다 — 오른쪽 회차는
                     // 판 끝에 딱 맞춰 잘리는데 왼쪽만 떠 보였다. 넘치게 두고
                     // 자르는 것은 바깥의 판 끝에 맡긴다.
-                    // 단추가 흘러내려도 설정 문 자리는 비켜 간다 — 그 자리를
-                    // 미리 떼어 두고, 넘치는 것은 그 위에서 잘린다.
-                    Box(
-                        Modifier
-                            .fillMaxHeight()
-                            .padding(bottom = GEAR_ROOM)
-                            .clipToBounds()
-                    ) {
                     Column(Modifier.wrapContentHeight(Alignment.Top, unbounded = true)) {
                         // 핑크 묶음이 둘 다 비었으면 등은 자리째 빠진다 —
                         // 돌려 보일 것도, 눌러 갈 데도 없는 자리다.
@@ -499,24 +491,25 @@ fun RoundPicker(
                                 }
                             }
                         }
-                    }
-                    }
-                    // 판 왼쪽 아래 모서리 — 설정으로 드는 문. 서랍을 여는 길은
-                    // 이것 하나뿐이다. 어깨의 다른 단추와 같은 잉크로 서되,
-                    // 수가 붙지 않는 자리라 톱니를 앞에 세워 갈래를 가른다.
-                    Row(
-                        Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(start = TALLY_SHIFT, bottom = GEAR_FOOT)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                            ) { drawer = Drawer.SETTINGS },
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(Modifier.size(GEAR).rotate(45f).background(TALLY_INK))
-                        Spacer(Modifier.width(GEAR_GAP))
-                        Text("SETTINGS", style = TALLY_NAME, color = TALLY_INK, maxLines = 1)
+                        // 설정으로 드는 문 — 서랍을 여는 길은 이것 하나뿐이다.
+                        // 어깨의 다른 단추와 같은 잉크로 서되, 수가 붙지 않는
+                        // 자리라 마름모를 앞에 세운다. 마지막 단추에서 유난히 멀리
+                        // 떨어져 서므로, 판이 다 자랐을 때에만 판 안으로 들어와
+                        // 마지막 회차와 나란히 선다.
+                        Spacer(Modifier.height(GEAR_TOP))
+                        Row(
+                            Modifier
+                                .padding(start = TALLY_SHIFT)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) { drawer = Drawer.SETTINGS },
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(Modifier.size(GEAR).rotate(45f).background(TALLY_INK))
+                            Spacer(Modifier.width(GEAR_GAP))
+                            Text("SETTINGS", style = TALLY_NAME, color = TALLY_INK, maxLines = 1)
+                        }
                     }
                 }
 
@@ -802,12 +795,11 @@ private val TALLY_SHIFT = 12.dp
  */
 private val GEAR = 8.4.dp * 0.8f
 private val GEAR_GAP = 6.dp
-// 오른쪽 목록을 끝까지 올렸을 때 마지막 회차(035)의 잉크 아랫선과 같은 높이다.
-// 폰에서 재어 잡았다 — 회차는 판 아래에서 35dp, 문은 18dp 였다.
-private val GEAR_FOOT = 33.3.dp
-
-/** 설정 문이 차지하는 자리. 어깨의 단추는 이 위에서 잘린다. */
-private val GEAR_ROOM = 54.dp
+/**
+ * 마지막 단추(Known Cards)와 설정 문 사이. 판이 다 자랐을 때 문의 아랫선이
+ * 마지막 회차의 아랫선과 나란히 놓이도록 폰에서 재어 잡은 값이다.
+ */
+private val GEAR_TOP = 137.3.dp
 
 /** 단추 이름의 잉크. 회차 번호와 같은 색을 한 겹 더 물린다. */
 private val TALLY_INK = Hak3.Hanja.copy(alpha = Hak3.Hanja.alpha * 0.7f)
