@@ -810,7 +810,7 @@ private val SIDE = 16.dp
 private val LANTERN_LIFT = 5.dp
 
 /** 등이 제 자리에서 오른쪽으로 물러나는 만큼. */
-private val LANTERN_SHIFT = 8.dp
+private val LANTERN_SHIFT = 4.dp
 
 /**
  * 등의 글자가 사전 판의 한자보다 더 큰 만큼(sp). 자리가 차지하는 크기는 그대로
