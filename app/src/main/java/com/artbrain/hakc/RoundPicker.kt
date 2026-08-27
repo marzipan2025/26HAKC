@@ -795,12 +795,12 @@ private val TALLY_SHIFT = 12.dp
  * 돌려 세운 마름모, 한 변은 점 지름 8.4dp 의 80% 다.
  */
 private val GEAR = 8.4.dp * 0.8f
-private val GEAR_GAP = 7.dp
+private val GEAR_GAP = 8.dp
 /**
  * 마지막 단추(Known Cards)와 설정 문 사이. 판이 다 자랐을 때 문의 아랫선이
  * 마지막 회차의 아랫선과 나란히 놓이도록 폰에서 재어 잡은 값이다.
  */
-private val GEAR_TOP = 140.3.dp
+private val GEAR_TOP = 142.3.dp
 
 /** 단추 이름의 잉크. 회차 번호와 같은 색을 한 겹 더 물린다. */
 private val TALLY_INK = Hak3.Hanja.copy(alpha = Hak3.Hanja.alpha * 0.7f)
