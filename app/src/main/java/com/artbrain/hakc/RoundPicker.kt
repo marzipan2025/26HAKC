@@ -3,6 +3,7 @@ package com.artbrain.hakc
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.ui.draw.clipToBounds
@@ -134,10 +135,13 @@ private val TUCK = CARD + DOT / 2
 /** 손잡이 막대. 키보드가 올라와 틈이 벌어졌을 때만 선다. */
 private val BAR = 38.dp
 
-/** 틈에 박히는 점. 서랍이 나와 있든 아니든 늘 같은 얼굴이다. */
+/**
+ * 틈에 박히는 표. 서랍이 나와 있든 아니든 늘 같은 얼굴이다.
+ * 동그라미가 아니라 네모를 45도 돌려 세운 마름모다 — 한 변은 점 지름의 80% 다.
+ */
 @Composable
 private fun Dot() {
-    Box(Modifier.size(DOT).background(Hak3.TextDim, CircleShape))
+    Box(Modifier.size(DOT * 0.8f).rotate(45f).background(Hak3.TextDim))
 }
 
 @Composable
@@ -819,7 +823,7 @@ private val SIDE = 16.dp
 private val LANTERN_LIFT = 6.dp
 
 /** 등이 제 자리에서 오른쪽으로 물러나는 만큼. */
-private val LANTERN_SHIFT = 4.dp
+private val LANTERN_SHIFT = 3.dp
 
 /**
  * 등의 글자가 사전 판의 한자보다 더 큰 만큼(sp). 자리가 차지하는 크기는 그대로
