@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -806,7 +807,16 @@ private val SIDE = 16.dp
  * 번호의 잉크는 판 위끝에서 29.3dp, 한자의 잉크는 40.3dp 에 있었다.
  * 올리는 것은 그리는 자리뿐이라 아래 단추는 따라 오르지 않는다.
  */
-private val LANTERN_LIFT = 13.dp
+private val LANTERN_LIFT = 17.dp
+
+/** 등이 제 자리에서 왼쪽으로 물러나는 만큼. */
+private val LANTERN_SHIFT = 4.dp
+
+/**
+ * 등의 글자가 사전 판의 한자보다 더 큰 만큼(sp). 자리가 차지하는 크기는 그대로
+ * 두고 글자만 키운다 — 자리까지 자라면 아래 단추가 그만큼 밀려 내려간다.
+ */
+private const val LANTERN_MORE = 8f
 
 /** 등과 첫 단추 사이. */
 private val TALLY_TOP = 22.dp
@@ -890,9 +900,11 @@ private fun tallyName(bin: Mark, kind: Collect.Kind): String = when {
 @Composable
 private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit) {
     val square = LocalConfiguration.current.screenWidthDp.dp - CARD * 2
-    val glyph = (square.value * DICT_HEAD * 0.68f).sp
-    // 글자 상자에 사방 여백을 더한 만큼 — 한자는 가로세로가 같으니 등도 정사각이다
-    val side = with(LocalDensity.current) { glyph.toDp() } + LANTERN_PAD * 2
+    val base = square.value * DICT_HEAD * 0.68f
+    val glyph = (base + LANTERN_MORE).sp
+    // 자리는 사전 판의 한자 크기에 사방 여백을 더한 만큼 — 한자는 가로세로가
+    // 같으니 등도 정사각이다. 키운 몫은 이 자리 밖으로 고르게 넘친다.
+    val side = with(LocalDensity.current) { base.sp.toDp() } + LANTERN_PAD * 2
     // 첫 글자부터 아무 글자다 — 처음 뜨는 것이 늘 묶음의 첫 자면 돌리는 맛이 없다
     var han by remember(pool) { mutableStateOf(pool.randomOrNull().orEmpty()) }
     LaunchedEffect(pool) {
@@ -905,7 +917,7 @@ private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit)
     Box(
         Modifier
             .size(side)
-            .offset(y = -LANTERN_LIFT)
+            .offset(x = -LANTERN_SHIFT, y = -LANTERN_LIFT)
             .clickable(enabled = open && han.isNotEmpty()) { onOpen(han) },
         contentAlignment = Alignment.Center,
     ) {
@@ -915,6 +927,8 @@ private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit)
             // 못 외운 글자를 돌려 보이는 자리라, 그 묶음의 색으로 선다
             color = Hak3.Pink,
             maxLines = 1,
+            // 자리보다 커진 만큼은 잘리지 않고 사방으로 고르게 넘친다
+            modifier = Modifier.wrapContentSize(unbounded = true),
         )
     }
 }
