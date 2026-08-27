@@ -2,6 +2,7 @@ package com.artbrain.hakc
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -673,7 +674,13 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
             Row(
                 Modifier
                     .padding(start = EUM, top = 3.dp)
-                    .clickable(enabled = long) { open = !open },
+                    // 접고 펴는 자국은 그리지 않는다 — 줄이 판 너비만큼 넓어
+                    // 자국이 뜨면 뜻풀이 한 줄이 통째로 번쩍인다.
+                    .clickable(
+                        enabled = long,
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { open = !open },
                 verticalAlignment = Alignment.Top,
             ) {
                 Text(

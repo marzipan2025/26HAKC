@@ -3,6 +3,7 @@ package com.artbrain.hakc
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalConfiguration
@@ -608,7 +609,7 @@ private val COUNT_W = 20.dp
  * 회차 덩이가 판 오른벽에서 물러나는 만큼. 왼쪽에서 한자가 물러난 26dp 보다
  * 6dp 더 붙어 선다 — 어깨의 수가 한두 자리라 잉크는 그보다 더 안쪽에서 끝난다.
  */
-private val WALL = 18.dp
+private val WALL = 17.dp
 
 /** 눈금의 바탕. 경계선에서 한 겹 더 물러난다. */
 private val GAUGE_TRACK = Hak3.Rule.copy(alpha = Hak3.Rule.alpha / 2)
@@ -983,7 +984,13 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
     Box(
         Modifier
             .fillMaxWidth()
-            .clickable(enabled = live) { onPick(e.round) },
+            // 눌린 자국을 그리지 않는다 — 줄 하나가 판 너비 그대로라, 자국이
+            // 뜨면 판 전체가 번쩍이는 것처럼 보인다.
+            .clickable(
+                enabled = live,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) { onPick(e.round) },
         contentAlignment = Alignment.CenterEnd,
     ) {
         // 번호와 어깨의 수가 한 덩이로 판 오른벽에서 48dp 물러나 선다. 덩이의
