@@ -183,6 +183,8 @@ private fun Root() {
                         ExamScreen(
                             w.no, ready, morph, veil,
                             { if (isTransitionActive) 1f else 0f },
+                            // 이 조각이 지금 자리를 내주는 중인가
+                            leaving = w != where,
                         ) { open = null }
                     }
                     else -> {

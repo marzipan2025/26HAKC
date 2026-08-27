@@ -131,6 +131,9 @@ private fun glue(s: String, before: Char = ' '): String = buildString {
 }
 private val OUTER = 8.dp
 
+/** 위 캡슐과 아래 바닥 줄이 한 박자 어긋나 드나드는 만큼. (ms) */
+private const val LAG = 160
+
 /**
  * 카드 한 장. `id` 는 표시를 걸어 두는 이름이다 — 회차에서는 `113:7`, 단어장에서는
  * 글자 그 자체가 된다. 이렇게 두면 같은 화면으로 둘 다 넘길 수 있다.
@@ -222,6 +225,8 @@ fun ExamScreen(
     morph: Modifier = Modifier,
     veil: Modifier = Modifier,
     morphLit: () -> Float = { 0f },
+    /** 이 화면이 지금 자리를 내주는 중인가. 위·아래 줄을 되돌려 보내려고 본다. */
+    leaving: Boolean = false,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -248,6 +253,7 @@ fun ExamScreen(
         morph = morph,
         veil = veil,
         morphLit = morphLit,
+        leaving = leaving,
         onMark = { p, m ->
             book.set(p.item.no, m)
             if (m == null) marks.remove(p.id) else marks[p.id] = m
@@ -391,6 +397,25 @@ private fun Deck(
     // 카드가 캡슐께에서 잘려 사라진다. 바닥 줄은 pager 뒤에 두어 조작을 뺏기지 않는다.
     // 위로는 캡슐과 OUTER 만큼, 아래로도 바닥 줄과 OUTER 만큼. 같은 간격이다.
     val inset = PaddingValues(top = TOP + OUTER, bottom = BAR + OUTER)
+    // 위 캡슐과 아래 바닥 줄은 화면 밖에서 미끄러져 들어온다. 나갈 때는 온 길로
+    // 되돌아간다. 판이 카드 자리까지 늘어나는 참(GROW)을 그대로 쓴다 — 판과 줄이
+    // 한 몸으로 움직인다. 1 이 화면 밖, 0 이 제자리다.
+    //
+    // 둘은 한 박자 어긋나 움직인다. 들어올 때는 위가 먼저 서고 아래가 [LAG] 만큼
+    // 늦게 따라오며, 나갈 때는 그 순서를 뒤집어 아래가 먼저 빠지고 위가 뒤따른다.
+    val slideTop = remember { Animatable(1f) }
+    val slideFoot = remember { Animatable(1f) }
+    LaunchedEffect(leaving) {
+        val ease = FastOutSlowInEasing
+        val to = if (leaving) 1f else 0f
+        if (leaving) {
+            launch { slideFoot.animateTo(to, tween(GROW, easing = ease)) }
+            slideTop.animateTo(to, tween(GROW, delayMillis = LAG, easing = ease))
+        } else {
+            launch { slideTop.animateTo(to, tween(GROW, easing = ease)) }
+            slideFoot.animateTo(to, tween(GROW, delayMillis = LAG, easing = ease))
+        }
+    }
     Box(
         Modifier
             .fillMaxSize()
@@ -459,7 +484,10 @@ private fun Deck(
         // 캡슐과 바닥 줄은 pager 뒤에 둔다 — 앞에 두면 pager 가 눌림을 가로챈다.
         // pager 는 화면 전체를 차지하므로 카드는 잘리지 않고 이 줄들 아래로 미끄러져 나간다.
         TopBar(
-            modifier = Modifier.align(Alignment.TopStart).then(veil),
+            // 제 키에 바깥 여백까지 더해 밀어내면 화면 위로 온전히 사라진다
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .graphicsLayer { translationY = -slideTop.value * (size.height + OUTER.toPx()) },
             title = title,
             sub = page?.let(subOf),
             filter = filter,
@@ -476,7 +504,9 @@ private fun Deck(
 
 
         BottomBar(
-            modifier = Modifier.align(Alignment.BottomStart).then(veil),
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .graphicsLayer { translationY = slideFoot.value * (size.height + OUTER.toPx()) },
             // 단어장에서 이미 풀린 카드는 뺄 것이 없으니 단추도 물러난다
             enabled = page != null && (face == null || marks[page.id] != null),
             markOnLeft = markOnLeft,
