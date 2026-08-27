@@ -807,7 +807,7 @@ private val SIDE = 16.dp
  * 번호의 잉크는 판 위끝에서 29.3dp, 한자의 잉크는 40.3dp 에 있었다.
  * 올리는 것은 그리는 자리뿐이라 아래 단추는 따라 오르지 않는다.
  */
-private val LANTERN_LIFT = 5.dp
+private val LANTERN_LIFT = 6.dp
 
 /** 등이 제 자리에서 오른쪽으로 물러나는 만큼. */
 private val LANTERN_SHIFT = 4.dp
@@ -835,6 +835,12 @@ private val TALLY_INK = Hak3.Hanja.copy(alpha = Hak3.Hanja.alpha * 0.7f)
 
 /** 이름과 수 사이. 한 덩이로 읽히도록 바짝 붙인다. */
 private val TALLY_TIGHT = 4.dp
+
+/**
+ * 이름이 수 쪽으로 내려앉는 만큼. 내리는 것은 그리는 자리뿐이라 수도, 아래
+ * 단추도 그대로 있고 둘 사이의 틈만 그만큼 좁아진다.
+ */
+private val TALLY_LABEL_DROP = 2.dp
 
 /** 등의 글자가 제 자리에서 두르는 여백. 바탕은 두지 않고 자리만 잡는다. */
 private val LANTERN_PAD = 10.dp
@@ -882,10 +888,10 @@ private val TALLY_NUM = TextStyle(
 
 /** 단추에 적는 이름. 어느 묶음인지와 무엇이 담겼는지를 그대로 적는다. */
 private fun tallyName(bin: Mark, kind: Collect.Kind): String = when {
-    bin == Mark.AMBER && kind == Collect.Kind.CHARS -> "unsure letters"
-    bin == Mark.AMBER -> "unsure cards"
-    kind == Collect.Kind.CHARS -> "known letters"
-    else -> "known cards"
+    bin == Mark.AMBER && kind == Collect.Kind.CHARS -> "Unsure Letters"
+    bin == Mark.AMBER -> "Unsure Cards"
+    kind == Collect.Kind.CHARS -> "Known Letters"
+    else -> "Known Cards"
 }
 
 /**
@@ -949,6 +955,7 @@ private fun Tally(title: String, n: Int, color: Color, solid: Boolean, onClick: 
             style = TALLY_NAME,
             color = if (on) TALLY_INK else Hak3.TextDim,
             maxLines = 1,
+            modifier = Modifier.offset(y = TALLY_LABEL_DROP),
         )
         Spacer(Modifier.height(TALLY_TIGHT))
         Text(
