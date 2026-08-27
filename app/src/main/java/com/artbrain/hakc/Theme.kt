@@ -84,14 +84,19 @@ fun screenCornerRadius(fallback: Dp = 32.dp): Dp {
 }
 
 /**
- * 판 위쪽에 얹는 빛. 흰빛 5% 로 시작해 판 높이의 75% 에서 스러진다.
- * 있는 줄 모르고 지나칠 만큼만 — 판이 위에서 조금 들린 것처럼 보이게 하는 몫이다.
- * 위의 사전 판과 아래의 회차 판이 같은 빛을 쓴다.
+ * 판 위쪽에 얹는 빛. 판 높이의 75% 에서 스러진다. 있는 줄 모르고 지나칠
+ * 만큼만 — 판이 위에서 조금 들린 것처럼 보이게 하는 몫이다.
  */
-val PanelGlow = Brush.verticalGradient(
-    0f to Color.White.copy(alpha = 0.05f),
+private fun glow(alpha: Float) = Brush.verticalGradient(
+    0f to Color.White.copy(alpha = alpha),
     0.75f to Color.Transparent,
 )
+
+/** 위 사전 판의 빛. */
+val PanelGlow = glow(0.05f)
+
+/** 아래 회차 판의 빛 — 위 판의 절반이다. 어두운 남색에서는 같은 세기가 더 세게 든다. */
+val CardGlow = glow(0.025f)
 
 /**
  * 자주 찾은 한자가 오르는 짙기 계단. 열 번마다 한 단이고 넉 단이 끝이다.

@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
@@ -489,8 +490,9 @@ fun RoundPicker(
                     .graphicsLayer(dim)
                     .then(morph)
                     .background(Hak3.Card, RoundedCornerShape(radius))
-                    // 위 판과 같은 빛 한 겹 — 판이 위에서 조금 들린 것처럼 보인다
-                    .background(PanelGlow, RoundedCornerShape(radius))
+                    // 위 판과 같은 빛 한 겹, 세기는 그 절반 — 판이 위에서 조금
+                    // 들린 것처럼 보인다
+                    .background(CardGlow, RoundedCornerShape(radius))
             ) {
                 // 목록이 키보드 밑으로 다 내려간 뒤에야 알맹이를 비운다. 판이 딱
                 // 맞아떨어지지 않아 한 줄쯤 삐져나올 때가 있는데, 그때 글자가 반쯤
@@ -519,7 +521,11 @@ fun RoundPicker(
                         .pointerInput(Unit) { detectTapGestures { } }
                         .zIndex(1f),
                 ) {
-                    Column {
+                    // 높이를 판에 맞춰 묶지 않는다. 묶으면 마지막 단추가 제 칸을
+                    // 다 받지 못해 판 끝보다 한참 위에서 잘린다 — 오른쪽 회차는
+                    // 판 끝에 딱 맞춰 잘리는데 왼쪽만 떠 보였다. 넘치게 두고
+                    // 자르는 것은 바깥의 판 끝에 맡긴다.
+                    Column(Modifier.wrapContentHeight(Alignment.Top, unbounded = true)) {
                         // 핑크 묶음이 둘 다 비었으면 등은 자리째 빠진다 —
                         // 돌려 보일 것도, 눌러 갈 데도 없는 자리다.
                         if (hasPink) Lantern(pool, open = pink.isNotEmpty()) { han ->
@@ -533,7 +539,7 @@ fun RoundPicker(
                         }
                         if (hasPink) Spacer(Modifier.height(TALLY_TOP))
                         Column(
-                            Modifier.padding(start = TALLY_SHIFT).offset(y = -TALLY_LIFT),
+                            Modifier.padding(start = TALLY_SHIFT),
                             verticalArrangement = Arrangement.spacedBy(TALLY_GAP),
                         ) {
                             for (bin in Mark.entries) {
@@ -821,17 +827,18 @@ private val LANTERN_SHIFT = 4.dp
  */
 private const val LANTERN_MORE = 12f
 
-/** 등과 첫 단추 사이. */
-private val TALLY_TOP = 22.dp
+/**
+ * 등과 첫 단추 사이. 예전에는 22dp 를 두고 단추 묶음을 8dp 끌어올려 그렸는데,
+ * 그리는 자리만 올리면 판 끝의 자르는 선은 그대로라 마지막 단추가 8dp 일찍
+ * 잘렸다. 이제 그만큼을 이 자에서 덜어 낸다 — 자리도 그림도 한 자리다.
+ */
+private val TALLY_TOP = 14.dp
 
 /** 단추끼리 벌어지는 만큼. */
 private val TALLY_GAP = 14.dp
 
 /** 단추 묶음이 등의 선에서 더 오른쪽으로 물러나는 만큼. */
 private val TALLY_SHIFT = 12.dp
-
-/** 단추 묶음이 제 자리에서 올라앉는 만큼. 올리는 것은 그리는 자리뿐이다. */
-private val TALLY_LIFT = 8.dp
 
 /** 단추 이름의 잉크. 회차 번호와 같은 색을 한 겹 더 물린다. */
 private val TALLY_INK = Hak3.Hanja.copy(alpha = Hak3.Hanja.alpha * 0.7f)
