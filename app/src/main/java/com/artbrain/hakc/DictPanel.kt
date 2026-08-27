@@ -158,15 +158,6 @@ private const val FOOT = 50f / 244f * 0.72f    // 입력 칸
 /** 訓 오른쪽 표기 번호가 앉는 높이. 글자 위로 얼마나 뜨는지의 비율이다. */
 private const val MARK_LIFT = 0.34f
 
-/**
- * 판 위쪽에 얹는 빛. 흰빛 5% 로 시작해 판 높이의 75% 에서 스러진다.
- * 있는 줄 모르고 지나칠 만큼만 — 판이 위에서 조금 들린 것처럼 보이게 하는 몫이다.
- */
-private val GLOW = Brush.verticalGradient(
-    0f to Color.White.copy(alpha = 0.05f),
-    0.75f to Color.Transparent,
-)
-
 /** 실선이 벽에서 물러나는 거리. */
 private val WALL = 16.dp
 
@@ -319,7 +310,7 @@ fun DictPanel(
             .background(Hak3.Panel)
             // 판 색 위에 겹을 얹지 않는다 — 얹으면 노랑이 그만큼 흐려진다.
             // 위쪽의 아주 옅은 빛 한 겹만 그대로 둔다.
-            .background(GLOW)
+            .background(PanelGlow)
     ) {
         val square = maxWidth                       // 정사각형이었을 때의 한 변
         // 입력 칸은 재어 잡은 높이보다 2dp 더 자란다 — 자라는 쪽은 위다. 실선이
