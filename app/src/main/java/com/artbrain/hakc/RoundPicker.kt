@@ -822,13 +822,13 @@ private const val LANTERN_MORE = 12f
 private val TALLY_TOP = 22.dp
 
 /** 단추끼리 벌어지는 만큼. */
-private val TALLY_GAP = 18.dp
+private val TALLY_GAP = 14.dp
 
 /** 단추 묶음이 등의 선에서 더 오른쪽으로 물러나는 만큼. */
 private val TALLY_SHIFT = 12.dp
 
 /** 단추 묶음이 제 자리에서 올라앉는 만큼. 올리는 것은 그리는 자리뿐이다. */
-private val TALLY_LIFT = 12.dp
+private val TALLY_LIFT = 8.dp
 
 /** 단추 이름의 잉크. 회차 번호와 같은 색을 한 겹 더 물린다. */
 private val TALLY_INK = Hak3.Hanja.copy(alpha = Hak3.Hanja.alpha * 0.7f)
