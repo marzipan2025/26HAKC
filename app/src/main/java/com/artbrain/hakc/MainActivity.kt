@@ -98,9 +98,6 @@ private fun Root() {
     var reload by remember { mutableStateOf(0) }
     var open by remember { mutableStateOf<Int?>(null) }
     var words by remember { mutableStateOf<Triple<Mark, Collect.Kind, Int>?>(null) }
-    // 묶음을 닫고 돌아오면 왼쪽 서랍이 열린 채로 선다 — 방금 있던 자리다.
-    // 한 번 쓰고 잊는다. 그러지 않으면 회차를 보고 돌아올 때도 서랍이 열린다.
-    var back by remember { mutableStateOf(Drawer.NONE) }
     val dict = remember { Dict.open(context) }
 
     val pickFolder = rememberLauncherForActivityResult(
@@ -190,9 +187,7 @@ private fun Root() {
                     else -> {
                         Picker(state, reload, ready, dict, pickFolder, pickFile, morph, veil,
                             onPick = { open = it },
-                            onWords = { bin, kind, at -> words = Triple(bin, kind, at) },
-                            startDrawer = back)
-                        LaunchedEffect(Unit) { back = Drawer.NONE }
+                            onWords = { bin, kind, at -> words = Triple(bin, kind, at) })
                     }
                 }
             }
@@ -225,7 +220,6 @@ private fun Picker(
     veil: Modifier,
     onPick: (Int) -> Unit,
     onWords: (Mark, Collect.Kind, Int) -> Unit,
-    startDrawer: Drawer,
 ) {
     RoundPicker(
         // 사전은 기출 데이터가 없어도 선다 — 앱 안에 든 자료라 남을 기다릴 것이 없다
@@ -238,7 +232,6 @@ private fun Picker(
         onFile = { pickFile.launch(arrayOf("*/*")) },
         onPick = onPick,
         onWords = onWords,
-        startDrawer = startDrawer,
         morph = morph,
         veil = veil,
     )

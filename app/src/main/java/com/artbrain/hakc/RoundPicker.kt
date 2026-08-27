@@ -113,10 +113,7 @@ private val GAP = 6.dp
 /** 판이 화면 가장자리에서 물러나 있는 만큼. */
 private val CARD = 8.dp
 
-/** 평소의 잉크. 아이콘 대신 점 하나만 남겼다 — 예전 21dp 의 40% 다. */
-private val DOT = 8.4.dp
-
-/** 그 잉크를 누를 수 있는 자리. 틈보다 크므로 판 위로 걸쳐 앉는다. */
+/** 두 판 사이에서 잡을 수 있는 자리. 틈보다 크므로 판 위로 걸쳐 앉는다. */
 private val TOUCH = 40.dp
 
 /**
@@ -126,23 +123,8 @@ private val TOUCH = 40.dp
  */
 private val TYPING = TOUCH + GAP
 
-/**
- * 점의 한가운데가 앉는 자리. 점의 바깥선이 판의 바깥선과 나란히 만난다 —
- * 선 위에 걸터앉히면 반쪽이 판 밖으로 나가 정렬이 아니라 어긋남으로 보인다.
- */
-private val TUCK = CARD + DOT / 2
-
 /** 손잡이 막대. 키보드가 올라와 틈이 벌어졌을 때만 선다. */
 private val BAR = 38.dp
-
-/**
- * 틈에 박히는 표. 서랍이 나와 있든 아니든 늘 같은 얼굴이다.
- * 동그라미가 아니라 네모를 45도 돌려 세운 마름모다 — 한 변은 점 지름의 80% 다.
- */
-@Composable
-private fun Dot() {
-    Box(Modifier.size(DOT * 0.8f).rotate(45f).background(Hak3.TextDim))
-}
 
 @Composable
 fun RoundPicker(
@@ -155,7 +137,6 @@ fun RoundPicker(
     onFile: () -> Unit,
     onPick: (Int) -> Unit,
     onWords: (Mark, Collect.Kind, Int) -> Unit,
-    startDrawer: Drawer = Drawer.NONE,
     morph: Modifier = Modifier,
     veil: Modifier = Modifier,
 ) {
@@ -192,7 +173,7 @@ fun RoundPicker(
     val fresh = (status as? Updater.Status.Available)?.release
 
     // 묶음을 열었다 닫고 돌아오면 서랍이 열린 채로 다시 선다 — 방금 있던 자리다
-    var drawer by remember { mutableStateOf(startDrawer) }
+    var drawer by remember { mutableStateOf(Drawer.NONE) }
     var last by remember { mutableIntStateOf(Settings.lastRound(context)) }
     var markOnLeft by remember { mutableStateOf(Settings.markOnLeft(context)) }
 
@@ -303,34 +284,10 @@ fun RoundPicker(
         LaunchedEffect(drawer, room) { shift.animateTo(anchor(drawer, room), SNAP) }
         if (open) BackHandler { drawer = Drawer.NONE }
 
-        // 단추를 누르지 않고 끌어서도 연다. 손짓은 화면 전체에서 받되, 가로로 넘기는
-        // 자리(위 한자 줄)가 먼저 집어 가는 것은 그대로 둔다.
-        val drag = rememberDraggableState { dx ->
-            scope.launch { shift.snapTo((shift.value + dx).coerceIn(-room, room)) }
-        }
-        Box(
-            Modifier
-                .fillMaxSize()
-                .draggable(
-                    orientation = Orientation.Horizontal,
-                    state = drag,
-                    // 사전에 무언가 적는 중에는 서랍이 끌려 나오지 않는다
-                    enabled = !typing,
-                    onDragStopped = { v ->
-                        val s = shift.value
-                        val next = when {
-                            v > FLING -> if (s > 0f) Drawer.USER else Drawer.NONE
-                            v < -FLING -> if (s < 0f) Drawer.SETTINGS else Drawer.NONE
-                            s > room * COMMIT -> Drawer.USER
-                            s < -room * COMMIT -> Drawer.SETTINGS
-                            else -> Drawer.NONE
-                        }
-                        // 서랍이 그대로면 LaunchedEffect 가 돌지 않는다. 여기서 앉힌다.
-                        if (next != drawer) drawer = next
-                        else shift.animateTo(anchor(next, room), SNAP)
-                    },
-                )
-        ) {
+        // 서랍은 가로로 끌어 열지 않는다. 판 왼쪽 아래의 설정 문으로만 열고,
+        // 열린 뒤에는 남은 자락을 눌러 닫는다 — 드나드는 길이 하나뿐이라야
+        // 사전을 적다가 손이 옆으로 스쳐도 판이 밀려나지 않는다.
+        Box(Modifier.fillMaxSize()) {
         // 밀려난 만큼 어두워진다 — 남은 자락이 지금 쓸 수 없는 것임을 그렇게 알린다.
         // 손잡이 줄의 화살표만 이 층을 벗어나 제 밝기로 선다.
         val dim: GraphicsLayerScope.() -> Unit = {
@@ -339,9 +296,8 @@ fun RoundPicker(
         Box(Modifier.fillMaxSize().offset { IntOffset(shift.value.roundToInt(), 0) }) {
             // 서랍 둘은 판의 양옆에 붙어 함께 밀린다. 제자리에 두면 판이 그 위를
             // 덮고 지나가는데, 덮는 것이 아니라 밀려나야 한다.
-            // 왼쪽 서랍 — 단어장은 목록 판의 어깨로 옮겨 갔다. 지금은 비어 있다.
-            Box(Modifier.offset(x = -roomDp).width(roomDp).fillMaxHeight())
-            Box(Modifier.offset(x = wide).width(roomDp).fillMaxHeight()) {
+            // 서랍은 왼쪽 하나뿐이다 — 오른쪽에 있던 설정이 이리로 옮겨 왔다.
+            Box(Modifier.offset(x = -roomDp).width(roomDp).fillMaxHeight()) {
                 SettingsPanel(
                     built = built,
                     markOnLeft = markOnLeft,
@@ -410,29 +366,6 @@ fun RoundPicker(
                             .background(Hak3.Rule, RoundedCornerShape(2.dp))
                     )
                 }
-                Box(
-                    Modifier
-                        .align(Alignment.CenterStart)
-                        .requiredSize(TOUCH)
-                        .offset(x = TUCK - TOUCH / 2)
-                        .clickable {
-                            // 적는 중이었으면 키보드가 내려가며 함께 움직인다
-                            if (typing) { focus.clearFocus(); ime?.hide() }
-                            drawer = if (drawer == Drawer.USER) Drawer.NONE else Drawer.USER
-                        },
-                    contentAlignment = Alignment.Center,
-                ) { Dot() }
-                Box(
-                    Modifier
-                        .align(Alignment.CenterEnd)
-                        .requiredSize(TOUCH)
-                        .offset(x = TOUCH / 2 - TUCK)
-                        .clickable {
-                            if (typing) { focus.clearFocus(); ime?.hide() }
-                            drawer = if (drawer == Drawer.SETTINGS) Drawer.NONE else Drawer.SETTINGS
-                        },
-                    contentAlignment = Alignment.Center,
-                ) { Dot() }
             }
 
             // 새 판 안내는 목록과 같은 얼굴로, 그러나 제 영역에 따로 선다
@@ -529,6 +462,14 @@ fun RoundPicker(
                     // 다 받지 못해 판 끝보다 한참 위에서 잘린다 — 오른쪽 회차는
                     // 판 끝에 딱 맞춰 잘리는데 왼쪽만 떠 보였다. 넘치게 두고
                     // 자르는 것은 바깥의 판 끝에 맡긴다.
+                    // 단추가 흘러내려도 설정 문 자리는 비켜 간다 — 그 자리를
+                    // 미리 떼어 두고, 넘치는 것은 그 위에서 잘린다.
+                    Box(
+                        Modifier
+                            .fillMaxHeight()
+                            .padding(bottom = GEAR_ROOM)
+                            .clipToBounds()
+                    ) {
                     Column(Modifier.wrapContentHeight(Alignment.Top, unbounded = true)) {
                         // 핑크 묶음이 둘 다 비었으면 등은 자리째 빠진다 —
                         // 돌려 보일 것도, 눌러 갈 데도 없는 자리다.
@@ -558,6 +499,29 @@ fun RoundPicker(
                                 }
                             }
                         }
+                    }
+                    }
+                    // 판 왼쪽 아래 모서리 — 설정으로 드는 문. 서랍을 여는 길은
+                    // 이것 하나뿐이다. 어깨의 다른 단추와 같은 잉크로 서되,
+                    // 수가 붙지 않는 자리라 톱니를 앞에 세워 갈래를 가른다.
+                    Row(
+                        Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(start = TALLY_SHIFT, bottom = GEAR_FOOT)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) { drawer = Drawer.SETTINGS },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.ic_settings),
+                            contentDescription = "Settings",
+                            tint = TALLY_INK,
+                            modifier = Modifier.size(GEAR),
+                        )
+                        Spacer(Modifier.width(GEAR_GAP))
+                        Text("Settings", style = TALLY_NAME, color = TALLY_INK, maxLines = 1)
                     }
                 }
 
@@ -661,21 +625,14 @@ private val COUNT = TextStyle(
     ),
 )
 
-/** 서랍이 저마다 앉는 자리. */
+/** 서랍이 앉는 자리. 왼쪽에서 나오므로 판은 오른쪽으로 밀린다. */
 private fun anchor(drawer: Drawer, room: Float) = when (drawer) {
-    Drawer.USER -> room
-    Drawer.SETTINGS -> -room
+    Drawer.SETTINGS -> room
     Drawer.NONE -> 0f
 }
 
 /** 서랍이 열렸을 때 남는 판의 자락. 돌아가는 길로만 쓰는 자리라 좁게 둔다. */
 private const val STRIP = 0.15f
-
-/** 여기까지 끌면 놓아도 그쪽으로 앉는다. 자락이 좁아진 만큼 문턱도 낮췄다. */
-private const val COMMIT = 0.22f
-
-/** 이만큼 빠르게 튕기면 끌린 거리와 상관없이 그쪽으로 앉힌다. (px/s) */
-private const val FLING = 400f
 
 /** 밀려난 판의 밝기. */
 private const val DIM = 0.48f
@@ -699,7 +656,7 @@ private const val DISSOLVE = 120
 private val SNAP = spring<Float>(dampingRatio = 0.9f, stiffness = 2800f)
 
 /** 서랍이 문 자리. 왼쪽은 아직 비었다. */
-enum class Drawer { NONE, USER, SETTINGS }
+enum class Drawer { NONE, SETTINGS }
 
 /** 기출 데이터를 아직 못 읽었을 때 목록 자리에 서는 카드. 사전은 그동안에도 쓴다. */
 @Composable
@@ -843,6 +800,14 @@ private val TALLY_GAP = 14.dp
 
 /** 단추 묶음이 등의 선에서 더 오른쪽으로 물러나는 만큼. */
 private val TALLY_SHIFT = 12.dp
+
+/** 설정 문의 톱니 크기와 이름까지의 사이, 그리고 판 바닥에서 뜨는 만큼. */
+private val GEAR = 15.dp
+private val GEAR_GAP = 6.dp
+private val GEAR_FOOT = 18.dp
+
+/** 설정 문이 차지하는 자리. 어깨의 단추는 이 위에서 잘린다. */
+private val GEAR_ROOM = 42.dp
 
 /** 단추 이름의 잉크. 회차 번호와 같은 색을 한 겹 더 물린다. */
 private val TALLY_INK = Hak3.Hanja.copy(alpha = Hak3.Hanja.alpha * 0.7f)
