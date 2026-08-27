@@ -126,9 +126,9 @@ private val INK_SOFT = Color.Black.copy(alpha = 0.57f)      // 물러나 읽히�
 /**
  * 訓音 아랫줄의 뜻풀이. 검은 겹을 덮는 대신 판 색을 그대로 깊게 내린 갈색이다 —
  * 바탕 노랑과 같은 색상(41°)에 채도를 올리고 밝기를 0.40 으로 눌렀다.
- * 노랑 위에서 4.98:1 로, 검정 57% 를 덮었을 때(4.41:1)보다 또렷하다.
+ * 판 위에서 70% 로 얹혀 訓 뒤로 한 겹 물러선다 — 訓 이 먼저 읽히는 자리다.
  */
-private val INK_GLOSS = Color(0xFF66490A)
+private val INK_GLOSS = Color(0xFF66490A).copy(alpha = 0.70f)
 private val INK_DIM = Color.Black.copy(alpha = 0.38f)       // 곁들이는 글
 private val INK_RULE = Color.Black.copy(alpha = 0.14f)      // 실선 · 꺼진 것
 /** 입력 칸 오른쪽의 들임표. 실선보다 짙어 빈 칸에서도 눈에 든다. */
@@ -607,7 +607,7 @@ private val INPUT_RULE = Color.Black.copy(alpha = 0.58f)
  */
 @Composable
 private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
-    Column(Modifier.padding(bottom = 12.dp)) {
+    Column(Modifier.padding(bottom = 15.dp)) {
         s.variant.hanja.forEachIndexed { i, ch ->
             val g = s.word.chars[ch.toString()] ?: return@forEachIndexed
             // 음과 훈은 밑선을 맞춘다. 위끝을 맞추면 오른쪽 글에 낀 급수 표시가
