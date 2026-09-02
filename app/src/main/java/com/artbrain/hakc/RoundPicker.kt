@@ -524,12 +524,13 @@ fun RoundPicker(
                                 ) { drawer = Drawer.SETTINGS },
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            // 문만 온전한 흰빛이다 — 어깨의 단추들보다 한 겹 앞에 선다
-                            Box(Modifier.size(GEAR).rotate(45f).background(Color.White))
+                            // 마름모 둘과 글자가 회차 번호와 같은 잉크로 선다 —
+                            // 흰빛으로 앞세우던 것을 거두고 어깨와 한 벌로 읽히게 둔다
+                            Box(Modifier.size(GEAR).rotate(45f).background(Hak3.Hanja))
                             Spacer(Modifier.width(GEAR_GAP))
-                            Text("SETTINGS", style = TALLY_NAME, color = Color.White, maxLines = 1)
+                            Text("SETTINGS", style = TALLY_NAME, color = Hak3.Hanja, maxLines = 1)
                             Spacer(Modifier.width(GEAR_GAP))
-                            Box(Modifier.size(GEAR).rotate(45f).background(Color.White))
+                            Box(Modifier.size(GEAR).rotate(45f).background(Hak3.Hanja))
                         }
                     }
                 }
@@ -612,13 +613,13 @@ private val DECO_W = 96.dp
 private val DECO_PULL = 8.dp
 
 /** c 만 더 넓게 선다. 오른끝에 붙어 있으므로 넓어지는 쪽은 왼쪽이다. */
-private val DECO_C_WIDE = 4.dp
+private val DECO_C_WIDE = 7.dp
 
 /** c 가 문의 아랫선에서 더 내려앉는 만큼. */
 private val DECO_C_DROP = 4.dp
 
 /** a 와 b 사이. b 는 이 거리에 못 박혀 c 를 따라 움직이지 않는다. */
-private val DECO_AB_GAP = 40.dp
+private val DECO_AB_GAP = 52.dp
 
 /** 맨 위 장식만 조금 내려 앉는 만큼. */
 private val DECO_A_DROP = 4.dp
@@ -885,7 +886,7 @@ private val SHOULDER_LIFT = 2.dp
 private val DOOR_DROP = 18.dp
 
 /** 등과 그 아래 것들이 한 덩이로 왼쪽에 물러나 서는 만큼. */
-private val LANTERN_PULL = 13.dp
+private val LANTERN_PULL = 11.dp
 
 
 /**
@@ -967,12 +968,16 @@ private val TALLY_NUM = TextStyle(
     ),
 )
 
-/** 단추에 적는 이름. 어느 묶음인지와 무엇이 담겼는지를 그대로 적는다. */
+/**
+ * 단추에 적는 이름. 어느 묶음인지와 무엇이 담겼는지를 그대로 적되, 두 낱말을
+ * 위아래로 나눠 적는다 — 한 줄로 눕히면 이름이 아래 수보다 넓어져, 가운데
+ * 어깨가 제 폭보다 벌어진다.
+ */
 private fun tallyName(bin: Mark, kind: Collect.Kind): String = when {
-    bin == Mark.AMBER && kind == Collect.Kind.CHARS -> "Unsure Letters"
-    bin == Mark.AMBER -> "Unsure Cards"
-    kind == Collect.Kind.CHARS -> "Known Letters"
-    else -> "Known Cards"
+    bin == Mark.AMBER && kind == Collect.Kind.CHARS -> "Unsure\nLetters"
+    bin == Mark.AMBER -> "Unsure\nCards"
+    kind == Collect.Kind.CHARS -> "Known\nLetters"
+    else -> "Known\nCards"
 }
 
 /**
@@ -1034,12 +1039,14 @@ private fun Tally(title: String, n: Int, color: Color, solid: Boolean, onClick: 
         Modifier.clickable(enabled = on, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // 이름은 회차 번호와 같은 잉크다 — 색은 수에만 준다
+        // 이름은 회차 번호와 같은 잉크다 — 색은 수에만 준다.
+        // 두 줄이고 행간은 글자 크기 그대로(100%)라, 두 낱말이 한 덩이로 붙는다.
         Text(
             title,
             style = TALLY_NAME,
             color = if (on) TALLY_INK else Hak3.TextDim,
-            maxLines = 1,
+            maxLines = 2,
+            textAlign = TextAlign.Center,
             modifier = Modifier.offset(y = TALLY_LABEL_DROP),
         )
         Spacer(Modifier.height(TALLY_TIGHT))
