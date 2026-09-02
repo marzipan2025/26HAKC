@@ -626,8 +626,9 @@ private val DECO_A_DROP = 4.dp
 /**
  * 회차 번호가 제 글자 상자 안에서 아래로 내려앉는 만큼(어센트). 장식은 그림이라
  * 여백이 없으므로, 두 윗선을 눈으로 맞추려면 목록을 이만큼 더 끌어올려야 한다.
+ * 어센트는 7dp 인데 눈으로는 한 뼘 낮아 보여 1dp 를 더 얹었다.
  */
-private val LIST_INK = 7.dp
+private val LIST_INK = 8.dp
 
 /** 회차 목록이 통째로 오른쪽으로 물러나는 만큼. */
 private val LIST_SHIFT = 24.dp
