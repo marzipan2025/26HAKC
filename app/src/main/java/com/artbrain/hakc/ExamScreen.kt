@@ -548,6 +548,10 @@ private fun Deck(
  */
 @Composable
 fun SettingsPanel(
+    radius: Dp,
+    face: Color,
+    head: Dp,
+    gap: Dp,
     built: String?,
     markOnLeft: Boolean,
     onMarkSide: (Boolean) -> Unit,
@@ -558,58 +562,73 @@ fun SettingsPanel(
     Column(
         Modifier
             .fillMaxSize()
-            .background(Hak3.Ground)
             // 뒤의 카드가 눌리지 않게 이 층에서 손짓을 삼킨다
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-            ) {}
-            .padding(horizontal = 16.dp),
+            ) {},
     ) {
-        // 왼쪽 서랍의 첫 칸과 같은 어깨에서, 눈에 맞게 2dp 더 내려 앉힌다
-        Spacer(Modifier.height(6.dp))
-        // 이름의 내력
-        Text(
-            "Haka Android Kichul Combined",
-            fontSize = 18.sp,
-            letterSpacing = 0.7.sp,
-            color = Hak3.TextDim,
-        )
-
-        // 판 번호와 자료 날짜는 사인에 딸린 말이라 바짝 붙인다
-        Spacer(Modifier.height(13.dp))
-        Text("Data ${day(built)}", fontSize = 20.sp, color = Hak3.TextDim)
-        Text("Version ${BuildConfig.VERSION_NAME}", fontSize = 20.sp, color = Hak3.TextDim)
-
-        Spacer(Modifier.height(36.dp))
-        Label("MARK BUTTON")
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Side("Left", markOnLeft) { onMarkSide(true) }
-            Side("Right", !markOnLeft) { onMarkSide(false) }
+        // 위아래로 갈리는 자리는 본 화면의 두 판과 똑같다 — 위에서 물러난 4dp,
+        // 사전 판의 높이, 그 아래 틈까지 그대로 받아 온다. 서랍이 밀려 들어와도
+        // 오른쪽에 남은 자락과 선이 나란히 이어진다.
+        Spacer(Modifier.height(DRAWER_TOP))
+        // 위 덩이 — 자료 날짜와 판 번호만 든다. 글씨는 앱의 기본 코레일체 그대로다.
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .height(head)
+                .background(face, RoundedCornerShape(radius))
+                .padding(DRAWER_PAD),
+        ) {
+            Text("Data ${day(built)}", fontSize = 20.sp, color = Hak3.TextSoft)
+            Text("Version ${BuildConfig.VERSION_NAME}", fontSize = 20.sp, color = Hak3.TextSoft)
         }
 
-        Spacer(Modifier.height(36.dp))
-        Label("RESET")
-        Spacer(Modifier.height(12.dp))
-        if (!asking) {
-            Key("Erase everything", Hak3.Knob, Hak3.TextDim) { asking = true }
-        } else {
-            Text(
-                "Marks, wordbook and search history\nwill be gone for good.",
-                fontSize = 15.sp,
-                lineHeight = 22.sp,
-                color = Hak3.TextSoft,
-            )
+        Spacer(Modifier.height(gap))
+
+        // 아래 덩이 — 손댈 것 둘. 표시 단추가 설 쪽과, 다 지우는 자리다.
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .background(face, RoundedCornerShape(radius))
+                .padding(DRAWER_PAD),
+        ) {
+            Label("MARK BUTTON")
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // 되돌릴 수 없는 쪽만 붉은 면으로. 검정 글이 그 위에 앉는다.
-                Key("Erase", Hak3.Red, Color.Black) { asking = false; onWipe() }
-                Key("Cancel", Hak3.Knob, Hak3.TextDim) { asking = false }
+                Side("Left", markOnLeft) { onMarkSide(true) }
+                Side("Right", !markOnLeft) { onMarkSide(false) }
+            }
+
+            Spacer(Modifier.height(36.dp))
+            Label("RESET")
+            Spacer(Modifier.height(12.dp))
+            if (!asking) {
+                Key("Erase everything", Hak3.Knob, Hak3.TextDim) { asking = true }
+            } else {
+                Text(
+                    "Marks, wordbook and search history\nwill be gone for good.",
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
+                    color = Hak3.TextSoft,
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // 되돌릴 수 없는 쪽만 붉은 면으로. 검정 글이 그 위에 앉는다.
+                    Key("Erase", Hak3.Red, Color.Black) { asking = false; onWipe() }
+                    Key("Cancel", Hak3.Knob, Hak3.TextDim) { asking = false }
+                }
             }
         }
     }
 }
+
+/** 첫 덩이가 위에서 물러나는 만큼. 본 화면에서 사전 판이 물러난 것과 같다. */
+private val DRAWER_TOP = 4.dp
+
+/** 덩이 안쪽의 마진. 덩이가 넓으므로 판 위의 글보다 넉넉히 둔다. */
+private val DRAWER_PAD = 24.dp
 
 /** 날짜는 YYYY.MM.DD 로 적는다. 데이터는 하이픈으로 적어 오므로 그것만 바꾼다. */
 private fun day(s: String?): String = s?.replace('-', '.') ?: "unknown"

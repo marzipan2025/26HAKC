@@ -300,8 +300,15 @@ fun RoundPicker(
             // 서랍 둘은 판의 양옆에 붙어 함께 밀린다. 제자리에 두면 판이 그 위를
             // 덮고 지나가는데, 덮는 것이 아니라 밀려나야 한다.
             // 서랍은 왼쪽 하나뿐이다 — 오른쪽에 있던 설정이 이리로 옮겨 왔다.
+            // 자리는 비워 두고, 그 안에서 덩이 둘이 제 면을 갖는다. 면의 색은
+            // 밀려난 판이 어두워진 그 색이다 — 검은 바탕 위에 얹히므로 판에
+            // 씌우는 것과 같은 알파를 주면 오른쪽 자락과 꼭 같은 색이 된다.
             Box(Modifier.offset(x = -roomDp).width(roomDp).fillMaxHeight()) {
                 SettingsPanel(
+                    radius = radius,
+                    face = Hak3.Card.copy(alpha = DIM),
+                    head = with(density) { height.toDp() },
+                    gap = band,
                     built = built,
                     markOnLeft = markOnLeft,
                     onMarkSide = { left ->
@@ -524,11 +531,11 @@ fun RoundPicker(
                                 ) { drawer = Drawer.SETTINGS },
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            // 마름모 둘과 글자가 회차 번호와 같은 잉크로 선다 —
-                            // 흰빛으로 앞세우던 것을 거두고 어깨와 한 벌로 읽히게 둔다
+                            // 마름모 둘은 회차 번호와 같은 잉크로 서고, 글자만
+                            // 온전한 흰빛이다 — 누르는 곳이 어디인지 그것이 말한다
                             Box(Modifier.size(GEAR).rotate(45f).background(Hak3.Hanja))
                             Spacer(Modifier.width(GEAR_GAP))
-                            Text("SETTINGS", style = TALLY_NAME, color = Hak3.Hanja, maxLines = 1)
+                            Text("SETTINGS", style = TALLY_NAME, color = Color.White, maxLines = 1)
                             Spacer(Modifier.width(GEAR_GAP))
                             Box(Modifier.size(GEAR).rotate(45f).background(Hak3.Hanja))
                         }
@@ -542,7 +549,7 @@ fun RoundPicker(
                         .then(veil)
                         .nestedScroll(nested),
                     state = rounds,
-                    contentPadding = PaddingValues(top = ROOF + DECO_A_DROP - LIST_INK, bottom = ROOF),
+                    contentPadding = PaddingValues(top = ROOF + DECO_A_DROP - LIST_INK, bottom = LIST_FLOOR),
                 ) {
                     if (trouble != null) {
                         item(key = "setup") { Setup(radius, trouble, onFolder, onFile) }
@@ -579,7 +586,7 @@ fun RoundPicker(
                     val bTop = aBottom + with(density) { DECO_AB_GAP.toPx() }
                     Deco(R.drawable.deco_a, DECO_A, aTop)
                     Deco(R.drawable.deco_b, DECO_B, bTop)
-                    Deco(R.drawable.deco_c, DECO_C, cTop, DECO_W + DECO_C_WIDE)
+                    Deco(R.drawable.deco_c, DECO_C, cTop, DECO_W + DECO_C_WIDE, DECO_C_PUSH)
                 }
             }
         }
@@ -616,11 +623,13 @@ private val DECO_PULL = 8.dp
 private val DECO_C_WIDE = 7.dp
 
 /**
- * c 가 문의 아랫선에서 더 내려앉는 만큼. c 는 문을 따라 서므로 문이 24dp
- * 올라가면 c 도 그만큼 딸려 올라간다. c 가 화면에서 20dp 만 올라 서게
- * 하려면 그 몫에서 4dp 를 도로 내려 주어야 한다 — 4dp 가 8dp 가 된 까닭이다.
+ * c 가 문의 아랫선에서 더 내려앉는 만큼. 문을 따라 서되 이만큼 어긋난다.
+ * 8dp 였던 것을 다시 8dp 걷어 지금은 문의 아랫선에 그대로 맞춰 선다.
  */
-private val DECO_C_DROP = 8.dp
+private val DECO_C_DROP = 0.dp
+
+/** c 만 오른쪽으로 더 나가는 만큼. 셋 중 이것만 벽에 더 붙어 선다. */
+private val DECO_C_PUSH = 3.dp
 
 /** a 와 b 사이. b 는 이 거리에 못 박혀 c 를 따라 움직이지 않는다. */
 private val DECO_AB_GAP = 52.dp
@@ -638,17 +647,25 @@ private val LIST_INK = 8.dp
 /** 회차 목록이 통째로 오른쪽으로 물러나는 만큼. */
 private val LIST_SHIFT = 24.dp
 
+/**
+ * 목록을 끝까지 올렸을 때 마지막 회차가 판 아래끝에서 물러나 멈추는 만큼.
+ * 위쪽 처마(ROOF 18dp)보다 10dp 얕다 — 그만큼 마지막 줄이 더 내려가 선다.
+ * ROOF 를 빼서 쓰지 못하는 것은 그것이 이 파일 아래쪽에 서 있기 때문이다.
+ */
+private val LIST_FLOOR = 8.dp
+
 
 
 
 /** 장식 한 벌. 기둥 안에서 제 자리(px)만 받아 앉는다. */
 @Composable
-private fun Deco(res: Int, ratio: Float, top: Float, width: Dp = DECO_W) {
+private fun Deco(res: Int, ratio: Float, top: Float, width: Dp = DECO_W, push: Dp = 0.dp) {
     Image(
         painterResource(res),
         contentDescription = null,
         modifier = Modifier
             .offset { IntOffset(0, top.roundToInt()) }
+            .offset(x = push)
             .width(width)
             .aspectRatio(ratio),
     )
