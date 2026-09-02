@@ -166,11 +166,29 @@ private const val MARK_LIFT = 0.34f
  */
 private val HEAD_PLATE = 110.dp
 
-/** 그 면의 흰빛. 노랑 위에 얕게 한 겹만 얹는다. */
-private const val HEAD_PLATE_ALPHA = 0.2f
+/**
+ * 면에 배어드는 잉크. 파랑이 0 이라 HSV 채도가 1 인, 바탕과 같은 결의 노랑이다.
+ * 흰빛을 얹어 바탕보다 밝히던 것을 뒤집어 이제는 바탕보다 어두워진다.
+ */
+private val HEAD_PLATE_INK = Color(0xFFFFAF00)
 
-/** 한자가 제 자리에서 올라앉는 만큼. 올리는 것은 그리는 자리뿐이다. */
-private val HEAD_LIFT = 4.dp
+/**
+ * 그 잉크가 가장 짙은 자리(아래끝)의 알파. 위끝은 0 이라 바탕 노랑 그대로다.
+ *
+ * 밝기 차이는 밝히던 때와 같게 두고 방향만 뒤집었다. 폰에서 잰 값으로 —
+ * 바탕 (255,191,53), 밝히던 면의 아래끝 (255,197,73), 상대 밝기로 +5.74 였다.
+ * 같은 만큼 어두운 (255,185,33) 을 겨냥하는데, 잉크의 채도를 최대로 두면
+ * (파랑 0) 알파가 저절로 정해진다: 1 − 33/53 = 0.377. 초록도 이 알파에서
+ * 191·0.623 + 175·0.377 = 185 로 맞아떨어진다.
+ */
+private const val HEAD_PLATE_ALPHA = 0.377f
+
+/**
+ * 한자의 잉크가 제 줄상자 한가운데에서 아래로 치우친 만큼 — 자리 높이에 대한
+ * 비율이다. 폰에서 재어 잡았다: 자리 119dp 일 때 잉크가 위로 32.00dp,
+ * 아래로 24.67dp 였으니 어긋남의 절반이 3.665dp, 곧 119 의 0.0308 이다.
+ */
+private const val HEAD_INK_BIAS = 0.0308f
 
 /** 실선이 벽에서 물러나는 거리. */
 private val WALL = 16.dp
@@ -343,23 +361,42 @@ fun DictPanel(
         }
         val folded = head <= 0.dp
         val glyph = (head.value * 0.68f).sp
+        // 한자가 앉는 면. 자리가 이보다 좁아지면 면도 자리만큼만 깔린다.
+        val plate = minOf(HEAD_PLATE, head)
+        // 한자를 면 한가운데에 정확히 세우려고 걷어 내는 몫. 둘을 더한 것이다.
+        //  · 자리가 면보다 클 때 그 차이의 절반 — 자리 가운데와 면 가운데의 어긋남
+        //  · 한자의 잉크가 제 줄상자 안에서 아래로 치우친 만큼. 글자 크기에
+        //    비례하므로 자리 높이에 비례한다. 못 박힌 dp 로 두면 자리가 줄었을 때
+        //    지나치게 올라간다.
+        val lift = (head - plate) / 2 + head * HEAD_INK_BIAS
 
         // 한자 자리를 가르던 실선을 걷고, 판 위끝에서 아래로 흰빛 한 겹을 깐다.
         // 선 하나로 나누는 대신 면이 그 자리를 통째로 쥔다. 판이 둥글게 잘려
         // 있으므로 위 두 모서리는 저절로 따라 말린다. 한자 자리가 이 면보다
         // 좁아지면 면도 거기서 끝난다 — 訓音 자리로 넘어가지 않는다.
+        //
+        // 고르게 깔면 자리가 너무 도드라진다. 위끝은 바탕 노랑 그대로 두고
+        // 아래로 내려오며 잉크가 배어들게 한다 — 투명한 검정이 아니라 '투명한
+        // 제 색'에서 시작해야 중간이 잿빛으로 돌지 않는다.
         if (!folded) Box(
             Modifier
                 .fillMaxWidth()
-                .height(minOf(HEAD_PLATE, head))
-                .background(Color.White.copy(alpha = HEAD_PLATE_ALPHA))
+                .height(plate)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            HEAD_PLATE_INK.copy(alpha = 0f),
+                            HEAD_PLATE_INK.copy(alpha = HEAD_PLATE_ALPHA),
+                        )
+                    )
+                )
         )
 
         Column(Modifier.fillMaxSize()) {
             // 위 — 동음이의어를 좌우로 훑는다
             if (head > 0.dp) {
                 Box(
-                    Modifier.fillMaxWidth().height(head).offset(y = -HEAD_LIFT),
+                    Modifier.fillMaxWidth().height(head).offset(y = -lift),
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     if (slots.isEmpty()) {
