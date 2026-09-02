@@ -568,13 +568,6 @@ fun SettingsPanel(
     ) {
         // 왼쪽 서랍의 첫 칸과 같은 어깨에서, 눈에 맞게 2dp 더 내려 앉힌다
         Spacer(Modifier.height(6.dp))
-        Icon(
-            painterResource(R.drawable.ic_sign),
-            contentDescription = "26HAKC",
-            tint = Hak3.Text,
-            modifier = Modifier.fillMaxWidth(0.5f).aspectRatio(SIGN),
-        )
-        Spacer(Modifier.height(10.dp))
         // 이름의 내력
         Text(
             "Haka Android Kichul Combined",
@@ -620,9 +613,6 @@ fun SettingsPanel(
 
 /** 날짜는 YYYY.MM.DD 로 적는다. 데이터는 하이픈으로 적어 오므로 그것만 바꾼다. */
 private fun day(s: String?): String = s?.replace('-', '.') ?: "unknown"
-
-/** 사인의 가로세로 비 — 원본 그대로다. */
-private const val SIGN = 830f / 170f
 
 /** 묶음의 이름. 성기게 적고 흐리게 두어 아래 것들과 층을 가른다. */
 @Composable
