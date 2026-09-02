@@ -57,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -232,25 +233,104 @@ private class Slot(val word: Found, val index: Int, val variant: Variant, val ma
 /**
  * 사전에 적어 둔 글과 그 결과. 회차를 열었다 돌아오면 판이 조합에서 빠졌다가 다시
  * 서는데, remember 로 붙잡아 둔 것은 그때 함께 사라진다. 적은 것은 앱이 살아 있는
- * 동안 남아야 하므로 여기에 둔다 — 앱을 다시 켜면 비어 있다.
+ * 동안 남아야 하므로 여기에 둔다.
+ *
+ * 앱을 껐다 켜도 보던 자리는 남는다 — 글만 적어 두었다가 다시 찾는다. 결과는
+ * 담아 두지 않는다. 30만 줄을 다시 훑는 편이 그것을 통째로 적어 두는 것보다 싸고,
+ * 자료가 바뀌어도 어긋나지 않는다.
  */
 object DictInput {
+    private const val PREFS = "dict"
+    private const val KEY_QUERY = "query"
+    private const val KEY_FROZEN = "frozen"
+
     var text by mutableStateOf("")
     var found by mutableStateOf<List<Found>>(emptyList())
 
     /** 엔터를 누른 횟수. 같은 글을 그대로 두고 눌러도 찾기가 새로 돌게 한다. */
     var again by mutableIntStateOf(0)
 
+    /**
+     * 지우개를 눌러 화면을 그대로 굳혀 두었는가. 굳은 동안 화면은 한 색으로
+     * 물들고 손짓도 받지 않는다 — 찍어 둔 한 장처럼 선다.
+     */
+    var frozen by mutableStateOf(false)
+        private set
+
+    /** 굳힐 때 입력 칸에서 걷어 낸 글. 굳은 화면은 이 글의 결과다. */
+    private var held by mutableStateOf("")
+
+    /** 지금 화면이 딛고 선 글. 굳어 있으면 걷어 낸 그 글이다. */
+    val query: String get() = if (frozen) held else text
+
     /** 지금 담긴 결과가 어느 글의 몇 번째 찾기인지. 돌아왔을 때 헛돌지 않게. */
     var done: Pair<String, Int>? = null
 
-    /** 지우개를 눌렀을 때. 적은 것도 결과도 함께 걷는다. */
-    fun clear() {
+    /**
+     * 지우개 — 적은 것만 걷고 화면은 그대로 굳힌다. 걷어 낸 글은 [held] 에
+     * 남으므로 [query] 가 흔들리지 않고, 따라서 결과를 다시 캐지도 않는다.
+     */
+    fun freeze() {
+        if (text.isEmpty()) return
+        held = text
         text = ""
-        found = emptyList()
-        done = null
+        frozen = true
+    }
+
+    /**
+     * 입력 칸에 적힐 때. 한 글자라도 적히면 굳은 것이 풀리고 화면도 그 자리에서
+     * 비워진다 — 새 결과가 오기 전까지 굳었던 글이 살아 있는 척 서 있지 않도록.
+     */
+    fun type(s: String) {
+        if (frozen) {
+            frozen = false
+            held = ""
+            found = emptyList()
+            done = null
+        }
+        text = s
+    }
+
+    private var loaded = false
+
+    /** 앱을 켤 때 한 번. 판은 회차를 다녀올 때마다 다시 서므로 한 번만 읽는다. */
+    fun restore(c: Context) {
+        if (loaded) return
+        loaded = true
+        val p = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        frozen = p.getBoolean(KEY_FROZEN, false)
+        val q = p.getString(KEY_QUERY, "").orEmpty()
+        if (frozen) held = q else text = q
+    }
+
+    /**
+     * 딛고 선 글이 바뀔 때마다. 짧은 글 한 줄이라 그때그때 적어도 무겁지 않다.
+     * 되살리기 전에는 적지 않는다 — 아직 읽지 않은 것을 빈 글로 덮지 않으려는 빗장이다.
+     */
+    fun save(c: Context) {
+        if (!loaded) return
+        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_QUERY, query)
+            .putBoolean(KEY_FROZEN, frozen)
+            .apply()
     }
 }
+
+/**
+ * 굳은 화면. 그려진 것을 한 겹 떠 놓고 그 위를 한 색으로 덮는다 — SrcIn 이라
+ * 획이 있는 자리만 갈리고 짙기는 그대로 남는다. 글마다 다르던 색이 하나로 모여
+ * 찍어 둔 한 장처럼 보인다.
+ */
+private fun Modifier.frozen(on: Boolean): Modifier =
+    if (!on) this else this
+        .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+        .drawWithContent {
+            drawContent()
+            drawRect(FROZEN_INK, blendMode = BlendMode.SrcIn)
+        }
+
+/** 굳은 글의 색. 판의 노랑(#FFBD2E)을 78% 로 눌러 앉힌 것이다. */
+private val FROZEN_INK = Color(0xFFC79324)
 
 /** 단어장 묶음의 색. */
 private fun binColor(m: Mark) = if (m == Mark.AMBER) Hak3.Pink else Hak3.Green
@@ -271,16 +351,25 @@ fun DictPanel(
     // 글자마다 도는 찾기까지 세면 한 낱말 적는 사이에 열 번이 지나간다.
     var seen by remember { mutableStateOf(Seen.all(context)) }
     val haptic = LocalHapticFeedback.current
+    // 적어 둔 것을 되살리는 일은 조합 안에서 곧바로 한다. LaunchedEffect 에
+    // 두면 첫 판이 빈 글로 먼저 지나가 적어 둔 것을 덮어 버린다. 안에 빗장이
+    // 있어 여러 번 불러도 한 번만 읽는다.
+    remember { DictInput.restore(context) }
     val text = DictInput.text
     val found = DictInput.found
     val again = DictInput.again
+    val frozen = DictInput.frozen
+    // 화면이 딛고 선 글. 굳어 있으면 걷어 낸 그 글이라, 지우개를 눌러도 결과가
+    // 그대로 남는다.
+    val query = DictInput.query
+    LaunchedEffect(query, frozen) { DictInput.save(context) }
     // 찾기는 곁줄에서 돈다. 한자로 찾으면 낱말 30만 줄을 훑으므로 화면을 붙잡고
     // 있을 일이 아니다. 이미 그 글로 찾아 둔 것이면 다시 돌지 않는다 — 회차를
     // 보고 돌아왔을 때 헛되이 한 번 더 캐지 않으려는 것이다.
-    LaunchedEffect(text, again) {
-        val key = text to again
+    LaunchedEffect(query, again) {
+        val key = query to again
         if (DictInput.done == key) return@LaunchedEffect
-        DictInput.found = withContext(Dispatchers.IO) { dict.search(text) }
+        DictInput.found = withContext(Dispatchers.IO) { dict.search(query) }
         DictInput.done = key
     }
 
@@ -363,12 +452,11 @@ fun DictPanel(
         val glyph = (head.value * 0.68f).sp
         // 한자가 앉는 면. 자리가 이보다 좁아지면 면도 자리만큼만 깔린다.
         val plate = minOf(HEAD_PLATE, head)
-        // 한자를 면 한가운데에 정확히 세우려고 걷어 내는 몫. 둘을 더한 것이다.
-        //  · 자리가 면보다 클 때 그 차이의 절반 — 자리 가운데와 면 가운데의 어긋남
-        //  · 한자의 잉크가 제 줄상자 안에서 아래로 치우친 만큼. 글자 크기에
-        //    비례하므로 자리 높이에 비례한다. 못 박힌 dp 로 두면 자리가 줄었을 때
-        //    지나치게 올라간다.
-        val lift = (head - plate) / 2 + head * HEAD_INK_BIAS
+        // 한자를 자리 한가운데에 정확히 세우려고 걷어 내는 몫. 한자의 잉크가 제
+        // 줄상자 안에서 아래로 치우친 만큼이다. 글자 크기에 비례하므로 자리가
+        // 아니라 glyph 를 정하는 head 에 비례한다 — 못 박힌 dp 로 두면 판을
+        // 줄였을 때 지나치게 올라간다.
+        val lift = head * HEAD_INK_BIAS
 
         // 한자 자리를 가르던 실선을 걷고, 판 위끝에서 아래로 흰빛 한 겹을 깐다.
         // 선 하나로 나누는 대신 면이 그 자리를 통째로 쥔다. 판이 둥글게 잘려
@@ -395,8 +483,11 @@ fun DictPanel(
         Column(Modifier.fillMaxSize()) {
             // 위 — 동음이의어를 좌우로 훑는다
             if (head > 0.dp) {
+                // 자리의 높이는 면의 높이(plate)를 그대로 받는다. 재어 잡은 head 로
+                // 두면 색이 갈리는 선은 110dp 인데 아래 訓音 이 잘리는 선은 119dp 라
+                // 둘이 9dp 어긋난다. 글자 크기만 head 를 따르고 자리는 면에 맞춘다.
                 Box(
-                    Modifier.fillMaxWidth().height(head).offset(y = -lift),
+                    Modifier.fillMaxWidth().height(plate).offset(y = -lift).frozen(frozen),
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     if (slots.isEmpty()) {
@@ -422,6 +513,7 @@ fun DictPanel(
                     } else {
                         LazyRow(
                             state = top,
+                            userScrollEnabled = !frozen,
                             contentPadding = PaddingValues(horizontal = TEXT_WALL),
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -493,10 +585,11 @@ fun DictPanel(
             }
 
             // 가운데 — 위에서 고른 표기의 訓音과 뜻
-            if (!folded) Box(Modifier.fillMaxWidth().weight(1f)) {
+            if (!folded) Box(Modifier.fillMaxWidth().weight(1f).frozen(frozen)) {
                 if (slots.isNotEmpty()) {
                     LazyColumn(
                         state = mid,
+                        userScrollEnabled = !frozen,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(TEXT_WALL + 6.dp, RULE_GAP, TEXT_WALL, RULE_GAP),
                     ) {
@@ -514,7 +607,7 @@ fun DictPanel(
             ) {
                 BasicTextField(
                     value = text,
-                    onValueChange = { DictInput.text = it },
+                    onValueChange = { DictInput.type(it) },
                     singleLine = true,
                     textStyle = TextStyle(color = INK, fontSize = 22.sp, fontFamily = Korail),
                     // 커서는 적히는 글자와 같은 색이다
@@ -546,10 +639,9 @@ fun DictPanel(
                         Box(
                             Modifier
                                 .clip(CircleShape)
-                                .clickable {
-                                    DictInput.clear()
-                                    active = 0
-                                }
+                                // 적은 것만 걷고 화면은 그대로 굳힌다. 보고 있던
+                                // 표기도 그 자리에 남아야 하므로 active 는 두었다.
+                                .clickable { DictInput.freeze() }
                                 .padding(
                                     start = 7.dp,
                                     top = 7.dp,
