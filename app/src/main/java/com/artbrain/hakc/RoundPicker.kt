@@ -615,8 +615,12 @@ private val DECO_PULL = 8.dp
 /** c 만 더 넓게 선다. 오른끝에 붙어 있으므로 넓어지는 쪽은 왼쪽이다. */
 private val DECO_C_WIDE = 7.dp
 
-/** c 가 문의 아랫선에서 더 내려앉는 만큼. */
-private val DECO_C_DROP = 4.dp
+/**
+ * c 가 문의 아랫선에서 더 내려앉는 만큼. c 는 문을 따라 서므로 문이 24dp
+ * 올라가면 c 도 그만큼 딸려 올라간다. c 가 화면에서 20dp 만 올라 서게
+ * 하려면 그 몫에서 4dp 를 도로 내려 주어야 한다 — 4dp 가 8dp 가 된 까닭이다.
+ */
+private val DECO_C_DROP = 8.dp
 
 /** a 와 b 사이. b 는 이 거리에 못 박혀 c 를 따라 움직이지 않는다. */
 private val DECO_AB_GAP = 52.dp
@@ -910,7 +914,7 @@ private val GEAR_GAP = 8.dp
  * 마지막 단추(Known Cards)와 설정 문 사이. 판이 다 자랐을 때 문의 아랫선이
  * 마지막 회차의 아랫선과 나란히 놓이도록 폰에서 재어 잡은 값이다.
  */
-private val GEAR_TOP = 142.3.dp
+private val GEAR_TOP = 118.3.dp
 
 /** 단추 이름의 잉크. 회차 번호와 같은 색을 한 겹 더 물린다. */
 private val TALLY_INK = Hak3.Hanja.copy(alpha = Hak3.Hanja.alpha * 0.7f)

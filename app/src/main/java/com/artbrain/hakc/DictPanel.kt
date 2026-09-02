@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -157,6 +158,19 @@ private const val HEAD = 84f / 244f
 private const val FOOT = 50f / 244f * 0.72f    // 입력 칸
 /** 訓 오른쪽 표기 번호가 앉는 높이. 글자 위로 얼마나 뜨는지의 비율이다. */
 private const val MARK_LIFT = 0.34f
+
+/**
+ * 한자 자리에 까는 면의 높이. 실선으로 가르던 자리를 이 면이 대신 쥔다.
+ * 판 폭을 따라 자라는 한자 자리(폰에서 119dp 남짓)와 달리 못 박힌 값이라,
+ * 면은 늘 그 안쪽에서 끝난다.
+ */
+private val HEAD_PLATE = 110.dp
+
+/** 그 면의 흰빛. 노랑 위에 얕게 한 겹만 얹는다. */
+private const val HEAD_PLATE_ALPHA = 0.2f
+
+/** 한자가 제 자리에서 올라앉는 만큼. 올리는 것은 그리는 자리뿐이다. */
+private val HEAD_LIFT = 4.dp
 
 /** 실선이 벽에서 물러나는 거리. */
 private val WALL = 16.dp
@@ -330,11 +344,22 @@ fun DictPanel(
         val folded = head <= 0.dp
         val glyph = (head.value * 0.68f).sp
 
+        // 한자 자리를 가르던 실선을 걷고, 판 위끝에서 아래로 흰빛 한 겹을 깐다.
+        // 선 하나로 나누는 대신 면이 그 자리를 통째로 쥔다. 판이 둥글게 잘려
+        // 있으므로 위 두 모서리는 저절로 따라 말린다. 한자 자리가 이 면보다
+        // 좁아지면 면도 거기서 끝난다 — 訓音 자리로 넘어가지 않는다.
+        if (!folded) Box(
+            Modifier
+                .fillMaxWidth()
+                .height(minOf(HEAD_PLATE, head))
+                .background(Color.White.copy(alpha = HEAD_PLATE_ALPHA))
+        )
+
         Column(Modifier.fillMaxSize()) {
             // 위 — 동음이의어를 좌우로 훑는다
             if (head > 0.dp) {
                 Box(
-                    Modifier.fillMaxWidth().height(head),
+                    Modifier.fillMaxWidth().height(head).offset(y = -HEAD_LIFT),
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     if (slots.isEmpty()) {
@@ -428,7 +453,6 @@ fun DictPanel(
                         }
                     }
                 }
-                Rule()
             }
 
             // 가운데 — 위에서 고른 표기의 訓音과 뜻
