@@ -57,6 +57,9 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.compose.material3.Text
 import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -417,6 +420,10 @@ fun RoundPicker(
             // 앉히던 것은 걷었다: 어디에 서 있는지 알 수 없게 어중간히 굴러
             // 있었고, 그 회차가 어느 줄인지는 흰 번호가 이미 말해 준다.
             val rounds = rememberLazyListState()
+            // 오른쪽 장식의 c 는 설정 문과 아랫선을 맞춘다. 문의 자리는 등이 섰는지,
+            // 단추의 수가 몇인지에 따라 달라지므로 재어서 따라간다.
+            var panelTop by remember { mutableFloatStateOf(0f) }
+            var doorBottom by remember { mutableFloatStateOf(0f) }
             // 아래는 판 하나다. 단어장 넷이 왼쪽 어깨에 얹히고, 회차가 그 아래로
             // 굴러간다. 늘어나 카드가 되는 것도 이 판이다.
             Box(
@@ -430,6 +437,7 @@ fun RoundPicker(
                     // 위 판과 같은 빛 한 겹, 세기는 그 절반 — 판이 위에서 조금
                     // 들린 것처럼 보인다
                     .background(CardGlow, RoundedCornerShape(radius))
+                    .onGloballyPositioned { panelTop = it.positionInRoot().y }
             ) {
                 // 목록이 키보드 밑으로 다 내려간 뒤에야 알맹이를 비운다. 판이 딱
                 // 맞아떨어지지 않아 한 줄쯤 삐져나올 때가 있는데, 그때 글자가 반쯤
@@ -437,18 +445,20 @@ fun RoundPicker(
                 val sunk = typing &&
                     with(density) { (4.dp + band).toPx() } + height >= usable
 
+
                 // 왼쪽 어깨 — 등 하나와 단추 넷. 단추를 빗나간 손짓은 이 자리에서
                 // 삼킨다. 그러지 않으면 그 손짓이 목록으로 새어 회차가 열린다.
                 // 아래로 흘러 판 밖으로 나가는 단추는 그대로 둔다 — 판이 커지면
                 // 그만큼 더 보인다.
                 if (!sunk) Box(
                     Modifier
-                        .align(Alignment.TopStart)
+                        .align(Alignment.TopCenter)
                         // 판 아래로 흘러나간 단추는 판 밖으로 삐져나오지 않고
                         // 판 끝에서 잘린다 — 판이 커지면 그만큼 더 보인다
                         .fillMaxHeight()
                         .clipToBounds()
-                        .padding(start = SIDE, top = ROOF)
+                        .padding(top = ROOF)
+                        .offset(x = -LANTERN_PULL)
                         .then(veil)
                         // 어깨를 끌어도 목록이 굴러가고 판이 함께 자란다 —
                         // 오른쪽 목록에서 끄는 것과 똑같이 움직인다. 끌기는
@@ -462,7 +472,12 @@ fun RoundPicker(
                     // 다 받지 못해 판 끝보다 한참 위에서 잘린다 — 오른쪽 회차는
                     // 판 끝에 딱 맞춰 잘리는데 왼쪽만 떠 보였다. 넘치게 두고
                     // 자르는 것은 바깥의 판 끝에 맡긴다.
-                    Column(Modifier.wrapContentHeight(Alignment.Top, unbounded = true)) {
+                    Column(
+                        Modifier
+                            .wrapContentHeight(Alignment.Top, unbounded = true)
+                            .offset(y = -SHOULDER_LIFT),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
                         // 핑크 묶음이 둘 다 비었으면 등은 자리째 빠진다 —
                         // 돌려 보일 것도, 눌러 갈 데도 없는 자리다.
                         if (hasPink) Lantern(pool, open = pink.isNotEmpty()) { han ->
@@ -476,8 +491,8 @@ fun RoundPicker(
                         }
                         if (hasPink) Spacer(Modifier.height(TALLY_TOP))
                         Column(
-                            Modifier.padding(start = TALLY_SHIFT),
                             verticalArrangement = Arrangement.spacedBy(TALLY_GAP),
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             for (bin in Mark.entries) {
                                 // 색마다 둘씩 — 낱글자가 먼저, 문제가 뒤다
@@ -499,7 +514,10 @@ fun RoundPicker(
                         Spacer(Modifier.height(GEAR_TOP))
                         Row(
                             Modifier
-                                .padding(start = TALLY_SHIFT)
+                                .offset(y = SHOULDER_LIFT + DOOR_DROP)
+                                .onGloballyPositioned {
+                                    doorBottom = it.positionInRoot().y + it.size.height
+                                }
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
@@ -510,14 +528,20 @@ fun RoundPicker(
                             Box(Modifier.size(GEAR).rotate(45f).background(Color.White))
                             Spacer(Modifier.width(GEAR_GAP))
                             Text("SETTINGS", style = TALLY_NAME, color = Color.White, maxLines = 1)
+                            Spacer(Modifier.width(GEAR_GAP))
+                            Box(Modifier.size(GEAR).rotate(45f).background(Color.White))
                         }
                     }
                 }
 
                 if (!sunk) LazyColumn(
-                    Modifier.fillMaxSize().then(veil).nestedScroll(nested),
+                    Modifier
+                        .fillMaxSize()
+                        .padding(start = LIST_SHIFT)
+                        .then(veil)
+                        .nestedScroll(nested),
                     state = rounds,
-                    contentPadding = PaddingValues(vertical = ROOF),
+                    contentPadding = PaddingValues(top = ROOF + DECO_A_DROP - LIST_INK, bottom = ROOF),
                 ) {
                     if (trouble != null) {
                         item(key = "setup") { Setup(radius, trouble, onFolder, onFile) }
@@ -529,6 +553,32 @@ fun RoundPicker(
                             onPick(it)
                         }
                     }
+                }
+
+                // 오른쪽 어깨의 장식. 위에서부터 a·b·c 이고, c 는 설정 문과
+                // 아랫선을 맞춘다 — 문이 판 아래에 있는 동안에는 함께 잘려
+                // 보이지 않다가, 판이 다 자라면 문과 나란히 들어온다.
+                // b 는 a 의 아랫선과 c 의 윗선 한가운데다.
+                if (!sunk) Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .fillMaxHeight()
+                        .clipToBounds()
+                        .padding(top = ROOF, end = SIDE + DECO_PULL),
+                    contentAlignment = Alignment.TopEnd,
+                ) {
+                    val cTop = with(density) {
+                        (doorBottom - panelTop - ROOF.toPx() - (DECO_W + DECO_C_WIDE).toPx() / DECO_C +
+                            DECO_C_DROP.toPx()).coerceAtLeast(0f)
+                    }
+                    val aTop = with(density) { DECO_A_DROP.toPx() }
+                    val aBottom = aTop + with(density) { DECO_W.toPx() / DECO_A }
+                    // b 는 a 의 아랫선에서 늘 같은 만큼 떨어져 선다 — c 가 판 밖에
+                    // 있든 안에 있든 자리가 흔들리지 않는다.
+                    val bTop = aBottom + with(density) { DECO_AB_GAP.toPx() }
+                    Deco(R.drawable.deco_a, DECO_A, aTop)
+                    Deco(R.drawable.deco_b, DECO_B, bTop)
+                    Deco(R.drawable.deco_c, DECO_C, cTop, DECO_W + DECO_C_WIDE)
                 }
             }
         }
@@ -543,6 +593,59 @@ fun RoundPicker(
         }
         }
     }
+}
+
+/**
+ * 오른쪽 어깨의 장식. haku_deco 의 svg 셋을 그대로 옮긴 것이라 그림 안의 글자는
+ * 이미 윤곽선이고, 색도 원본이 들고 있다. 여기서는 자리와 크기만 정한다.
+ *
+ * 셋의 가로세로 비 — 폭 하나를 정하면 높이는 이 비로 따라온다.
+ */
+private const val DECO_A = 258f / 476f
+private const val DECO_B = 259f / 49f
+private const val DECO_C = 260f / 184f
+
+/** 장식이 차지하는 폭. 원본은 258 이나 그대로 두면 판의 절반을 넘는다. */
+private val DECO_W = 96.dp
+
+/** 장식이 판 벽에서 한 뼘 더 물러나는 만큼. */
+private val DECO_PULL = 8.dp
+
+/** c 만 더 넓게 선다. 오른끝에 붙어 있으므로 넓어지는 쪽은 왼쪽이다. */
+private val DECO_C_WIDE = 4.dp
+
+/** c 가 문의 아랫선에서 더 내려앉는 만큼. */
+private val DECO_C_DROP = 4.dp
+
+/** a 와 b 사이. b 는 이 거리에 못 박혀 c 를 따라 움직이지 않는다. */
+private val DECO_AB_GAP = 40.dp
+
+/** 맨 위 장식만 조금 내려 앉는 만큼. */
+private val DECO_A_DROP = 4.dp
+
+/**
+ * 회차 번호가 제 글자 상자 안에서 아래로 내려앉는 만큼(어센트). 장식은 그림이라
+ * 여백이 없으므로, 두 윗선을 눈으로 맞추려면 목록을 이만큼 더 끌어올려야 한다.
+ */
+private val LIST_INK = 7.dp
+
+/** 회차 목록이 통째로 오른쪽으로 물러나는 만큼. */
+private val LIST_SHIFT = 24.dp
+
+
+
+
+/** 장식 한 벌. 기둥 안에서 제 자리(px)만 받아 앉는다. */
+@Composable
+private fun Deco(res: Int, ratio: Float, top: Float, width: Dp = DECO_W) {
+    Image(
+        painterResource(res),
+        contentDescription = null,
+        modifier = Modifier
+            .offset { IntOffset(0, top.roundToInt()) }
+            .width(width)
+            .aspectRatio(ratio),
+    )
 }
 
 /** 속을 비운 묶음이 두르는 테의 두께. */
@@ -566,6 +669,9 @@ private val NUM_W = 64.dp
 
 /** 번호 자리와 그 어깨의 수 사이. */
 private val COUNT_GAP = 11.dp
+
+/** 그 수만 번호 쪽으로 더 당겨지는 만큼. 번호가 비워 둔 자리는 그대로 둔다. */
+private val COUNT_PULL = 2.dp
 
 /** 어깨의 수가 서는 자리의 너비. 세 자리까지 든다. */
 private val COUNT_W = 20.dp
@@ -771,11 +877,15 @@ private val LANTERN_LIFT = 6.dp
 /** 등이 제 자리에서 오른쪽으로 물러나는 만큼. */
 private val LANTERN_SHIFT = 3.dp
 
-/**
- * 등의 글자가 사전 판의 한자보다 더 큰 만큼(sp). 자리가 차지하는 크기는 그대로
- * 두고 글자만 키운다 — 자리까지 자라면 아래 단추가 그만큼 밀려 내려간다.
- */
-private const val LANTERN_MORE = 12f
+/** 등과 네 단추가 함께 올라앉는 만큼. 문은 이 몫을 되돌리고 제 길로 간다. */
+private val SHOULDER_LIFT = 2.dp
+
+/** 설정 문이 제자리에서 더 내려앉는 만큼. 오른쪽 c 도 문을 따라 내려간다. */
+private val DOOR_DROP = 18.dp
+
+/** 등과 그 아래 것들이 한 덩이로 왼쪽에 물러나 서는 만큼. */
+private val LANTERN_PULL = 13.dp
+
 
 /**
  * 등과 첫 단추 사이. 예전에는 22dp 를 두고 단추 묶음을 8dp 끌어올려 그렸는데,
@@ -787,8 +897,6 @@ private val TALLY_TOP = 14.dp
 /** 단추끼리 벌어지는 만큼. */
 private val TALLY_GAP = 14.dp
 
-/** 단추 묶음이 등의 선에서 더 오른쪽으로 물러나는 만큼. */
-private val TALLY_SHIFT = 12.dp
 
 /**
  * 설정 문 앞에 서는 표. 예전에 두 판 사이에 박혀 있던 그 표다 — 네모를 45도
@@ -837,8 +945,8 @@ private val LANTERN_INK = TextStyle(
 /** 단추의 이름. */
 private val TALLY_NAME = TextStyle(
     fontFamily = Korail,
-    fontSize = 13.sp,
-    lineHeight = 13.sp,
+    fontSize = 9.sp,
+    lineHeight = 9.sp,
     platformStyle = PlatformTextStyle(includeFontPadding = false),
     lineHeightStyle = LineHeightStyle(
         alignment = LineHeightStyle.Alignment.Center,
@@ -879,9 +987,11 @@ private fun tallyName(bin: Mark, kind: Collect.Kind): String = when {
 private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit) {
     val square = LocalConfiguration.current.screenWidthDp.dp - CARD * 2
     val base = square.value * DICT_HEAD * 0.68f
-    val glyph = (base + LANTERN_MORE).sp
+    // 사전 판의 큰 한자가 다 자랐을 때와 같은 크기다. 서체도 굵기도 같으니
+    // 두 자리의 한자가 한 벌로 읽힌다.
+    val glyph = base.sp
     // 자리는 사전 판의 한자 크기에 사방 여백을 더한 만큼 — 한자는 가로세로가
-    // 같으니 등도 정사각이다. 키운 몫은 이 자리 밖으로 고르게 넘친다.
+    // 같으니 등도 정사각이다.
     val side = with(LocalDensity.current) { base.sp.toDp() } + LANTERN_PAD * 2
     // 첫 글자부터 아무 글자다 — 처음 뜨는 것이 늘 묶음의 첫 자면 돌리는 맛이 없다
     var han by remember(pool) { mutableStateOf(pool.randomOrNull().orEmpty()) }
@@ -905,7 +1015,6 @@ private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit)
             // 못 외운 글자를 돌려 보이는 자리라, 그 묶음의 색으로 선다
             color = Hak3.Pink,
             maxLines = 1,
-            // 자리보다 커진 만큼은 잘리지 않고 사방으로 고르게 넘친다
             modifier = Modifier.wrapContentSize(unbounded = true),
         )
     }
@@ -920,7 +1029,10 @@ private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit)
 private fun Tally(title: String, n: Int, color: Color, solid: Boolean, onClick: () -> Unit) {
     val on = n > 0
     val ink = if (on) color else Hak3.TextDim
-    Column(Modifier.clickable(enabled = on, onClick = onClick)) {
+    Column(
+        Modifier.clickable(enabled = on, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         // 이름은 회차 번호와 같은 잉크다 — 색은 수에만 준다
         Text(
             title,
@@ -962,7 +1074,7 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
             ) { onPick(e.round) },
-        contentAlignment = Alignment.CenterEnd,
+        contentAlignment = Alignment.CenterStart,
     ) {
         // 번호와 어깨의 수가 한 덩이로 판 오른벽에서 48dp 물러나 선다. 덩이의
         // 너비가 고정이라 수가 몇 자리든 번호는 늘 같은 자리에 있다. 어깨의
@@ -1002,7 +1114,7 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                 Column(
                     Modifier
                         .align(Alignment.TopStart)
-                        .offset(x = NUM_W + COUNT_GAP, y = INK)
+                        .offset(x = NUM_W + COUNT_GAP - COUNT_PULL, y = INK)
                         .padding(top = SHOULDER)
                 ) {
                     if (counts.amber > 0) {
