@@ -137,7 +137,6 @@ fun RoundPicker(
     built: String?,
     trouble: String?,
     onFolder: () -> Unit,
-    onFile: () -> Unit,
     onPick: (Int) -> Unit,
     onWords: (Mark, Collect.Kind, Int) -> Unit,
     morph: Modifier = Modifier,
@@ -551,9 +550,6 @@ fun RoundPicker(
                     state = rounds,
                     contentPadding = PaddingValues(top = ROOF + DECO_A_DROP - LIST_INK, bottom = LIST_FLOOR),
                 ) {
-                    if (trouble != null) {
-                        item(key = "setup") { Setup(radius, trouble, onFolder, onFile) }
-                    }
                     items(exams, key = { it.round }) { e ->
                         RoundRow(e, e.round == last) {
                             last = it
@@ -598,6 +594,22 @@ fun RoundPicker(
                 .matchParentSize()
                 .pointerInput(Unit) { detectTapGestures { drawer = Drawer.NONE } }
         )
+
+        // 기출 데이터를 못 읽었으면 화면을 통째로 검게 덮고 안내만 한가운데
+        // 세운다. 목록 안에 끼워 두었더니 어깨의 단추와 오른쪽 장식이 그 위에
+        // 겹쳐 그려져 글이 읽히지 않았다 — 셀 것이 없는 판이 뒤에 서 있을
+        // 까닭도 없다. 손짓은 이 층이 다 삼키고 안내의 단추만 받는다.
+        if (trouble != null) Box(
+            Modifier
+                .matchParentSize()
+                .background(Hak3.Ground)
+                .pointerInput(Unit) { detectTapGestures { } },
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(Modifier.fillMaxWidth(SETUP_WIDE)) {
+                Setup(trouble, onFolder)
+            }
+        }
         }
         }
     }
@@ -609,9 +621,9 @@ fun RoundPicker(
  *
  * 셋의 가로세로 비 — 폭 하나를 정하면 높이는 이 비로 따라온다.
  */
-private const val DECO_A = 258f / 476f
-private const val DECO_B = 259f / 49f
-private const val DECO_C = 260f / 184f
+private const val DECO_A = 255f / 475f
+private const val DECO_B = 259f / 79f
+private const val DECO_C = 256f / 219f
 
 /** 장식이 차지하는 폭. 원본은 258 이나 그대로 두면 판의 절반을 넘는다. */
 private val DECO_W = 96.dp
@@ -632,7 +644,7 @@ private val DECO_C_DROP = 0.dp
 private val DECO_C_PUSH = 3.dp
 
 /** a 와 b 사이. b 는 이 거리에 못 박혀 c 를 따라 움직이지 않는다. */
-private val DECO_AB_GAP = 52.dp
+private val DECO_AB_GAP = 44.dp
 
 /** 맨 위 장식만 조금 내려 앉는 만큼. */
 private val DECO_A_DROP = 4.dp
@@ -776,58 +788,80 @@ private val SNAP = spring<Float>(dampingRatio = 0.9f, stiffness = 2800f)
 /** 서랍이 문 자리. 왼쪽은 아직 비었다. */
 enum class Drawer { NONE, SETTINGS }
 
-/** 기출 데이터를 아직 못 읽었을 때 목록 자리에 서는 카드. 사전은 그동안에도 쓴다. */
+/** 안내가 화면에서 차지하는 너비. */
+private const val SETUP_WIDE = 0.8f
+
+/**
+ * 기출 데이터를 아직 못 읽었을 때 화면 한가운데 서는 안내.
+ *
+ * 바탕은 두지 않는다 — 검은 화면 위에 글만 선다. 판 위에 얹히던 때는 한 겹
+ * 파인 면으로 자리를 갈랐지만, 이제 그 아래가 검정이라 면이 할 일이 없다.
+ *
+ * 글씨는 라틴만 든 SF Mono 다. 여기 적히는 것이 모두 영문과 파일 이름이라
+ * 그 서체가 제 자리를 만난다.
+ */
 @Composable
-private fun Setup(radius: Dp, trouble: String, onFolder: () -> Unit, onFile: () -> Unit) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            // 판 위에 얹히는 자리라 판보다 한 겹 어둡게 판다
-            .background(SETUP_FACE, RoundedCornerShape(radius))
-            .padding(20.dp),
-    ) {
-        Text("No exam data yet", fontSize = 22.sp, color = Hak3.Text)
+private fun Setup(trouble: String, onFolder: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(20.dp)) {
+        Text("No exam data yet", fontFamily = Mono, fontSize = 22.sp, color = Hak3.Text)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Put hanja3.db in a 26HAKC folder inside Downloads, then point the app " +
-                "at that folder. The dictionary works meanwhile.",
+            "Put hanja3.db in a folder inside Downloads, " +
+                "then point the app at that folder.",
+            fontFamily = Mono,
             fontSize = 15.sp,
             lineHeight = 23.sp,
             color = Hak3.TextSoft,
         )
         if (trouble.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
-            Text(trouble, fontSize = 15.sp, color = Hak3.Red)
+            Text(trouble, fontFamily = Mono, fontSize = 15.sp, color = Hak3.Red)
         }
         Spacer(Modifier.height(14.dp))
-        Row {
-            // 폴더 쪽이 제 길이라 색면으로, 파일 쪽은 물러난 색면으로 선다
-            Capsule("Choose folder", Hak3.Pink, Color.Black, onFolder)
-            Spacer(Modifier.width(8.dp))
-            Capsule("Choose file", Hak3.Knob, Hak3.TextDim, onFile)
-        }
+        // 드는 길은 폴더 하나뿐이다. 다운로드에 그냥 둔 파일을 직접 고르는 길도
+        // 있었으나 걷었다 — 파일을 지웠다 다시 받으면 안드로이드가 새 문서 id 를
+        // 주어 자리가 끊기는데, 폴더는 그런 일이 없다. DataFile 의 kind 갈래는
+        // 그대로 두어, 전에 파일로 골라 둔 자리도 계속 읽힌다.
+        Capsule("Choose folder", Hak3.Pink, Color.Black, onFolder)
     }
 }
 
 /** 새 판 안내의 잉크. 알림이되 소리치지 않는 자리라 흰빛에서 한 겹 물러난다. */
 private val UPDATE_INK = Color(0xFFDDDDDD)
 
-/** 자료를 고르는 칸의 바탕 — 판보다 한 겹 어둡다. */
-private val SETUP_FACE = Color.Black.copy(alpha = 0.18f)
-
 /** 색면 캡슐 단추. 기출 화면의 단추와 같은 꼴이다. */
 @Composable
 private fun Capsule(label: String, face: Color, ink: Color, onClick: () -> Unit) {
     Text(
         label,
+        // 안내의 다른 글과 같은 서체로 — 라틴 낱말뿐인 자리다. 코레일체보다
+        // 넓어 자리가 좁으면 낱말이 접히므로, 접지 말고 한 줄로 세운다.
+        fontFamily = Mono,
         fontSize = 15.sp,
         color = ink,
+        maxLines = 1,
+        softWrap = false,
         modifier = Modifier
+            .offset(x = -CAPSULE_NUDGE, y = CAPSULE_DROP)
             .background(face, CircleShape)
             .clickable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 12.dp),
     )
 }
+
+/**
+ * 캡슐이 글의 왼선보다 더 왼쪽으로 나가는 만큼. 두 왼선을 같은 자리에 두면
+ * 색면이 큰 탓에 캡슐이 글보다 안쪽으로 물러나 보인다 — 눈으로 맞추려고
+ * 그만큼 끌어낸다. 누르는 자리도 함께 옮겨 간다.
+ */
+private val CAPSULE_NUDGE = 2.dp
+
+/**
+ * 캡슐이 앞 줄에서 더 떨어져 앉는 만큼. 바짝 붙으면 그 줄에 딸린 말처럼 읽히므로
+ * 한 뼘 떼어 사이를 느슨하게 둔다. 내리는 것은 그리는 자리뿐이라 안내가 차지하는
+ * 높이는 그대로고, 따라서 안내가 화면 한가운데 앉는 자리도 흔들리지 않는다.
+ */
+private val CAPSULE_DROP = 16.dp
 
 /** 회차 칸과 같은 얼굴을 한 칸. 큰 줄과 작은 줄만 밖에서 정한다. */
 @Composable

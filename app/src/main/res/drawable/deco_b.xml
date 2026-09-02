@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- haku_deco/svg_b.svg 에서 옮겨 온 것. 글자는 이미 윤곽선이다. -->
+<!-- hakc_asset2/svg_b.svg 에서 옮겨 온 것. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="259dp"
-    android:height="49dp"
+    android:height="79dp"
     android:viewportWidth="259"
-    android:viewportHeight="49">
+    android:viewportHeight="79">
     <path
         android:fillColor="#96A5C3"
-        android:pathData="M32.25 12.7451H49.7705V38.7031L30.3193 27.4707L40.3496 44.8467H13.5811L23.5869 27.5166L4.19727 38.7119V12.7539H4.82617L4.81055 12.7451H22.1523L27.2012 4L32.25 12.7451Z" />
+        android:pathData="M50.8994 18.5605H80.0664V61.7734L47.6855 43.0771L64.3828 72H19.8193L36.4746 43.1523L4.19824 61.7871V18.5742H5.24316L5.21875 18.5605H34.0869L42.4932 4L50.8994 18.5605Z" />
 </vector>

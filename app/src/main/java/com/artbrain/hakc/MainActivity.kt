@@ -108,14 +108,6 @@ private fun Root() {
             reload++
         }
     }
-    val pickFile = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            DataFile.remember(context, uri, "file")
-            reload++
-        }
-    }
 
     LaunchedEffect(reload) {
         val r = DataFile.sync(context)
@@ -185,7 +177,7 @@ private fun Root() {
                         ) { open = null }
                     }
                     else -> {
-                        Picker(state, reload, ready, dict, pickFolder, pickFile, morph, veil,
+                        Picker(state, reload, ready, dict, pickFolder, morph, veil,
                             onPick = { open = it },
                             onWords = { bin, kind, at -> words = Triple(bin, kind, at) })
                     }
@@ -215,7 +207,6 @@ private fun Picker(
     ready: ExamDb?,
     book: Dict?,
     pickFolder: androidx.activity.result.ActivityResultLauncher<android.net.Uri?>,
-    pickFile: androidx.activity.result.ActivityResultLauncher<Array<String>>,
     morph: Modifier,
     veil: Modifier,
     onPick: (Int) -> Unit,
@@ -229,7 +220,6 @@ private fun Picker(
         built = ready?.meta()?.get("built"),
         trouble = if (ready == null) trouble(state) else null,
         onFolder = { pickFolder.launch(null) },
-        onFile = { pickFile.launch(arrayOf("*/*")) },
         onPick = onPick,
         onWords = onWords,
         morph = morph,
