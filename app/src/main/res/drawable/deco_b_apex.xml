@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- svg_b 의 윗 삼각형만. 몸통과 색을 달리하려고 떼어 두었다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="259dp"
+    android:height="79dp"
+    android:viewportWidth="259"
+    android:viewportHeight="79">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M34.0869 18.5605L42.4932 4L50.8994 18.5605Z" />
+</vector>

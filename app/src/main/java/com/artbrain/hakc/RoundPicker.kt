@@ -644,7 +644,7 @@ fun RoundPicker(
                     SeenRounds(aTop, seenRounds)
                     // 갱신 표도 따로 그린다 — 새 판이 있으면 노랗게 물든다
                     UpdateMark(aTop, fresh != null) { updateShut = false }
-                    Deco(R.drawable.deco_b, DECO_B, bTop)
+                    DecoB(bTop)
                     Deco(R.drawable.deco_c, DECO_C, cTop, DECO_W + DECO_C_WIDE, DECO_C_PUSH)
                 }
             }
@@ -1414,6 +1414,115 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * b 조각. 왼쪽의 새 모양 옆에 그 도형의 실제 크기와 자리를 적는다 — svg 의 수치는
+ * 작업용 기준일 뿐이므로, 화면에 선 뒤의 값을 재어 보인다.
+ *
+ * 새기는 것은 셋이다. 도형의 크기를 픽셀로, 같은 것을 dp 로, 그리고 DIM 은 삼각형
+ * 윗 꼭지점의 절대 좌표다.
+ */
+private const val DECO_B_VIEW = 259f
+private const val B_W = 75.868f          // 새 모양의 폭 (작업 좌표)
+private const val B_H = 68.0f            // 그 높이
+private const val B_APEX_X = 42.4932f    // 삼각형 윗 꼭지점
+private const val B_APEX_Y = 4.0f
+private const val B_RIGHT = 80.0664f     // 새 모양의 오른쪽 끝
+private const val B_TOP = 18.5605f       // 몸통의 어깨선
+
+/** 새 모양의 잉크가 화면에서 서는 폭(px). 높이는 그림의 비로 따라온다. */
+private const val B_INK_PX = 72f
+
+/** b 조각이 기둥에서 왼쪽으로 물러나는 만큼. */
+private val B_PULL = 15.dp
+
+/** 첫 줄의 잉크를 어깨선에 앉히려고 끌어올리는 만큼(글꼴의 어센트). */
+private val DIM_ASCENT = 1.4.dp
+
+/** 수치가 도형에서 떨어져 서는 만큼. */
+private val DIM_GAP = 4.dp
+
+/** DIM 앞에 두는 한 줄의 빈자리. */
+private val DIM_BREAK = 5.dp
+
+/** 새 모양의 몸통과 윗 삼각형. 삼각형만 다른 색으로 선다. */
+private val B_BODY = Color(0xFF5D6A8C)
+private val B_APEX = Color(0xFFFFFFFF)
+
+/** 곁에 적는 수치의 크기와 잉크. */
+private val DIM_INK = 5.5.sp
+
+@Composable
+private fun DecoB(top: Float) {
+    val density = LocalDensity.current
+    var origin by remember { mutableStateOf(Offset.Zero) }
+    // 새 모양의 잉크가 화면에서 72px 폭으로 서도록 판을 되짚어 잡는다. 그림에서
+    // 도형이 차지하는 몫이 75.868/259 이므로 판은 그만큼 넓어야 한다.
+    val strip = with(density) { (B_INK_PX * DECO_B_VIEW / B_W).toDp() }
+    Box(
+        Modifier
+            .offset { IntOffset(0, top.roundToInt()) }
+            // 다른 조각보다 한 뼘 더 왼쪽에 선다
+            .offset(x = -B_PULL)
+            .width(strip)
+            .aspectRatio(DECO_B)
+            .onGloballyPositioned { origin = it.positionInRoot() },
+    ) {
+        // 몸통과 윗 삼각형은 색이 다르다 — 같은 캔버스라 그대로 겹쳐 놓는다
+        Image(
+            painterResource(R.drawable.deco_b),
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(B_BODY),
+            modifier = Modifier.fillMaxSize(),
+        )
+        Image(
+            painterResource(R.drawable.deco_b_apex),
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(B_APEX),
+            modifier = Modifier.fillMaxSize(),
+        )
+        // 작업 좌표 한 칸이 화면에서 몇 픽셀인가
+        val k = with(density) { strip.toPx() } / DECO_B_VIEW
+        val wPx = B_W * k
+        val hPx = B_H * k
+        val style = TextStyle(
+            fontFamily = Mono,
+            fontSize = DIM_INK,
+            lineHeight = DIM_INK,
+            color = TICK_OFF,
+            platformStyle = PlatformTextStyle(includeFontPadding = false),
+        )
+        Column(
+            Modifier
+                .align(Alignment.TopStart)
+                // 도형의 오른쪽 끝에서 한 뼘 떨어져 왼쪽 맞춤으로 서고, 첫 줄은
+                // 몸통의 어깨선에 맞춘다. 글꼴은 상자 안에서 어센트만큼 내려앉으므로
+                // 그만큼 끌어올린다.
+                .offset(
+                    x = strip * (B_RIGHT / DECO_B_VIEW) + DIM_GAP,
+                    y = strip * (B_TOP / DECO_B_VIEW) - DIM_ASCENT,
+                ),
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text("PIXEL %.1fx%.1f".format(wPx, hPx), style = style, maxLines = 1)
+            Text(
+                "DP    %.1fx%.1f".format(wPx / density.density, hPx / density.density),
+                style = style,
+                maxLines = 1,
+            )
+            Spacer(Modifier.height(DIM_BREAK))
+            Text(
+                "DIM.  (%.1f,%.1f)".format(
+                    origin.x + B_APEX_X * k,
+                    origin.y + B_APEX_Y * k,
+                ),
+                style = style,
+                maxLines = 1,
+            )
         }
     }
 }

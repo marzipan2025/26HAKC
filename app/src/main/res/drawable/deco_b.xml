@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- hakc_asset2/svg_b.svg 에서 옮겨 온 것. -->
+<!-- haku_deco/svg_b.svg — 몸통과 윗 삼각형을 따로 둔다. 삼각형만 색이 다르다.
+     색은 그릴 때 물들이므로 여기서는 흰색 한 가지로 굽는다. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="259dp"
     android:height="79dp"
     android:viewportWidth="259"
     android:viewportHeight="79">
     <path
-        android:fillColor="#96A5C3"
-        android:pathData="M50.8994 18.5605H80.0664V61.7734L47.6855 43.0771L64.3828 72H19.8193L36.4746 43.1523L4.19824 61.7871V18.5742H5.24316L5.21875 18.5605H34.0869L42.4932 4L50.8994 18.5605Z" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M50.8994 18.5605H80.0664V61.7734L47.6855 43.0771L64.3828 72H19.8193L36.4746 43.1523L4.19824 61.7871V18.5742H5.24316L5.21875 18.5605H34.0869Z" />
 </vector>
