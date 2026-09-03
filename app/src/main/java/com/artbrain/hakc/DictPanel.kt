@@ -562,8 +562,11 @@ fun DictPanel(
                                     if (s.many) {
                                         Text(
                                             if (s.index == 0) "●" else "${s.index}",
-                                            fontFamily = Mono,
-                                            fontSize = (glyph.value * 0.16f + 2f).sp,
+                                            // ● 는 수가 아니다. Plex 에 그 글자가
+                                            // 없기도 하고, 폭이 고를 까닭도 없다.
+                                            fontFamily = if (s.index == 0) Korail else Mono,
+                                            fontSize = ((glyph.value * 0.16f + 2f) *
+                                                if (s.index == 0) DOT else 1f).sp,
                                             // 표시는 제 글자를 따라 밝아진다 — 훑고
                                             // 지나가는 표기에서는 글자와 함께 물러난다
                                             color = when {
@@ -747,6 +750,15 @@ private fun Rule(color: Color = INK_RULE, thick: Dp? = null) {
 private val INPUT_RULE = Color.Black.copy(alpha = 0.58f)
 
 /**
+ * ● 을 코레일체로 적을 때 줄이는 몫.
+ *
+ * 서체마다 이 글자를 그리는 크기가 다르다 — 폰에서 재니 같은 13sp 에서 SF Mono
+ * 는 20px, 코레일체는 23px 로 섰다. 서체를 갈았다고 표가 커지면 안 되므로 그
+ * 비를 물려 본디 크기로 되돌린다.
+ */
+private const val DOT = 20f / 23f
+
+/**
  * 訓音 줄의 글자 크기. 급수 표시가 앉는 자리도 이 값을 따라간다 — 표시가 글보다
  * 크면 줄 상자가 부풀어 음과 훈의 밑선이 어긋난다.
  */
@@ -805,8 +817,9 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                             withStyle(SpanStyle(letterSpacing = (-2).sp)) { append("  ") }
                             withStyle(
                                 SpanStyle(
-                                    fontFamily = Mono,
-                                    fontSize = 13.sp,
+                                    // 위와 같다 — ● 만 코레일체로 적는다
+                                    fontFamily = if (s.index == 0) Korail else Mono,
+                                    fontSize = (13f * if (s.index == 0) DOT else 1f).sp,
                                     baselineShift = BaselineShift(MARK_LIFT),
                                 )
                             ) { append(if (s.index == 0) "●" else "${s.index}") }

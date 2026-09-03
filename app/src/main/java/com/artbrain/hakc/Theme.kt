@@ -130,16 +130,24 @@ fun hanjaLit(count: Int) = LIT[(count / 10).coerceIn(0, LIT.lastIndex)]
 val ThinHanja = FontFamily(Font(R.font.source_han_kr, FontWeight.ExtraLight))
 
 /**
- * 수만 적히는 자리의 글씨 — SF Mono Medium.
+ * 수만 적히는 자리의 글씨 — IBM Plex Mono.
  *
  * 회차 번호와 그 어깨의 수, 단어장 단추, 사전의 표기 번호처럼 숫자만 서는 자리에
- * 쓴다. 폭이 고른 서체라 줄이 바뀌어도 자리가 흔들리지 않는다. 라틴 글자만 든
- * 파일이라 둘을 합쳐도 220KB 다 — 한글·한자는 하나도 없으므로 이 자리 밖에서는
- * 쓰지 않는다. 굵은 쪽은 단어장 단추가 갈래를 가를 때 쓴다.
+ * 쓴다. 폭이 고른 서체라 줄이 바뀌어도 자리가 흔들리지 않는다. 한글·한자는 하나도
+ * 없으므로 이 자리 밖에서는 쓰지 않는다. 굵은 쪽은 단어장 단추가 갈래를 가를 때 쓴다.
+ *
+ * 본디 SF Mono 였다. 애플 서체는 애플 플랫폼 안에서만 쓰라는 것이라 앱에 담아
+ * 배포할 수 없어 걷어 냈다. IBM Plex Mono 는 OFL 1.1 이라 담아도 되고, 결도
+ * 가깝다. 대신 파일이 220KB 에서 340KB 로 는다 — 라틴 밖으로 그리스·키릴까지
+ * 든 온전한 판이라 그렇다.
+ *
+ * **이 서체에는 ● (U+25CF) 가 없다.** 첫 표기를 가리키는 그 표는 [Korail] 로
+ * 적는다 — 수가 아니므로 폭이 고를 까닭이 없고, 없는 채로 두면 안드로이드가
+ * 아무 글꼴에서나 주워 와 그 글꼴이 무엇이냐에 따라 크기도 자리도 달라진다.
  */
 val Mono = FontFamily(
-    Font(R.font.sf_mono, FontWeight.Normal),
-    Font(R.font.sf_mono_bold, FontWeight.Bold),
+    Font(R.font.ibm_plex_mono, FontWeight.Normal),
+    Font(R.font.ibm_plex_mono_bold, FontWeight.Bold),
 )
 
 /**

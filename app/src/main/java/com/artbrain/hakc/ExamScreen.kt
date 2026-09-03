@@ -1349,8 +1349,10 @@ Used for the large hanja glyphs only.
 Korail Font (코레일체)
 Copyright © Korea Railroad Corporation. Released by KORAIL for free public use, including commercial use, provided the font itself is not sold. Used for all Korean and Latin text in the app.
 
-SF Mono
-Copyright © Apple Inc. Used for figures and technical readouts.
+IBM Plex Mono
+Copyright © 2017 IBM Corp. with Reserved Font Name "Plex". Licensed under the SIL Open Font License, Version 1.1, and distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND.
+http://scripts.sil.org/OFL
+Used for figures and technical readouts.
 
 
 DICTIONARY DATA
