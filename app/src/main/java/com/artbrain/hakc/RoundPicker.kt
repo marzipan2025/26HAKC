@@ -624,7 +624,17 @@ fun RoundPicker(
                         .align(Alignment.TopEnd)
                         .fillMaxHeight()
                         .clipToBounds()
-                        .padding(top = ROOF, end = SIDE + DECO_PULL),
+                        .padding(top = ROOF, end = SIDE + DECO_PULL)
+                        // 장식을 끌어도 목록이 굴러가고 판이 함께 자란다 — 왼쪽
+                        // 어깨와 같은 길이다. 판이 자라는 길은 [nested] 하나뿐이고,
+                        // 제 스크롤러가 없는 기둥은 [rounds] 를 끌어 그 길에
+                        // 올라탄다. 이 둘이 없어 오른쪽만 끌리지 않았다.
+                        .nestedScroll(nested)
+                        .scrollable(rounds, Orientation.Vertical, reverseDirection = true)
+                        // 갱신 표를 빗나간 톡은 여기서 삼킨다. 그러지 않으면 그
+                        // 손짓이 뒤의 목록으로 새어 회차가 열린다 — 장식을 눌렀는데
+                        // 문제가 뜬다. 왼쪽 어깨가 같은 까닭으로 같은 것을 둔다.
+                        .pointerInput(Unit) { detectTapGestures { } },
                     contentAlignment = Alignment.TopEnd,
                 ) {
                     // 여태 본 문항이 전체에서 차지하는 몫. 회차마다 가장 멀리 간
