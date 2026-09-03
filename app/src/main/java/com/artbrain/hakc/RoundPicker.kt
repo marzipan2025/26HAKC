@@ -721,8 +721,13 @@ private const val DECO_B = 259f / 79f
  */
 private val DECO_RING = 90.6.dp
 
-/** 링이 문의 줄에서 위로 물러나는 만큼. */
-private val RING_LIFT = 60.dp
+/**
+ * 링이 문의 줄에서 위로 물러나는 만큼.
+ *
+ * 60 에서 12dp 를 도로 내리고, 점을 걷어 낸 뒤 링과 LICENSES 사이가 48.3dp 로
+ * 벌어져 그 절반을 더 내렸다 — 폰에서 재어 잡은 값이다.
+ */
+private val RING_LIFT = 23.8.dp
 private const val RING_VIEW_W = 106.6f
 private const val RING_VIEW_H = 145f
 
