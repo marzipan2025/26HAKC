@@ -1445,8 +1445,12 @@ private val DIM_ROOM = 16.dp
 /** 그림의 세로 칸 수. */
 private const val DECO_B_H = 79f
 
-/** 첫 줄의 잉크를 어깨선에 앉히려고 끌어올리는 만큼(글꼴의 어센트). */
-private val DIM_ASCENT = 1.4.dp
+/**
+ * 첫 줄의 잉크를 어깨선에 앉히려고 끌어올리는 만큼(글꼴의 어센트).
+ *
+ * 1.4 은 한 눈금 지나쳐 PIXEL 줄이 어깨선보다 살짝 떠 있었다. 0.2 을 돌려준다.
+ */
+private val DIM_ASCENT = 1.2.dp
 
 /** 수치가 도형에서 떨어져 서는 만큼. */
 private val DIM_GAP = 4.dp

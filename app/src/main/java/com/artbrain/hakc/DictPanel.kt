@@ -747,6 +747,15 @@ private fun Rule(color: Color = INK_RULE, thick: Dp? = null) {
 private val INPUT_RULE = Color.Black.copy(alpha = 0.58f)
 
 /**
+ * 訓音 줄의 글자 크기. 급수 표시가 앉는 자리도 이 값을 따라간다 — 표시가 글보다
+ * 크면 줄 상자가 부풀어 음과 훈의 밑선이 어긋난다.
+ */
+private val HUNEUM = 18.sp
+
+/** 그 아래 뜻풀이. 訓音보다 한 걸음 더 물러나 딸린 말로 읽힌다. */
+private val GLOSS = 17.4.sp
+
+/**
  * 표기 하나의 풀이 — 글자마다 `음 : 급수 훈`, 그 아래 뜻.
  * [kept] 는 단어장에 든 글자와 그 묶음이다.
  */
@@ -760,7 +769,7 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
             Row {
                 Text(
                     "${g.eum} :",
-                    fontSize = 19.sp,
+                    fontSize = HUNEUM,
                     lineHeight = 27.sp,
                     // 흰 글씨는 판에서 가장 밝아 한자보다 앞으로 나온다.
                     // 訓音은 한자에 딸린 말이니 한자와 같은 색을 쓴다.
@@ -790,13 +799,13 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                             ) { append(if (s.index == 0) "●" else "${s.index}") }
                         }
                     },
-                    fontSize = 19.sp,
+                    fontSize = HUNEUM,
                     lineHeight = 27.sp,
                     color = INK_HANJA,
                     modifier = Modifier.alignByBaseline(),
                     inlineContent = mapOf(
                         GRADE_SLOT to InlineTextContent(
-                            Placeholder(19.sp, 19.sp, PlaceholderVerticalAlign.TextCenter)
+                            Placeholder(HUNEUM, HUNEUM, PlaceholderVerticalAlign.TextCenter)
                         ) {
                             Icon(
                                 painterResource(gradeIcon(g.grade)),
@@ -837,7 +846,7 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                 Spacer(Modifier.width(6.dp))
                 Text(
                     body,
-                    fontSize = 19.sp,
+                    fontSize = GLOSS,
                     lineHeight = 27.sp,
                     color = INK_GLOSS,
                     maxLines = if (open) Int.MAX_VALUE else 1,
