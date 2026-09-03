@@ -1301,9 +1301,12 @@ private val LIC_LIFT = DOOR_SETTINGS * ((DOOR_VIEW_H - DOOR_INK_TOP) / DOOR_VIEW
  * 마지막 회차의 아랫선과 나란히 놓이도록 폰에서 재어 잡은 값이다.
  *
  * 문이 글자에서 그림이 되며 키가 9dp 에서 33.6dp 로 자랐다. 아랫선을 그 자리에
- * 두려면 자란 만큼을 앞의 빈자리에서 덜어 내야 하므로 118.3 에서 다시 잡았다.
+ * 두려면 자란 만큼을 앞의 빈자리에서 덜어 내야 하므로 118.3 에서 93.7 로 잡았다.
+ *
+ * 그러고도 폰에서 재니 단추의 아랫선이 마지막 회차보다 40px(13.3dp) 아래였다.
+ * 그만큼 다시 덜어 낸다.
  */
-private val GEAR_TOP = 93.7.dp
+private val GEAR_TOP = 80.4.dp
 
 /** 단추 이름의 잉크. 회차 번호와 같은 색을 한 겹 더 물린다. */
 private val TALLY_INK = Hak3.Hanja.copy(alpha = Hak3.Hanja.alpha * 0.7f)
