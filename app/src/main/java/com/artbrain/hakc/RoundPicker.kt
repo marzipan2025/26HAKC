@@ -560,40 +560,28 @@ fun RoundPicker(
                                 }
                             }
                         }
-                        // 서랍으로 드는 문 둘 — 서랍을 여는 길은 이것뿐이다.
-                        // 어깨의 다른 단추와 같은 잉크로 서되, 수가 붙지 않는
-                        // 자리라 대괄호로 감싼다. 설정 문은 마지막 단추에서
-                        // 유난히 멀리 떨어져 서므로, 판이 다 자랐을 때에만 판
-                        // 안으로 들어와 마지막 회차와 나란히 선다.
+                        // 설정으로 드는 문. 마지막 단추에서 유난히 멀리 떨어져
+                        // 서므로, 판이 다 자랐을 때에만 판 안으로 들어와 마지막
+                        // 회차와 나란히 선다 — [GEAR_TOP] 이 그 나란함을 폰에서
+                        // 재어 잡은 값이다.
                         //
-                        // [GEAR_TOP] 은 그 나란함을 폰에서 재어 잡은 값이라
-                        // 설정 문이 움직이면 안 된다. 라이선스 문을 그 위에
-                        // 끼우면서 문 높이와 사이를 앞의 빈자리에서 덜어 내는
-                        // 것은 그래서다 — 문의 높이는 글자와 여백이 정하므로
-                        // 재어서 쓴다.
-                        var doorTall by remember { mutableStateOf(0.dp) }
-                        Spacer(
-                            Modifier.height(
-                                (GEAR_TOP - DOOR_GAP - doorTall).coerceAtLeast(0.dp)
-                            )
-                        )
-                        Door(
-                            "LICENSE",
-                            Modifier
+                        // 라이선스로 드는 길은 오른쪽 기둥의 장식이 가져갔다 —
+                        // 그림에 LICENSES 라 적힌 자리다. 그래서 문은 하나뿐이다.
+                        Spacer(Modifier.height(GEAR_TOP))
+                        Image(
+                            painterResource(R.drawable.door_settings),
+                            contentDescription = null,
+                            modifier = Modifier
                                 .offset(y = SHOULDER_LIFT + DOOR_DROP)
-                                .onGloballyPositioned {
-                                    doorTall = with(density) { it.size.height.toDp() }
-                                },
-                        ) { drawer = Drawer.LICENSE }
-                        Spacer(Modifier.height(DOOR_GAP))
-                        Door(
-                            "SETTINGS",
-                            Modifier
-                                .offset(y = SHOULDER_LIFT + DOOR_DROP)
+                                .width(DOOR_SETTINGS)
                                 .onGloballyPositioned {
                                     doorBottom = it.positionInRoot().y + it.size.height
-                                },
-                        ) { drawer = Drawer.SETTINGS }
+                                }
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) { drawer = Drawer.SETTINGS },
+                        )
                     }
                 }
 
@@ -672,6 +660,8 @@ fun RoundPicker(
                     UpdateMark(aTop, fresh != null) { updateShut = false }
                     DecoB(bTop)
                     Deco(R.drawable.deco_c, DECO_C, cTop, DECO_W + DECO_C_WIDE, DECO_C_PUSH)
+                    // 그림에 적힌 LICENSES 가 곧 서랍으로 드는 문이다
+                    LicenseSpot(cTop) { drawer = Drawer.LICENSE }
                 }
             }
         }
@@ -712,7 +702,22 @@ fun RoundPicker(
  */
 private const val DECO_A = 255f / 475f
 private const val DECO_B = 259f / 79f
-private const val DECO_C = 256f / 219f
+private const val DECO_C = 279f / 200f
+
+/** deco_c 의 캔버스. 그림 속 한 자리를 화면으로 옮기는 데 쓴다. */
+private const val DECO_C_VIEW = 279f
+
+/**
+ * 그림에서 LICENSES 덩이(눈·화살표·글자)가 앉은 네 귀. 캔버스 좌표다 —
+ * 렌더를 재어 잡았고, 그림이 바뀌면 다시 재야 한다.
+ */
+private const val LIC_X0 = 4f
+private const val LIC_X1 = 84.7f
+private const val LIC_Y0 = 148f
+private const val LIC_Y1 = 185f
+
+/** 그 자리를 누를 수 있는 키. 보이는 글은 얇아도 손끝은 이만큼이라야 한다. */
+private val LIC_TOUCH = 48.dp
 
 /** 장식이 차지하는 폭. 원본은 258 이나 그대로 두면 판의 절반을 넘는다. */
 private val DECO_W = 96.dp
@@ -901,6 +906,41 @@ private fun UpdateMark(top: Float, fresh: Boolean, onOpen: () -> Unit) {
                 onClick = onOpen,
             ),
     )
+}
+
+/**
+ * 그림에 적힌 LICENSES 를 누를 자리.
+ *
+ * 글은 장식이 그리고 누르는 일만 여기서 받는다 — 조각을 둘로 가르지 않으려는
+ * 것이다. 보이는 덩이는 14dp 남짓이라 손끝에는 좁으므로 세로만 [LIC_TOUCH] 로
+ * 넓혀 그 덩이를 가운데 둔다.
+ */
+@Composable
+private fun LicenseSpot(top: Float, onOpen: () -> Unit) {
+    val wide = DECO_W + DECO_C_WIDE
+    val k = wide / DECO_C_VIEW                 // 캔버스 한 칸이 몇 dp 인가
+    val tall = k * (LIC_Y1 - LIC_Y0)
+    val room = maxOf(LIC_TOUCH, tall)
+    Box(
+        Modifier
+            .offset { IntOffset(0, top.roundToInt()) }
+            .offset(x = DECO_C_PUSH)
+            .width(wide)
+            .aspectRatio(DECO_C),
+    ) {
+        Box(
+            Modifier
+                .align(Alignment.TopStart)
+                .offset(x = k * LIC_X0, y = k * LIC_Y0 - (room - tall) / 2)
+                .width(k * (LIC_X1 - LIC_X0))
+                .height(room)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onOpen,
+                ),
+        )
+    }
 }
 
 /** 수가 앉는 상자의 너비. 오른쪽 끝을 맞춰 두고 왼쪽으로 자라게 한다. */
@@ -1190,35 +1230,16 @@ private val TALLY_GAP = 14.dp
 private val GEAR = 8.4.dp * 0.8f
 private val GEAR_GAP = 8.dp
 
-/** 라이선스 문과 설정 문 사이. */
-private val DOOR_GAP = 24.dp
-
-/**
- * 서랍으로 드는 문. 이름을 대괄호가 좌우에서 감싼다 — 괄호는 회차 번호와 같은
- * 잉크로 물러나 서고 이름만 온전한 흰빛이다. 누르는 곳이 어디인지 그것이 말한다.
- */
-@Composable
-private fun Door(name: String, modifier: Modifier = Modifier, onOpen: () -> Unit) {
-    Row(
-        modifier.clickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = null,
-            onClick = onOpen,
-        ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("[", style = TALLY_NAME, color = Hak3.Hanja)
-        Spacer(Modifier.width(GEAR_GAP))
-        Text(name, style = TALLY_NAME, color = Color.White, maxLines = 1)
-        Spacer(Modifier.width(GEAR_GAP))
-        Text("]", style = TALLY_NAME, color = Hak3.Hanja)
-    }
-}
+/** 설정 문 그림이 서는 폭. 높이는 그림의 비(118x62)로 따라온다. */
+private val DOOR_SETTINGS = 64.dp
 /**
  * 마지막 단추(Known Cards)와 설정 문 사이. 판이 다 자랐을 때 문의 아랫선이
  * 마지막 회차의 아랫선과 나란히 놓이도록 폰에서 재어 잡은 값이다.
+ *
+ * 문이 글자에서 그림이 되며 키가 9dp 에서 33.6dp 로 자랐다. 아랫선을 그 자리에
+ * 두려면 자란 만큼을 앞의 빈자리에서 덜어 내야 하므로 118.3 에서 다시 잡았다.
  */
-private val GEAR_TOP = 118.3.dp
+private val GEAR_TOP = 93.7.dp
 
 /** 단추 이름의 잉크. 회차 번호와 같은 색을 한 겹 더 물린다. */
 private val TALLY_INK = Hak3.Hanja.copy(alpha = Hak3.Hanja.alpha * 0.7f)
