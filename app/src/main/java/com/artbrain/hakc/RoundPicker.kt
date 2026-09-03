@@ -665,7 +665,7 @@ fun RoundPicker(
                     // c 조각은 둘로 갈렸다. 링은 판의 오른아래 귀에 서고,
                     // LICENSES 는 왼쪽 어깨의 SETTINGS 와 한 줄로 읽히도록
                     // 문의 아랫선에서 되짚어 잡은 자리에 선다.
-                    Deco(R.drawable.deco_ring, RING_VIEW_W / RING_VIEW_H, ringTop, DECO_RING)
+                    Deco(R.drawable.deco_ring, RING_VIEW_W / RING_VIEW_H, ringTop, DECO_RING, RING_PUSH)
                     val licTop = with(density) {
                         (doorBottom - panelTop - ROOF.toPx() - LIC_LIFT.toPx())
                             .coerceAtLeast(0f)
@@ -711,10 +711,30 @@ fun RoundPicker(
  */
 private const val DECO_A = 255f / 475f
 private const val DECO_B = 259f / 79f
-/** 오른쪽 아래 귀에 서는 링(c_sub2). 폭을 72dp 로 못 박는다. */
-private val DECO_RING = 72.dp
+/**
+ * 오른쪽 아래 귀에 서는 링(c_sub2).
+ *
+ * 폭은 두 세로 잣대 사이의 70% 다 — LICENSES 의 왼선과 deco_a 그림의 오른선이
+ * 그 둘이고, 폰에서 재니 114dp 였다.
+ */
+private val DECO_RING = 80.dp
 private const val RING_VIEW_W = 146f
 private const val RING_VIEW_H = 145f
+
+/**
+ * 그림 안에서 동그라미 글자가 서는 왼끝과 오른끝. 오른쪽 점 하나를 뺐으므로
+ * 이 글자가 곧 그림의 오른끝이다. 왼쪽에는 점 하나가 더 나가 있다.
+ */
+private const val RING_INK_LEFT = 17.5f
+private const val RING_INK_RIGHT = 106.6f
+
+/**
+ * deco_a 의 그림이 제 오른선에서 안으로 물러난 만큼.
+ *
+ * 눈대중으로 8.7 을 넣었더니 링의 오른끝이 25px 모자랐다. 폰에서 재어
+ * 되짚으니 그림은 오른선에 거의 닿아 있다.
+ */
+private val DECO_A_INSET = 0.4.dp
 
 /** 링과 LICENSES 사이. */
 private val LIC_GAP = 8.dp
@@ -957,7 +977,7 @@ private fun LicenseTag(top: Float, onOpen: () -> Unit) {
         Modifier
             .offset { IntOffset(0, top.roundToInt()) }
             // 링의 왼쪽에 한 뼘 떼고 선다
-            .offset(x = -(DECO_RING + LIC_GAP), y = -(room - tall) / 2)
+            .offset(x = -LIC_PULL, y = -(room - tall) / 2)
             .width(LIC_W)
             .height(room)
             .clickable(
@@ -1282,8 +1302,23 @@ private val LIC_W = DOOR_SETTINGS *
 private val LIC_LIFT = DOOR_SETTINGS * ((DOOR_VIEW_H - DOOR_INK_TOP) / DOOR_VIEW_W) +
     LIC_W * (LIC_INK_TOP / LIC_VIEW_W)
 
+/**
+ * 링을 오른쪽으로 미는 만큼. 동그라미 글자의 오른끝을 deco_a 그림의 오른끝에
+ * 맞춘다 — 그림 오른쪽에 남은 빈 칸만큼 내밀고, deco_a 가 물러난 만큼 되돌린다.
+ * 내밀린 자리는 빈 칸이라 기둥의 자르기에 걸릴 것이 없다.
+ */
+private val RING_PUSH =
+    DECO_RING * (1f - RING_INK_RIGHT / RING_VIEW_W) - DECO_A_INSET
+
+/**
+ * LICENSES 가 오른쪽 끝에서 물러나는 만큼. 링의 동그라미 글자 왼끝에서
+ * [LIC_GAP] 을 더 떼고 그 왼쪽에 선다.
+ */
+private val LIC_PULL = DECO_RING - RING_PUSH -
+    DECO_RING * (RING_INK_LEFT / RING_VIEW_W) + LIC_GAP
+
 /** 기둥이 차지하는 폭. 가장 넓은 조각과, 링에 LICENSES 를 붙인 줄 중 넓은 쪽이다. */
-private val DECO_COLUMN = maxOf(DECO_W, DECO_RING + LIC_GAP + LIC_W)
+private val DECO_COLUMN = maxOf(DECO_W, LIC_PULL + LIC_W)
 
 /**
  * 마지막 단추(Known Cards)와 설정 문 사이. 판이 다 자랐을 때 문의 아랫선이

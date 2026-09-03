@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- hakc_asset2/c_sub2.svg 에서 옮겨 온 것. 동그라미 넷은 path 로 폈다. -->
+<!-- hakc_asset2/c_sub2.svg 에서 옮겨 온 것. 동그라미 글자 오른쪽의 점 하나는 뺐고, 남은 점 셋은 path 로 폈다. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="146dp"
     android:height="145dp"
@@ -11,9 +11,6 @@
     <path
         android:fillColor="#95A5C2"
         android:pathData="M31.7153 141.4000a2.9623 2.9623 0 1 0 5.9246 0a2.9623 2.9623 0 1 0 -5.9246 0Z" />
-    <path
-        android:fillColor="#95A5C2"
-        android:pathData="M140.9897 86.5521a2.9623 2.9623 0 1 0 5.9246 0a2.9623 2.9623 0 1 0 -5.9246 0Z" />
     <path
         android:fillColor="#95A5C2"
         android:pathData="M77.4277 2.9623a2.9623 2.9623 0 1 0 5.9246 0a2.9623 2.9623 0 1 0 -5.9246 0Z" />
