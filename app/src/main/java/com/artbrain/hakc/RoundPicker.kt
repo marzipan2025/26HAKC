@@ -613,6 +613,9 @@ fun RoundPicker(
                         .fillMaxHeight()
                         .clipToBounds()
                         .padding(top = ROOF, end = SIDE + DECO_PULL)
+                        // 폭은 여백 '안쪽' 을 재는 것이라야 한다. 앞에 두면
+                        // 여백이 이 폭을 파먹어 링 왼쪽의 LICENSES 가 잘린다.
+                        .width(DECO_COLUMN)
                         // 장식을 끌어도 목록이 굴러가고 판이 함께 자란다 — 왼쪽
                         // 어깨와 같은 길이다. 판이 자라는 길은 [nested] 하나뿐이고,
                         // 제 스크롤러가 없는 기둥은 [rounds] 를 끌어 그 길에
@@ -640,9 +643,9 @@ fun RoundPicker(
                     }
                     val seenShare = progress.first
                     val seenRounds = progress.second
-                    val cTop = with(density) {
-                        (doorBottom - panelTop - ROOF.toPx() - (DECO_W + DECO_C_WIDE).toPx() / DECO_C +
-                            DECO_C_DROP.toPx()).coerceAtLeast(0f)
+                    val ringTop = with(density) {
+                        (doorBottom - panelTop - ROOF.toPx() -
+                            DECO_RING.toPx() * (RING_VIEW_H / RING_VIEW_W)).coerceAtLeast(0f)
                     }
                     val aTop = with(density) { DECO_A_DROP.toPx() }
                     val aBottom = aTop + with(density) { DECO_W.toPx() / DECO_A }
@@ -659,9 +662,15 @@ fun RoundPicker(
                     // 갱신 표도 따로 그린다 — 새 판이 있으면 노랗게 물든다
                     UpdateMark(aTop, fresh != null) { updateShut = false }
                     DecoB(bTop)
-                    Deco(R.drawable.deco_c, DECO_C, cTop, DECO_W + DECO_C_WIDE, DECO_C_PUSH)
-                    // 그림에 적힌 LICENSES 가 곧 서랍으로 드는 문이다
-                    LicenseSpot(cTop) { drawer = Drawer.LICENSE }
+                    // c 조각은 둘로 갈렸다. 링은 판의 오른아래 귀에 서고,
+                    // LICENSES 는 왼쪽 어깨의 SETTINGS 와 한 줄로 읽히도록
+                    // 문의 아랫선에서 되짚어 잡은 자리에 선다.
+                    Deco(R.drawable.deco_ring, RING_VIEW_W / RING_VIEW_H, ringTop, DECO_RING)
+                    val licTop = with(density) {
+                        (doorBottom - panelTop - ROOF.toPx() - LIC_LIFT.toPx())
+                            .coerceAtLeast(0f)
+                    }
+                    LicenseTag(licTop) { drawer = Drawer.LICENSE }
                 }
             }
         }
@@ -702,7 +711,29 @@ fun RoundPicker(
  */
 private const val DECO_A = 255f / 475f
 private const val DECO_B = 259f / 79f
-private const val DECO_C = 279f / 200f
+/** 오른쪽 아래 귀에 서는 링(c_sub2). 폭을 72dp 로 못 박는다. */
+private val DECO_RING = 72.dp
+private const val RING_VIEW_W = 146f
+private const val RING_VIEW_H = 145f
+
+/** 링과 LICENSES 사이. */
+private val LIC_GAP = 8.dp
+
+/**
+ * c_sub1(81x42)의 캔버스와, 그 안에서 LICENSES 글자가 앉은 줄.
+ * icon_settings(118x62)의 것도 함께 둔다 — 두 글자를 견주어야 하기 때문이다.
+ * 넷 다 그림을 재어 잡았고, 그림이 바뀌면 다시 재야 한다.
+ */
+private const val LIC_VIEW_W = 81f
+private const val LIC_VIEW_H = 42f
+private const val LIC_INK_TOP = 25f
+private const val LIC_INK_BOTTOM = 37f
+private const val DOOR_VIEW_W = 118f
+private const val DOOR_VIEW_H = 62f
+private const val DOOR_INK_TOP = 49.33f
+private const val DOOR_INK_BOTTOM = 61f
+
+
 
 /** deco_c 의 캔버스. 그림 속 한 자리를 화면으로 옮기는 데 쓴다. */
 private const val DECO_C_VIEW = 279f
@@ -909,36 +940,37 @@ private fun UpdateMark(top: Float, fresh: Boolean, onOpen: () -> Unit) {
 }
 
 /**
- * 그림에 적힌 LICENSES 를 누를 자리.
+ * LICENSES — 그림이 글을 그리고, 누르는 일도 함께 받는다.
  *
- * 글은 장식이 그리고 누르는 일만 여기서 받는다 — 조각을 둘로 가르지 않으려는
- * 것이다. 보이는 덩이는 14dp 남짓이라 손끝에는 좁으므로 세로만 [LIC_TOUCH] 로
- * 넓혀 그 덩이를 가운데 둔다.
+ * 왼쪽 어깨의 SETTINGS 와 한 줄로 읽혀야 하는 자리다. 그래서 크기는 두 글자의
+ * 키가 같아지도록 [LIC_W] 로 되짚어 잡고, 서는 자리는 문의 아랫선에서
+ * [LIC_LIFT] 만큼 끌어올려 잡는다 — 문이 움직이면 이것도 따라 움직인다.
+ *
+ * 보이는 조각이 22dp 남짓이라 손끝에는 얕으므로 누를 자리만 [TOUCH] 로 넓혀
+ * 그림을 그 가운데 둔다.
  */
 @Composable
-private fun LicenseSpot(top: Float, onOpen: () -> Unit) {
-    val wide = DECO_W + DECO_C_WIDE
-    val k = wide / DECO_C_VIEW                 // 캔버스 한 칸이 몇 dp 인가
-    val tall = k * (LIC_Y1 - LIC_Y0)
-    val room = maxOf(LIC_TOUCH, tall)
+private fun LicenseTag(top: Float, onOpen: () -> Unit) {
+    val tall = LIC_W * (LIC_VIEW_H / LIC_VIEW_W)
+    val room = maxOf(TOUCH, tall)
     Box(
         Modifier
             .offset { IntOffset(0, top.roundToInt()) }
-            .offset(x = DECO_C_PUSH)
-            .width(wide)
-            .aspectRatio(DECO_C),
+            // 링의 왼쪽에 한 뼘 떼고 선다
+            .offset(x = -(DECO_RING + LIC_GAP), y = -(room - tall) / 2)
+            .width(LIC_W)
+            .height(room)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onOpen,
+            ),
+        contentAlignment = Alignment.Center,
     ) {
-        Box(
-            Modifier
-                .align(Alignment.TopStart)
-                .offset(x = k * LIC_X0, y = k * LIC_Y0 - (room - tall) / 2)
-                .width(k * (LIC_X1 - LIC_X0))
-                .height(room)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onOpen,
-                ),
+        Image(
+            painterResource(R.drawable.lic_block),
+            contentDescription = null,
+            modifier = Modifier.fillMaxWidth().aspectRatio(LIC_VIEW_W / LIC_VIEW_H),
         )
     }
 }
@@ -1232,6 +1264,27 @@ private val GEAR_GAP = 8.dp
 
 /** 설정 문 그림이 서는 폭. 높이는 그림의 비(118x62)로 따라온다. */
 private val DOOR_SETTINGS = 64.dp
+
+/**
+ * LICENSES 조각의 폭. 두 글자가 같은 키로 서도록 되짚어 잡는다 — 문에서 글자
+ * 키를 얻고(11.67칸 × 64/118 = 6.33dp), 그 키가 나오려면 이 조각이 얼마나
+ * 넓어야 하는지를 되묻는다.
+ */
+private val LIC_W = DOOR_SETTINGS *
+    ((DOOR_INK_BOTTOM - DOOR_INK_TOP) / DOOR_VIEW_W) *
+    (LIC_VIEW_W / (LIC_INK_BOTTOM - LIC_INK_TOP))
+
+/**
+ * 문의 아랫선에서 LICENSES 조각의 윗선까지. 두 글자의 윗선이 한 줄에 놓이는
+ * 값이다 — 문 안에서 글자가 아랫선 위 얼마에 있는지와, 이 조각 안에서 글자가
+ * 윗선 아래 얼마에 있는지를 더한 것이다.
+ */
+private val LIC_LIFT = DOOR_SETTINGS * ((DOOR_VIEW_H - DOOR_INK_TOP) / DOOR_VIEW_W) +
+    LIC_W * (LIC_INK_TOP / LIC_VIEW_W)
+
+/** 기둥이 차지하는 폭. 가장 넓은 조각과, 링에 LICENSES 를 붙인 줄 중 넓은 쪽이다. */
+private val DECO_COLUMN = maxOf(DECO_W, DECO_RING + LIC_GAP + LIC_W)
+
 /**
  * 마지막 단추(Known Cards)와 설정 문 사이. 판이 다 자랐을 때 문의 아랫선이
  * 마지막 회차의 아랫선과 나란히 놓이도록 폰에서 재어 잡은 값이다.
