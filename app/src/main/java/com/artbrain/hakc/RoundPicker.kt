@@ -645,7 +645,8 @@ fun RoundPicker(
                     val seenRounds = progress.second
                     val ringTop = with(density) {
                         (doorBottom - panelTop - ROOF.toPx() -
-                            DECO_RING.toPx() * (RING_VIEW_H / RING_VIEW_W)).coerceAtLeast(0f)
+                            DECO_RING.toPx() * (RING_VIEW_H / RING_VIEW_W) -
+                            RING_LIFT.toPx()).coerceAtLeast(0f)
                     }
                     val aTop = with(density) { DECO_A_DROP.toPx() }
                     val aBottom = aTop + with(density) { DECO_W.toPx() / DECO_A }
@@ -714,18 +715,18 @@ private const val DECO_B = 259f / 79f
 /**
  * 오른쪽 아래 귀에 서는 링(c_sub2).
  *
- * 폭은 두 세로 잣대 사이의 70% 다 — LICENSES 의 왼선과 deco_a 그림의 오른선이
- * 그 둘이고, 폰에서 재니 114dp 였다.
+ * 폭은 두 세로 잣대 사이의 70%(80dp)로 잡았다가 155% 키웠다. 그때 판은 146칸
+ * 이었고 124dp 였는데, 뺀 점 자리의 빈 칸을 판에서 잘라 106.6칸으로 줄였으므로
+ * 같은 크기로 서려면 124 × 106.6/146 = 90.6dp 다. 눈에 보이는 동그라미는 그대로다.
  */
-private val DECO_RING = 80.dp
-private const val RING_VIEW_W = 146f
+private val DECO_RING = 90.6.dp
+
+/** 링이 문의 줄에서 위로 물러나는 만큼. */
+private val RING_LIFT = 60.dp
+private const val RING_VIEW_W = 106.6f
 private const val RING_VIEW_H = 145f
 
-/**
- * 그림 안에서 동그라미 글자가 서는 왼끝과 오른끝. 오른쪽 점 하나를 뺐으므로
- * 이 글자가 곧 그림의 오른끝이다. 왼쪽에는 점 하나가 더 나가 있다.
- */
-private const val RING_INK_LEFT = 17.5f
+/** 그림 안에서 동그라미 글자의 오른끝. 판을 여기서 잘랐으므로 판의 오른끝과 같다. */
 private const val RING_INK_RIGHT = 106.6f
 
 /**
@@ -1311,11 +1312,13 @@ private val RING_PUSH =
     DECO_RING * (1f - RING_INK_RIGHT / RING_VIEW_W) - DECO_A_INSET
 
 /**
- * LICENSES 가 오른쪽 끝에서 물러나는 만큼. 링의 동그라미 글자 왼끝에서
- * [LIC_GAP] 을 더 떼고 그 왼쪽에 선다.
+ * LICENSES 가 기둥의 오른선에서 물러나는 만큼.
+ *
+ * 본디 링의 동그라미 글자 왼끝에서 [LIC_GAP] 을 떼어 되짚던 값이다. 링이 위로
+ * 올라가 더는 나란히 서지 않으므로 그 셈은 뜻을 잃었고, 그때 서 있던 자리를
+ * 그대로 못 박는다 — 링이 커지고 올라가도 LICENSES 는 제자리다.
  */
-private val LIC_PULL = DECO_RING - RING_PUSH -
-    DECO_RING * (RING_INK_LEFT / RING_VIEW_W) + LIC_GAP
+private val LIC_PULL = 65.5.dp
 
 /** 기둥이 차지하는 폭. 가장 넓은 조각과, 링에 LICENSES 를 붙인 줄 중 넓은 쪽이다. */
 private val DECO_COLUMN = maxOf(DECO_W, LIC_PULL + LIC_W)

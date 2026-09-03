@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- hakc_asset2/c_sub2.svg 에서 옮겨 온 것. 동그라미 글자 오른쪽의 점 하나는 뺐고, 남은 점 셋은 path 로 폈다. -->
+<!-- hakc_asset2/c_sub2.svg 에서 옮겨 온 것. 동그라미 글자 오른쪽의 점 하나는 뺐고,
+     그 자리에 남던 빈 칸(x 106.6~146)은 판을 잘라 걷었다 — 그래야 판의 오른끝이
+     곧 잉크의 오른끝이라 밀어내지 않고도 오른선을 맞출 수 있다. 점 셋은 path 로 폈다. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="146dp"
+    android:width="106.6dp"
     android:height="145dp"
-    android:viewportWidth="146"
+    android:viewportWidth="106.6"
     android:viewportHeight="145">
     <path
         android:fillColor="#95A5C2"
