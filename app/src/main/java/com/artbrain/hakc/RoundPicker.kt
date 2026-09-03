@@ -810,10 +810,16 @@ private val BURST_PATHS by lazy(LazyThreadSafetyMode.NONE) {
 /** deco_a 의 캔버스 너비. 조각의 좌표를 화면 크기로 옮기는 데 쓴다. */
 private const val DECO_A_VIEW = 255f
 
-/** 갱신 표의 평소 색. 새 판이 없을 때는 이 잉크로 물러나 선다. */
-private val UPDATE_OFF = Color(0xFF4D5671)
+/**
+ * 장식이 쉬고 있을 때의 잉크.
+ *
+ * 갱신 표가 '새 판 없음' 으로 물러나 설 때와, 다이얼의 아직 켜지지 않은 조각이
+ * 이 색을 함께 쓴다 — 둘 다 '아직 아무 일도 없다' 는 같은 말이므로 같은 잉크로
+ * 서야 한다. 한쪽만 고치면 기둥 안에서 두 잣대가 생긴다.
+ */
+private val DECO_REST = Color(0xFF4D5671)
 
-/** 꺼진 조각의 잉크 — 장식이 본디 쓰던 것 그대로다. */
+/** 곁에 적는 수의 잉크 — 장식이 본디 쓰던 것 그대로다. */
 private val TICK_OFF = Color(0xFF96A5C3)
 
 @Composable
@@ -828,7 +834,7 @@ private fun Gauge(top: Float, share: Float) {
         val k = size.width / DECO_A_VIEW
         withTransform({ scale(k, k, Offset.Zero) }) {
             BURST_PATHS.forEachIndexed { i, path ->
-                drawPath(path, if (i < lit) Hak3.Text else TICK_OFF)
+                drawPath(path, if (i < lit) Hak3.Text else DECO_REST)
             }
         }
     }
@@ -882,7 +888,7 @@ private fun UpdateMark(top: Float, fresh: Boolean, onOpen: () -> Unit) {
     Image(
         painterResource(R.drawable.deco_update),
         contentDescription = null,
-        colorFilter = ColorFilter.tint(if (fresh) Hak3.Sun else UPDATE_OFF),
+        colorFilter = ColorFilter.tint(if (fresh) Hak3.Sun else DECO_REST),
         modifier = Modifier
             .offset { IntOffset(0, top.roundToInt()) }
             .width(DECO_W)
