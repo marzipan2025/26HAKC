@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- haku_deco/num4.svg — 글자는 이미 윤곽선이다. 색은 그릴 때 물들인다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="13dp"
+    android:height="15dp"
+    android:viewportWidth="13"
+    android:viewportHeight="15">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M10.664 14.0336H7.22V11.5976H3.58C1.732 11.5976 0.5 10.3656 0.5 8.51762V1.26562H3.944V7.87362C3.944 8.37762 4.28 8.71362 4.784 8.71362H7.22V1.26562H10.664V8.71362H12.3V11.5976H10.664V14.0336Z" />
+</vector>

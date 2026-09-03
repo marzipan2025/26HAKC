@@ -57,6 +57,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.compose.material3.Text
 import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -89,7 +90,11 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -173,6 +178,8 @@ fun RoundPicker(
     var progress by remember { mutableStateOf(-2f) }   // -2 = 받기 전
     LaunchedEffect(Unit) { status = Updater.check(BuildConfig.VERSION_NAME) }
     val fresh = (status as? Updater.Status.Available)?.release
+    // 안내를 닫아 두었는가. 판이 바뀌면 다시 열린다 — 새 소식은 새로 알린다.
+    var updateShut by remember(fresh?.version) { mutableStateOf(false) }
 
     // 묶음을 열었다 닫고 돌아오면 서랍이 열린 채로 다시 선다 — 방금 있던 자리다
     var drawer by remember { mutableStateOf(Drawer.NONE) }
@@ -378,10 +385,16 @@ fun RoundPicker(
             }
 
             // 새 판 안내는 목록과 같은 얼굴로, 그러나 제 영역에 따로 선다
-            if (fresh != null) {
+            if (fresh != null && !updateShut) {
+                // 닫는 표의 원을 캡슐의 둥근 끝과 동심으로 앉히려면 캡슐의 높이를
+                // 알아야 한다 — 글자와 여백으로 정해지는 값이라 재어서 쓴다.
+                var capsule by remember { mutableStateOf(0.dp) }
                 Box(
                     Modifier
                         .fillMaxWidth()
+                        .onGloballyPositioned {
+                            capsule = with(density) { it.size.height.toDp() }
+                        }
                         .then(veil)
                         .padding(horizontal = 8.dp)
                         .graphicsLayer(dim)
@@ -391,10 +404,10 @@ fun RoundPicker(
                 ) {
                     UpdateRow(
                         label = when {
-                            progress == -2f -> "Update"
-                            progress < 0f -> "Fetching"
+                            progress == -2f -> "UPDATE"
+                            progress < 0f -> "FETCHING"
                             progress < 1f -> "${(progress * 100).toInt()}%"
-                            else -> "Install"
+                            else -> "INSTALL"
                         },
                         note = if (progress == -2f) fresh.version else "tap to open",
                         enabled = progress == -2f,
@@ -414,6 +427,33 @@ fun RoundPicker(
                                 progress = 1f
                                 Updater.install(context, apk)
                             }
+                        }
+                    }
+                    // 닫는 표. 보이는 원은 작지만 누를 자리는 손끝에 맞춰 넓힌다 —
+                    // 빗나가면 아무 일도 안 나는 게 아니라 본문에 닿아 받기가
+                    // 시작되므로 여기서 넉넉히 삼킨다. UpdateRow 뒤에 두어야
+                    // 손짓을 이것이 먼저 받는다.
+                    Box(
+                        Modifier
+                            .align(Alignment.CenterStart)
+                            .offset(x = (capsule - X_TOUCH) / 2)
+                            .size(X_TOUCH)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) { updateShut = true },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        // 캡슐의 둥근 끝은 높이의 절반으로 잘려 있다. 사방으로 같은
+                        // 만큼 물러난 원은 그 끝과 중심이 절로 맞고, 지름은 그 절반이다.
+                        Box(
+                            Modifier
+                                .size(updateXSize(capsule))
+                                .clip(CircleShape)
+                                .background(UPDATE_X_FACE),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("✕", fontSize = 16.sp, color = UPDATE_INK)
                         }
                     }
                 }
@@ -571,6 +611,21 @@ fun RoundPicker(
                         .padding(top = ROOF, end = SIDE + DECO_PULL),
                     contentAlignment = Alignment.TopEnd,
                 ) {
+                    // 여태 본 문항이 전체에서 차지하는 몫. 회차마다 가장 멀리 간
+                    // 자리를 더한 것이라, 회차 줄 아래의 작은 눈금과 같은 셈이다.
+                    val progress = remember(exams) {
+                        val total = exams.sumOf { it.items }
+                        var seen = 0
+                        var rounds = 0
+                        exams.forEach {
+                            val n = Marks.lastSeen(context, it.round).coerceIn(0, it.items)
+                            seen += n
+                            if (n > 0) rounds++
+                        }
+                        (if (total > 0) seen.toFloat() / total else 0f) to rounds
+                    }
+                    val seenShare = progress.first
+                    val seenRounds = progress.second
                     val cTop = with(density) {
                         (doorBottom - panelTop - ROOF.toPx() - (DECO_W + DECO_C_WIDE).toPx() / DECO_C +
                             DECO_C_DROP.toPx()).coerceAtLeast(0f)
@@ -581,6 +636,14 @@ fun RoundPicker(
                     // 있든 안에 있든 자리가 흔들리지 않는다.
                     val bTop = aBottom + with(density) { DECO_AB_GAP.toPx() }
                     Deco(R.drawable.deco_a, DECO_A, aTop)
+                    // a 안의 다이얼은 그림에서 떼어 여기서 그린다 — 조각마다 켜고
+                    // 꺼야 하기 때문이다. 자리는 a 와 똑같이 잡는다.
+                    Gauge(aTop, seenShare)
+                    // 원 안의 수도 그림에서 떼어 여기서 적는다 — 여태 들어가 본
+                    // 회차의 수다.
+                    SeenRounds(aTop, seenRounds)
+                    // 갱신 표도 따로 그린다 — 새 판이 있으면 노랗게 물든다
+                    UpdateMark(aTop, fresh != null) { updateShut = false }
                     Deco(R.drawable.deco_b, DECO_B, bTop)
                     Deco(R.drawable.deco_c, DECO_C, cTop, DECO_W + DECO_C_WIDE, DECO_C_PUSH)
                 }
@@ -682,6 +745,134 @@ private fun Deco(res: Int, ratio: Float, top: Float, width: Dp = DECO_W, push: D
             .aspectRatio(ratio),
     )
 }
+
+/**
+ * a 안의 다이얼. 그림에서 떼어 낸 스물한 조각을 원본 그대로 다시 그리되, 여태 본
+ * 몫만큼 켠다 — 12시에서 시계방향이다. 좌표는 deco_a 의 캔버스(255×475) 안의
+ * 값이라 남은 그림과 한 자리에 겹친다.
+ *
+ * 선이 아니라 채움 도형이라 좌표를 다시 셈하지 않고 path 를 그대로 옮겼다.
+ */
+private val BURST = arrayOf(
+    "M227.745 325.713C228.321 325.713 228.791 326.215 228.791 326.83L228.791 332.379C228.791 332.994 228.321 333.496 227.745 333.496C227.168 333.496 226.698 332.994 226.698 332.379L226.698 326.83C226.698 326.215 227.168 325.713 227.745 325.713Z",
+    "M228.484 338.797C228.674 339.001 228.79 339.278 228.79 339.587L228.79 346.423C228.79 347.039 228.322 347.539 227.744 347.539C227.166 347.539 226.698 347.039 226.698 346.423L226.698 339.587C226.698 338.97 227.166 338.47 227.744 338.47C228.033 338.47 228.293 338.594 228.484 338.797L228.484 338.797Z",
+    "M237.51 328.19C237.645 328.19 237.78 328.217 237.907 328.273C238.442 328.509 238.7 329.163 238.479 329.73L235.634 337.103C235.413 337.679 234.783 337.945 234.269 337.714C233.733 337.478 233.476 336.824 233.696 336.257L236.541 328.884C236.709 328.453 237.097 328.19 237.51 328.19Z",
+    "M245.869 333.728C246.139 333.728 246.405 333.837 246.609 334.055C247.018 334.491 247.018 335.198 246.609 335.634L242.934 339.556C242.525 339.992 241.863 339.992 241.454 339.556C241.046 339.119 241.046 338.413 241.454 337.976L245.129 334.055C245.334 333.836 245.599 333.728 245.869 333.728L245.869 333.728Z",
+    "M237.854 343.399C238.261 343.834 238.261 344.544 237.854 344.979L235.324 347.678C234.917 348.113 234.252 348.113 233.845 347.678C233.437 347.243 233.437 346.533 233.845 346.099L236.374 343.399C236.781 342.965 237.446 342.965 237.854 343.399Z",
+    "M251.106 342.859C251.514 342.859 251.903 343.116 252.07 343.548C252.295 344.115 252.042 344.77 251.506 345.005L244.634 348.059C244.111 348.304 243.49 348.028 243.269 347.457C243.044 346.89 243.298 346.235 243.833 346L250.705 342.946C250.836 342.885 250.971 342.859 251.106 342.859Z",
+    "M248.179 353.075L253.379 353.075C253.955 353.075 254.425 353.576 254.425 354.192C254.425 354.807 253.955 355.309 253.379 355.309L248.179 355.309C247.603 355.309 247.133 354.807 247.133 354.192C247.133 353.576 247.603 353.075 248.179 353.075Z",
+    "M242.166 353.398C242.357 353.602 242.472 353.879 242.472 354.188C242.472 354.805 242.004 355.305 241.426 355.305L235.021 355.305C234.443 355.305 233.975 354.805 233.975 354.188C233.975 353.571 234.443 353.072 235.021 353.072L241.426 353.072C241.715 353.072 241.975 353.195 242.166 353.399L242.166 353.398Z",
+    "M244.145 360.46C244.279 360.46 244.414 360.487 244.541 360.543L251.453 363.58C251.989 363.815 252.246 364.47 252.025 365.037C251.805 365.613 251.183 365.888 250.66 365.648L243.748 362.611C243.213 362.376 242.955 361.721 243.176 361.154C243.344 360.723 243.732 360.46 244.145 360.46Z",
+    "M242.194 368.486C242.464 368.486 242.73 368.596 242.934 368.814L246.609 372.74C247.018 373.176 247.018 373.883 246.609 374.319C246.2 374.755 245.534 374.751 245.129 374.319L241.454 370.393C241.046 369.957 241.046 369.25 241.454 368.814C241.659 368.595 241.929 368.486 242.194 368.486L242.194 368.486Z",
+    "M235.325 360.695L237.851 363.392C238.259 363.827 238.259 364.536 237.851 364.971C237.443 365.406 236.779 365.406 236.371 364.971L233.845 362.275C233.437 361.839 233.437 361.13 233.845 360.695C234.253 360.261 234.918 360.26 235.325 360.695Z",
+    "M228.484 361.164C228.674 361.368 228.79 361.645 228.79 361.954L228.79 368.79C228.79 369.407 228.322 369.906 227.744 369.906C227.166 369.906 226.698 369.407 226.698 368.79L226.698 361.954C226.698 361.337 227.166 360.838 227.744 360.838C228.033 360.838 228.293 360.961 228.484 361.165L228.484 361.164Z",
+    "M221.642 360.695C222.049 361.13 222.049 361.84 221.642 362.275L219.115 364.971C218.708 365.406 218.043 365.406 217.635 364.971C217.228 364.536 217.228 363.826 217.635 363.392L220.162 360.695C220.569 360.261 221.234 360.261 221.642 360.695Z",
+    "M213.296 368.489C213.561 368.489 213.831 368.598 214.035 368.816C214.444 369.252 214.444 369.959 214.035 370.395L210.36 374.321C209.952 374.753 209.289 374.762 208.881 374.321C208.472 373.885 208.472 373.178 208.881 372.742L212.555 368.816C212.76 368.597 213.025 368.489 213.295 368.489L213.296 368.489Z",
+    "M211.251 360.223C211.66 360.223 212.048 360.481 212.216 360.913C212.441 361.48 212.187 362.134 211.651 362.37L204.78 365.424C204.244 365.664 203.635 365.397 203.415 364.821C203.19 364.254 203.443 363.6 203.979 363.364L210.85 360.31C210.981 360.25 211.116 360.223 211.251 360.223Z",
+    "M221.205 353.398C221.396 353.602 221.512 353.879 221.512 354.188C221.512 354.805 221.043 355.305 220.466 355.305L214.06 355.305C213.482 355.305 213.014 354.805 213.014 354.188C213.014 353.571 213.482 353.072 214.06 353.072L220.466 353.072C220.755 353.072 221.015 353.195 221.206 353.399L221.205 353.398Z",
+    "M202.111 353.075L207.311 353.075C207.887 353.075 208.357 353.576 208.357 354.192C208.357 354.807 207.887 355.309 207.311 355.309L202.111 355.309C201.535 355.309 201.065 354.807 201.065 354.192C201.065 353.576 201.535 353.075 202.111 353.075Z",
+    "M204.433 342.654C204.568 342.654 204.703 342.681 204.829 342.737L211.738 345.774C212.273 346.009 212.531 346.664 212.31 347.231C212.089 347.802 211.464 348.077 210.945 347.841L204.036 344.805C203.501 344.57 203.244 343.915 203.464 343.348C203.631 342.916 204.02 342.654 204.433 342.654Z",
+    "M219.115 343.402L221.642 346.099C222.049 346.533 222.049 347.243 221.642 347.678C221.234 348.113 220.569 348.113 220.162 347.678L217.635 344.982C217.228 344.547 217.228 343.837 217.635 343.402C218.043 342.968 218.708 342.967 219.115 343.402Z",
+    "M209.62 333.728C209.889 333.728 210.155 333.837 210.359 334.055L214.034 337.976C214.443 338.413 214.443 339.119 214.034 339.556C213.625 339.992 212.963 339.992 212.554 339.556L208.88 335.634C208.471 335.198 208.471 334.491 208.88 334.055C209.084 333.836 209.35 333.728 209.619 333.728L209.62 333.728Z",
+    "M218.175 328.134C218.584 328.134 218.973 328.392 219.14 328.819L222.005 336.152C222.23 336.724 221.976 337.378 221.445 337.614C220.897 337.858 220.297 337.583 220.076 337.016L217.21 329.683C216.985 329.111 217.239 328.457 217.77 328.221C217.905 328.16 218.04 328.134 218.175 328.134L218.175 328.134Z"
+)
+
+private val BURST_PATHS by lazy(LazyThreadSafetyMode.NONE) {
+    BURST.map { PathParser().parsePathString(it).toPath() }
+}
+
+/** deco_a 의 캔버스 너비. 조각의 좌표를 화면 크기로 옮기는 데 쓴다. */
+private const val DECO_A_VIEW = 255f
+
+/** 갱신 표의 평소 색. 새 판이 없을 때는 이 잉크로 물러나 선다. */
+private val UPDATE_OFF = Color(0xFF4D5671)
+
+/** 꺼진 조각의 잉크 — 장식이 본디 쓰던 것 그대로다. */
+private val TICK_OFF = Color(0xFF96A5C3)
+
+@Composable
+private fun Gauge(top: Float, share: Float) {
+    val lit = (share.coerceIn(0f, 1f) * BURST_PATHS.size).roundToInt()
+    Canvas(
+        Modifier
+            .offset { IntOffset(0, top.roundToInt()) }
+            .width(DECO_W)
+            .aspectRatio(DECO_A),
+    ) {
+        val k = size.width / DECO_A_VIEW
+        withTransform({ scale(k, k, Offset.Zero) }) {
+            BURST_PATHS.forEachIndexed { i, path ->
+                drawPath(path, if (i < lit) Hak3.Text else TICK_OFF)
+            }
+        }
+    }
+}
+
+/**
+ * 위쪽 원 안의 수 — 여태 들어가 본 회차가 몇인지. 그림에는 `26` 이 박혀 있었으나
+ * 떼어내고 여기서 적는다. 기둥의 다른 글과 같이 90° 누워 서고, 자릿수가 늘면
+ * 왼쪽으로 자란다(오른쪽 맞춤).
+ */
+private val ROUNDS_INK = 11.sp
+
+/** 그림에서 26 이 서 있던 자리 — deco_a 캔버스(255×475) 안의 값이다. */
+private const val ROUNDS_X = 245.2f      // 오른끝
+private const val ROUNDS_Y = 37.1f       // 가운데 높이
+
+@Composable
+private fun SeenRounds(top: Float, n: Int) {
+    val k = DECO_W.value / DECO_A_VIEW        // 캔버스 한 칸이 몇 dp 인가
+    Box(
+        Modifier
+            .offset { IntOffset(0, top.roundToInt()) }
+            .width(DECO_W)
+            .aspectRatio(DECO_A),
+    ) {
+        Text(
+            "$n",
+            fontFamily = Mono,
+            fontSize = ROUNDS_INK,
+            lineHeight = ROUNDS_INK,
+            color = TICK_OFF,
+            maxLines = 1,
+            textAlign = TextAlign.End,
+            modifier = Modifier
+                .offset(
+                    x = (ROUNDS_X * k).dp - ROUNDS_BOX,
+                    y = (ROUNDS_Y * k).dp - ROUNDS_BOX / 2,
+                )
+                .width(ROUNDS_BOX)
+                .rotate(90f),
+        )
+    }
+}
+
+/**
+ * 갱신 표. deco_a 에서 떼어 낸 조각이라 자리는 그림과 같고, 여기서는 색만 준다 —
+ * 새 판이 있으면 노랗게, 없으면 장식이 본디 쓰던 잉크로.
+ */
+@Composable
+private fun UpdateMark(top: Float, fresh: Boolean, onOpen: () -> Unit) {
+    Image(
+        painterResource(R.drawable.deco_update),
+        contentDescription = null,
+        colorFilter = ColorFilter.tint(if (fresh) Hak3.Sun else UPDATE_OFF),
+        modifier = Modifier
+            .offset { IntOffset(0, top.roundToInt()) }
+            .width(DECO_W)
+            .aspectRatio(DECO_A)
+            // 새 판이 있을 때만 눌린다 — 접어 둔 안내를 도로 편다
+            .clickable(
+                enabled = fresh,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onOpen,
+            ),
+    )
+}
+
+/** 수가 앉는 상자의 너비. 오른쪽 끝을 맞춰 두고 왼쪽으로 자라게 한다. */
+private val ROUNDS_BOX = 14.dp
 
 /** 속을 비운 묶음이 두르는 테의 두께. */
 private val RING = 2.dp
@@ -1227,6 +1418,47 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
     }
 }
 
+/** 큰 글자 그림의 높이. 원본은 모두 15 칸 높이로 그려져 있다. */
+private val LABEL_H = 28.dp
+
+/** 곁의 글이 그림 글자의 윗선에 닿도록 내려앉는 만큼. */
+private val NOTE_DROP = 1.3.dp
+
+/** 몫을 이룰 때 낱자 사이. 낱말 한 장짜리에는 쓰이지 않는다. */
+private val LABEL_GAP = 2.dp
+
+private val DIGIT_GLYPH = listOf(
+    R.drawable.u_num0, R.drawable.u_num1, R.drawable.u_num2, R.drawable.u_num3,
+    R.drawable.u_num4, R.drawable.u_num5, R.drawable.u_num6, R.drawable.u_num7,
+    R.drawable.u_num8, R.drawable.u_num9,
+)
+
+/** 큰 글자를 그림 목록으로. 낱말은 한 장, 몫은 숫자들과 % 다. */
+private fun labelGlyphs(label: String): List<Int> = when (label) {
+    "UPDATE" -> listOf(R.drawable.u_update)
+    "FETCHING" -> listOf(R.drawable.u_fetching)
+    "INSTALL" -> listOf(R.drawable.u_install)
+    else -> label.mapNotNull { c ->
+        when {
+            c == '%' -> R.drawable.u_pct
+            c.isDigit() -> DIGIT_GLYPH[c - '0']
+            else -> null
+        }
+    }
+}
+
+/** 닫는 표의 원이 캡슐의 둥근 끝에서 안으로 물러나는 만큼. 두 원의 중심은 같다. */
+private val UPDATE_X_GAP = 10.dp
+
+/** 닫는 표를 누를 수 있는 자리. 보이는 원보다 넓다 — 손끝에 맞춘다. */
+private val X_TOUCH = 48.dp
+
+/** 그 원의 지름 — 사방으로 물러난 크기의 절반이다. */
+private fun updateXSize(capsule: Dp) = ((capsule - UPDATE_X_GAP * 2) / 2).coerceAtLeast(0.dp)
+
+/** 그 원의 낯 — 캡슐보다 한 겹 어둡다. */
+private val UPDATE_X_FACE = Hak3.Ground.copy(alpha = 0.22f)
+
 /** 새 판 안내. 회차 줄과 같은 얼굴로 제 영역에 선다. */
 @Composable
 private fun UpdateRow(label: String, note: String, enabled: Boolean, onClick: () -> Unit) {
@@ -1234,18 +1466,26 @@ private fun UpdateRow(label: String, note: String, enabled: Boolean, onClick: ()
         Modifier
             .fillMaxWidth()
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(vertical = 18.dp),
+            .padding(vertical = 15.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.Top) {
-            Text(
-                label,
-                // 받는 동안 뜨는 몫(72% 같은)은 수만 서는 자리라 폭이 고른 서체로
-                fontFamily = if (label.endsWith("%")) Mono else Korail,
-                fontSize = 44.sp,
-                color = UPDATE_INK,
-                maxLines = 1,
-            )
+            // 큰 글자는 글꼴이 아니라 그림이다 — 낱말은 한 장, 몫은 숫자와 %를
+            // 이어 붙인다. 원본이 모두 같은 높이로 그려져 있어 높이만 맞추면
+            // 폭은 저마다의 비로 따라온다.
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(LABEL_GAP),
+            ) {
+                labelGlyphs(label).forEach { res ->
+                    Image(
+                        painterResource(res),
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(UPDATE_INK),
+                        modifier = Modifier.height(LABEL_H),
+                    )
+                }
+            }
             Spacer(Modifier.width(7.dp))
             Text(
                 note,
@@ -1253,7 +1493,8 @@ private fun UpdateRow(label: String, note: String, enabled: Boolean, onClick: ()
                 fontFamily = if (note.firstOrNull()?.isDigit() == true) Mono else Korail,
                 fontSize = 13.sp,
                 color = UPDATE_INK,
-                modifier = Modifier.padding(top = 9.dp),
+                // 그림 글자의 윗선에 맞춘다 — 폰에서 재어 잡은 값이다.
+                modifier = Modifier.offset(y = NOTE_DROP),
             )
         }
     }
