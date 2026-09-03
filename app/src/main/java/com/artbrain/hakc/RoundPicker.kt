@@ -726,7 +726,11 @@ private val RING_LIFT = 60.dp
 private const val RING_VIEW_W = 106.6f
 private const val RING_VIEW_H = 145f
 
-/** 그림 안에서 동그라미 글자의 오른끝. 판을 여기서 잘랐으므로 판의 오른끝과 같다. */
+/**
+ * 그림 안에서 동그라미 글자가 서는 두 끝. 판을 오른끝에서 잘랐으므로
+ * [RING_INK_RIGHT] 는 판의 오른끝과 같다. 왼끝은 가운데를 셈하는 데 쓴다.
+ */
+private const val RING_INK_LEFT = 17.5f
 private const val RING_INK_RIGHT = 106.6f
 
 /**
@@ -746,9 +750,9 @@ private val LIC_GAP = 8.dp
  * 넷 다 그림을 재어 잡았고, 그림이 바뀌면 다시 재야 한다.
  */
 private const val LIC_VIEW_W = 81f
-private const val LIC_VIEW_H = 42f
-private const val LIC_INK_TOP = 25f
-private const val LIC_INK_BOTTOM = 37f
+private const val LIC_VIEW_H = 45f
+private const val LIC_INK_TOP = 28.52f
+private const val LIC_INK_BOTTOM = 40.23f
 private const val DOOR_VIEW_W = 118f
 private const val DOOR_VIEW_H = 62f
 private const val DOOR_INK_TOP = 49.33f
@@ -1311,14 +1315,18 @@ private val LIC_LIFT = DOOR_SETTINGS * ((DOOR_VIEW_H - DOOR_INK_TOP) / DOOR_VIEW
 private val RING_PUSH =
     DECO_RING * (1f - RING_INK_RIGHT / RING_VIEW_W) - DECO_A_INSET
 
+/** 링의 동그라미 가운데가 기둥의 오른선에서 물러난 만큼. */
+private val RING_MID = DECO_RING *
+    ((RING_VIEW_W - (RING_INK_LEFT + RING_VIEW_W) / 2f) / RING_VIEW_W) - RING_PUSH
+
 /**
  * LICENSES 가 기둥의 오른선에서 물러나는 만큼.
  *
- * 본디 링의 동그라미 글자 왼끝에서 [LIC_GAP] 을 떼어 되짚던 값이다. 링이 위로
- * 올라가 더는 나란히 서지 않으므로 그 셈은 뜻을 잃었고, 그때 서 있던 자리를
- * 그대로 못 박는다 — 링이 커지고 올라가도 LICENSES 는 제자리다.
+ * 동그라미의 두 끝이 곧 잣대이므로, 그 사이의 가운데는 동그라미의 가운데다.
+ * LICENSES 는 거기에 제 가운데를 맞춘다 — 링이 커지거나 밀려도 둘의 가운데는
+ * 함께 움직인다.
  */
-private val LIC_PULL = 65.5.dp
+private val LIC_PULL = RING_MID - LIC_W / 2
 
 /** 기둥이 차지하는 폭. 가장 넓은 조각과, 링에 LICENSES 를 붙인 줄 중 넓은 쪽이다. */
 private val DECO_COLUMN = maxOf(DECO_W, LIC_PULL + LIC_W)
