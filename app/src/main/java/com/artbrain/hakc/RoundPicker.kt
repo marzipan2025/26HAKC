@@ -1439,6 +1439,12 @@ private const val B_INK_PX = 72f
 /** b 조각이 기둥에서 왼쪽으로 물러나는 만큼. */
 private val B_PULL = 15.dp
 
+/** 그림 아래로 글자가 더 설 자리. */
+private val DIM_ROOM = 16.dp
+
+/** 그림의 세로 칸 수. */
+private const val DECO_B_H = 79f
+
 /** 첫 줄의 잉크를 어깨선에 앉히려고 끌어올리는 만큼(글꼴의 어센트). */
 private val DIM_ASCENT = 1.4.dp
 
@@ -1468,7 +1474,9 @@ private fun DecoB(top: Float) {
             // 다른 조각보다 한 뼘 더 왼쪽에 선다
             .offset(x = -B_PULL)
             .width(strip)
-            .aspectRatio(DECO_B)
+            // 그림 높이만으로는 셋째 줄(DIM)이 기둥의 자르기에 걸린다. 글자가
+            // 설 자리를 아래에 더 둔다.
+            .height(strip * (DECO_B_H / DECO_B_VIEW) + DIM_ROOM)
             .onGloballyPositioned { origin = it.positionInRoot() },
     ) {
         // 몸통과 윗 삼각형은 색이 다르다 — 같은 캔버스라 그대로 겹쳐 놓는다
@@ -1476,13 +1484,13 @@ private fun DecoB(top: Float) {
             painterResource(R.drawable.deco_b),
             contentDescription = null,
             colorFilter = ColorFilter.tint(B_BODY),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.width(strip).aspectRatio(DECO_B),
         )
         Image(
             painterResource(R.drawable.deco_b_apex),
             contentDescription = null,
             colorFilter = ColorFilter.tint(B_APEX),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.width(strip).aspectRatio(DECO_B),
         )
         // 작업 좌표 한 칸이 화면에서 몇 픽셀인가
         val k = with(density) { strip.toPx() } / DECO_B_VIEW
