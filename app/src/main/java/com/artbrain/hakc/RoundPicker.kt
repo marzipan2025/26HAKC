@@ -309,6 +309,14 @@ fun RoundPicker(
             // 자리는 비워 두고, 그 안에서 덩이 둘이 제 면을 갖는다. 면의 색은
             // 밀려난 판이 어두워진 그 색이다 — 검은 바탕 위에 얹히므로 판에
             // 씌우는 것과 같은 알파를 주면 오른쪽 자락과 꼭 같은 색이 된다.
+            // 라이선스는 오른쪽에서 나온다. 판 오른끝 바로 밖에 세워 두면 판이
+            // 왼쪽으로 밀릴 때 그 자리로 들어선다 — 왼쪽 것과 거울처럼 맞선다.
+            Box(Modifier.offset(x = wide).width(roomDp).fillMaxHeight()) {
+                LicensePanel(
+                    radius = radius,
+                    face = Hak3.Card.copy(alpha = DIM),
+                )
+            }
             Box(Modifier.offset(x = -roomDp).width(roomDp).fillMaxHeight()) {
                 SettingsPanel(
                     radius = radius,
@@ -552,32 +560,40 @@ fun RoundPicker(
                                 }
                             }
                         }
-                        // 설정으로 드는 문 — 서랍을 여는 길은 이것 하나뿐이다.
+                        // 서랍으로 드는 문 둘 — 서랍을 여는 길은 이것뿐이다.
                         // 어깨의 다른 단추와 같은 잉크로 서되, 수가 붙지 않는
-                        // 자리라 마름모를 앞에 세운다. 마지막 단추에서 유난히 멀리
-                        // 떨어져 서므로, 판이 다 자랐을 때에만 판 안으로 들어와
-                        // 마지막 회차와 나란히 선다.
-                        Spacer(Modifier.height(GEAR_TOP))
-                        Row(
+                        // 자리라 대괄호로 감싼다. 설정 문은 마지막 단추에서
+                        // 유난히 멀리 떨어져 서므로, 판이 다 자랐을 때에만 판
+                        // 안으로 들어와 마지막 회차와 나란히 선다.
+                        //
+                        // [GEAR_TOP] 은 그 나란함을 폰에서 재어 잡은 값이라
+                        // 설정 문이 움직이면 안 된다. 라이선스 문을 그 위에
+                        // 끼우면서 문 높이와 사이를 앞의 빈자리에서 덜어 내는
+                        // 것은 그래서다 — 문의 높이는 글자와 여백이 정하므로
+                        // 재어서 쓴다.
+                        var doorTall by remember { mutableStateOf(0.dp) }
+                        Spacer(
+                            Modifier.height(
+                                (GEAR_TOP - DOOR_GAP - doorTall).coerceAtLeast(0.dp)
+                            )
+                        )
+                        Door(
+                            "LICENSE",
+                            Modifier
+                                .offset(y = SHOULDER_LIFT + DOOR_DROP)
+                                .onGloballyPositioned {
+                                    doorTall = with(density) { it.size.height.toDp() }
+                                },
+                        ) { drawer = Drawer.LICENSE }
+                        Spacer(Modifier.height(DOOR_GAP))
+                        Door(
+                            "SETTINGS",
                             Modifier
                                 .offset(y = SHOULDER_LIFT + DOOR_DROP)
                                 .onGloballyPositioned {
                                     doorBottom = it.positionInRoot().y + it.size.height
-                                }
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                ) { drawer = Drawer.SETTINGS },
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            // 마름모 둘은 회차 번호와 같은 잉크로 서고, 글자만
-                            // 온전한 흰빛이다 — 누르는 곳이 어디인지 그것이 말한다
-                            Box(Modifier.size(GEAR).rotate(45f).background(Hak3.Hanja))
-                            Spacer(Modifier.width(GEAR_GAP))
-                            Text("SETTINGS", style = TALLY_NAME, color = Color.White, maxLines = 1)
-                            Spacer(Modifier.width(GEAR_GAP))
-                            Box(Modifier.size(GEAR).rotate(45f).background(Hak3.Hanja))
-                        }
+                                },
+                        ) { drawer = Drawer.SETTINGS }
                     }
                 }
 
@@ -946,9 +962,14 @@ private val COUNT = TextStyle(
     ),
 )
 
-/** 서랍이 앉는 자리. 왼쪽에서 나오므로 판은 오른쪽으로 밀린다. */
+/**
+ * 서랍이 앉는 자리. 판이 밀리는 쪽이 곧 서랍이 나오는 쪽의 반대다 —
+ * 설정은 왼쪽에서 나오므로 판이 오른쪽으로, 라이선스는 오른쪽에서 나오므로
+ * 판이 왼쪽으로 밀린다.
+ */
 private fun anchor(drawer: Drawer, room: Float) = when (drawer) {
     Drawer.SETTINGS -> room
+    Drawer.LICENSE -> -room
     Drawer.NONE -> 0f
 }
 
@@ -976,8 +997,8 @@ private const val DISSOLVE = 120
 /** 서랍이 앉는 결. 튕기지 않으면서 짧게 끊어 붙는다. 붙는 힘을 좀 더 주었다. */
 private val SNAP = spring<Float>(dampingRatio = 0.9f, stiffness = 2800f)
 
-/** 서랍이 문 자리. 왼쪽은 아직 비었다. */
-enum class Drawer { NONE, SETTINGS }
+/** 서랍이 문 자리. 설정은 왼쪽에서, 라이선스는 오른쪽에서 나온다. */
+enum class Drawer { NONE, SETTINGS, LICENSE }
 
 /** 안내가 화면에서 차지하는 너비. */
 private const val SETUP_WIDE = 0.8f
@@ -1152,6 +1173,31 @@ private val TALLY_GAP = 14.dp
  */
 private val GEAR = 8.4.dp * 0.8f
 private val GEAR_GAP = 8.dp
+
+/** 라이선스 문과 설정 문 사이. */
+private val DOOR_GAP = 24.dp
+
+/**
+ * 서랍으로 드는 문. 이름을 대괄호가 좌우에서 감싼다 — 괄호는 회차 번호와 같은
+ * 잉크로 물러나 서고 이름만 온전한 흰빛이다. 누르는 곳이 어디인지 그것이 말한다.
+ */
+@Composable
+private fun Door(name: String, modifier: Modifier = Modifier, onOpen: () -> Unit) {
+    Row(
+        modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = onOpen,
+        ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("[", style = TALLY_NAME, color = Hak3.Hanja)
+        Spacer(Modifier.width(GEAR_GAP))
+        Text(name, style = TALLY_NAME, color = Color.White, maxLines = 1)
+        Spacer(Modifier.width(GEAR_GAP))
+        Text("]", style = TALLY_NAME, color = Hak3.Hanja)
+    }
+}
 /**
  * 마지막 단추(Known Cards)와 설정 문 사이. 판이 다 자랐을 때 문의 아랫선이
  * 마지막 회차의 아랫선과 나란히 놓이도록 폰에서 재어 잡은 값이다.

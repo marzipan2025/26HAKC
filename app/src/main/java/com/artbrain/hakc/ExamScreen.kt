@@ -1278,3 +1278,102 @@ private fun underlined(html: String, mark: Color): AnnotatedString = buildAnnota
         }
     }
 }
+
+/**
+ * 라이선스. 오른쪽 서랍에 든다.
+ *
+ * 설정과 달리 덩이가 하나다 — 읽을 것이 길게 이어지는 자리라 중간에 선을 그으면
+ * 읽던 눈이 끊긴다. 판 하나가 위아래를 다 받고 그 안에서 글이 굴러간다.
+ *
+ * 적는 말은 영어로 둔다. 원문이 영어인 조항을 한국어로 옮겨 적으면 그 옮김이
+ * 곧 또 하나의 주장이 되고, 서체와 자료의 이름은 어차피 영어다.
+ */
+@Composable
+fun LicensePanel(radius: Dp, face: Color) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            // 뒤의 카드가 눌리지 않게 이 층에서 손짓을 삼킨다
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) {},
+    ) {
+        // 설정 서랍과 같은 자리에서 시작하고 같은 자리에서 끝난다 — 두 서랍이
+        // 한 자에서 재어진 것처럼 보이려면 위아래 벽이 같아야 한다.
+        Spacer(Modifier.height(DRAWER_TOP))
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .background(face, RoundedCornerShape(radius))
+                .verticalScroll(rememberScrollState())
+                .padding(DRAWER_PAD),
+        ) {
+            Label("LICENSES")
+            Spacer(Modifier.height(16.dp))
+            Text(
+                LICENSE_TEXT,
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                color = Hak3.TextSoft,
+            )
+            // 판 끝에서 글이 잘려 보이지 않도록 아래에 한 뼘 더 둔다
+            Spacer(Modifier.height(DRAWER_PAD))
+        }
+    }
+}
+
+/**
+ * 서랍에 적는 글. 앱이 남의 것을 무엇 무엇 빌려 썼는지, 그 조건이 무엇인지다.
+ *
+ * 조항 전문을 다 옮기지는 않는다 — 어느 것을 어떤 이름으로 빌렸고 그 조건이
+ * 무엇인지가 여기서 할 말이고, 전문은 그 이름으로 찾을 수 있다. 다만 OFL 과
+ * CC BY-SA 처럼 '이렇게 밝히라' 고 요구하는 것은 그 요구를 그대로 지킨다.
+ */
+private val LICENSE_TEXT = """
+26HAKC — Hanja dictionary and Grade 3 past papers
+Copyright © ARTBRAIN / MARZIPAN 2025
+
+This app bundles the third-party fonts and data listed below. Each remains the property of its authors, under the terms named with it.
+
+
+FONTS
+
+Source Han Sans KR
+Copyright © 2014–2025 Adobe (http://www.adobe.com), with Reserved Font Name 'Source'. Source is a trademark of Adobe in the United States and/or other countries.
+Licensed under the SIL Open Font License, Version 1.1. This Font Software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the license for the specific language governing permissions and limitations.
+http://scripts.sil.org/OFL
+Used for the large hanja glyphs only.
+
+Korail Font (코레일체)
+Copyright © Korea Railroad Corporation. Released by KORAIL for free public use, including commercial use, provided the font itself is not sold. Used for all Korean and Latin text in the app.
+
+SF Mono
+Copyright © Apple Inc. Used for figures and technical readouts.
+
+
+DICTIONARY DATA
+
+Hanja readings — libhangul
+Copyright © Choe Hwanjin and contributors. Licensed under the BSD 3-Clause License. The hanja table is redistributed with its copyright notice and disclaimer intact.
+https://github.com/libhangul/libhangul
+
+Definitions — 우리말샘
+Copyright © National Institute of Korean Language. Licensed under Creative Commons Attribution-ShareAlike 2.0 Korea (CC BY-SA 2.0 KR). Definitions have been shortened to sentence boundaries; their wording is otherwise unchanged. Being ShareAlike material, the definitions carried in this app remain under the same license.
+https://creativecommons.org/licenses/by-sa/2.0/kr/
+
+Definitions — 위키낱말사전 (Wiktionary)
+Copyright © Wikimedia Foundation and contributors. Licensed under Creative Commons Attribution-ShareAlike (CC BY-SA). Used as the first source for definitions, with the same shortening.
+https://ko.wiktionary.org
+
+
+SOFTWARE
+
+Android Jetpack and AndroidX
+Copyright © The Android Open Source Project. Licensed under the Apache License, Version 2.0.
+http://www.apache.org/licenses/LICENSE-2.0
+
+
+Past paper questions are the property of their examining body. They are read from a file you supply; none are distributed with this app.
+""".trimIndent()
