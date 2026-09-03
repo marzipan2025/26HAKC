@@ -263,6 +263,30 @@ object DictInput {
     /** 지금 화면이 딛고 선 글. 굳어 있으면 걷어 낸 그 글이다. */
     val query: String get() = if (frozen) held else text
 
+    /**
+     * 찾기가 딛고 설 글 — [query] 끝의 아직 글자가 되지 못한 자모를 떼어 낸 것.
+     *
+     * 자판은 낱자를 치는 동안 그 자락을 그대로 흘려 보낸다. '한국' 을 치면
+     * ㅎ · 하 · 한 · 한ㄱ · 한구 · 한국 이 차례로 오는데, 자모가 낀 두 참에서
+     * 찾기가 빈손으로 돌아오면 판이 비었다 다시 서기를 되풀이한다 — 글자를
+     * 이어 치는 동안 판이 깜빡인다. 판은 비어 있지 않아야 한다.
+     *
+     * 그래서 '한ㄱ' 은 '한' 으로 찾는다. 적힌 글은 '한ㄱ' 그대로 보이고,
+     * 판만 '한' 의 것을 이어 세운다.
+     *
+     * null 이면 찾지 않는다 — 자모밖에 없어(첫 자를 치는 중이다) 딛고 설
+     * 글이 없는 참이다. 그때는 지금 선 것을 그대로 둔다.
+     *
+     * 다 지운 것은 다르다. 빈 글로 찾으면 결과도 비는데, 그것이 지운 사람의
+     * 뜻이다 — 자모 한 자락과 한데 묶지 않는다.
+     */
+    val stem: String?
+        get() {
+            val q = query
+            if (q.isEmpty()) return ""
+            return q.trimEnd { Dict.isJamo(it) }.ifEmpty { null }
+        }
+
     /** 지금 담긴 결과가 어느 글의 몇 번째 찾기인지. 돌아왔을 때 헛돌지 않게. */
     var done: Pair<String, Int>? = null
 
@@ -280,13 +304,19 @@ object DictInput {
     /**
      * 입력 칸에 적힐 때. 한 글자라도 적히면 굳은 것이 풀리고 화면도 그 자리에서
      * 비워진다 — 새 결과가 오기 전까지 굳었던 글이 살아 있는 척 서 있지 않도록.
+     *
+     * 자모 한 자락만 온 참은 아니다. 'ㅎ' 은 아직 찾을 것이 없어 새 결과가
+     * 오지 않으므로, 여기서 비우면 판은 온전한 글자가 올 때까지 빈 채로 선다.
+     * 그때는 굳었던 것을 그대로 두고 [stem] 이 설 때 갈린다.
      */
     fun type(s: String) {
         if (frozen) {
             frozen = false
             held = ""
-            found = emptyList()
-            done = null
+            if (s.any { !Dict.isJamo(it) }) {
+                found = emptyList()
+                done = null
+            }
         }
         text = s
     }
@@ -362,14 +392,18 @@ fun DictPanel(
     // 화면이 딛고 선 글. 굳어 있으면 걷어 낸 그 글이라, 지우개를 눌러도 결과가
     // 그대로 남는다.
     val query = DictInput.query
+    // 찾기는 자모 자락을 뗀 쪽을 딛는다. 적어 두는 것은 적힌 글 그대로다.
+    val stem = DictInput.stem
     LaunchedEffect(query, frozen) { DictInput.save(context) }
     // 찾기는 곁줄에서 돈다. 한자로 찾으면 낱말 30만 줄을 훑으므로 화면을 붙잡고
     // 있을 일이 아니다. 이미 그 글로 찾아 둔 것이면 다시 돌지 않는다 — 회차를
     // 보고 돌아왔을 때 헛되이 한 번 더 캐지 않으려는 것이다.
-    LaunchedEffect(query, again) {
-        val key = query to again
+    LaunchedEffect(stem, again) {
+        // 자모밖에 없는 참에는 찾지 않고 지금 선 것을 그대로 둔다
+        val s = stem ?: return@LaunchedEffect
+        val key = s to again
         if (DictInput.done == key) return@LaunchedEffect
-        DictInput.found = withContext(Dispatchers.IO) { dict.search(query) }
+        DictInput.found = withContext(Dispatchers.IO) { dict.search(s) }
         DictInput.done = key
     }
 
