@@ -571,6 +571,10 @@ fun RoundPicker(
                         Image(
                             painterResource(R.drawable.door_settings),
                             contentDescription = null,
+                            // 회차 번호가 쉬고 있을 때의 잉크로 통일한다 — 그림이
+                            // 제 색을 둘(#96A5C3·#D9D9D9) 씩 들고 있어 판 위에서
+                            // 저 혼자 다른 결로 섰다.
+                            colorFilter = ColorFilter.tint(Hak3.Hanja),
                             modifier = Modifier
                                 .offset(y = SHOULDER_LIFT + DOOR_DROP)
                                 .width(DOOR_SETTINGS)
@@ -603,10 +607,13 @@ fun RoundPicker(
                     }
                 }
 
-                // 오른쪽 어깨의 장식. 위에서부터 a·b·c 이고, c 는 설정 문과
-                // 아랫선을 맞춘다 — 문이 판 아래에 있는 동안에는 함께 잘려
-                // 보이지 않다가, 판이 다 자라면 문과 나란히 들어온다.
-                // b 는 a 의 아랫선과 c 의 윗선 한가운데다.
+                // 오른쪽 어깨의 장식. 위에서부터 a·b 이고, 그 아래 LICENSES 가
+                // 선다. 링이던 c 는 설정 서랍으로 옮겨 갔다.
+                //
+                // 새 모양(b)의 판 폭은 여기서 한 번 셈해 안팎이 나눠 쓴다 —
+                // 잉크가 화면에서 [B_INK_PX] 로 못 박혀 있어 배수마다 달라지는데,
+                // 기둥의 폭도 LICENSES 의 자리도 그것을 딛기 때문이다.
+                val strip = birdStrip()
                 if (!sunk) Box(
                     Modifier
                         .align(Alignment.TopEnd)
@@ -614,8 +621,8 @@ fun RoundPicker(
                         .clipToBounds()
                         .padding(top = ROOF, end = SIDE + DECO_PULL)
                         // 폭은 여백 '안쪽' 을 재는 것이라야 한다. 앞에 두면
-                        // 여백이 이 폭을 파먹어 링 왼쪽의 LICENSES 가 잘린다.
-                        .width(DECO_COLUMN)
+                        // 여백이 이 폭을 파먹어 LICENSES 의 왼쪽이 잘린다.
+                        .width(maxOf(DECO_W, licPull(strip) + LIC_W))
                         // 장식을 끌어도 목록이 굴러가고 판이 함께 자란다 — 왼쪽
                         // 어깨와 같은 길이다. 판이 자라는 길은 [nested] 하나뿐이고,
                         // 제 스크롤러가 없는 기둥은 [rounds] 를 끌어 그 길에
@@ -643,11 +650,7 @@ fun RoundPicker(
                     }
                     val seenShare = progress.first
                     val seenRounds = progress.second
-                    val ringTop = with(density) {
-                        (doorBottom - panelTop - ROOF.toPx() -
-                            DECO_RING.toPx() * (RING_VIEW_H / RING_VIEW_W) -
-                            RING_LIFT.toPx()).coerceAtLeast(0f)
-                    }
+
                     val aTop = with(density) { DECO_A_DROP.toPx() }
                     val aBottom = aTop + with(density) { DECO_W.toPx() / DECO_A }
                     // b 는 a 의 아랫선에서 늘 같은 만큼 떨어져 선다 — c 가 판 밖에
@@ -662,16 +665,15 @@ fun RoundPicker(
                     SeenRounds(aTop, seenRounds)
                     // 갱신 표도 따로 그린다 — 새 판이 있으면 노랗게 물든다
                     UpdateMark(aTop, fresh != null) { updateShut = false }
-                    DecoB(bTop)
-                    // c 조각은 둘로 갈렸다. 링은 판의 오른아래 귀에 서고,
-                    // LICENSES 는 왼쪽 어깨의 SETTINGS 와 한 줄로 읽히도록
-                    // 문의 아랫선에서 되짚어 잡은 자리에 선다.
-                    Deco(R.drawable.deco_ring, RING_VIEW_W / RING_VIEW_H, ringTop, DECO_RING, RING_PUSH)
+                    DecoB(bTop, strip)
+                    // 링은 설정 서랍으로 옮겨 갔다. 남은 LICENSES 는 왼쪽 어깨의
+                    // SETTINGS 와 한 줄로 읽히도록 문의 아랫선에서 되짚어 잡은
+                    // 자리에 서고, 왼선은 새 모양(deco_b)의 왼선에 맞춘다.
                     val licTop = with(density) {
                         (doorBottom - panelTop - ROOF.toPx() - LIC_LIFT.toPx())
                             .coerceAtLeast(0f)
                     }
-                    LicenseTag(licTop) { drawer = Drawer.LICENSE }
+                    LicenseTag(licTop, strip) { drawer = Drawer.LICENSE }
                 }
             }
         }
@@ -712,42 +714,6 @@ fun RoundPicker(
  */
 private const val DECO_A = 255f / 475f
 private const val DECO_B = 259f / 79f
-/**
- * 오른쪽 아래 귀에 서는 링(c_sub2).
- *
- * 폭은 두 세로 잣대 사이의 70%(80dp)로 잡았다가 155% 키웠다. 그때 판은 146칸
- * 이었고 124dp 였는데, 뺀 점 자리의 빈 칸을 판에서 잘라 106.6칸으로 줄였으므로
- * 같은 크기로 서려면 124 × 106.6/146 = 90.6dp 다. 눈에 보이는 동그라미는 그대로다.
- */
-private val DECO_RING = 90.6.dp
-
-/**
- * 링이 문의 줄에서 위로 물러나는 만큼.
- *
- * 60 에서 12dp 를 도로 내리고, 점을 걷어 낸 뒤 링과 LICENSES 사이가 48.3dp 로
- * 벌어져 그 절반을 더 내렸다 — 폰에서 재어 잡은 값이다.
- */
-private val RING_LIFT = 23.8.dp
-private const val RING_VIEW_W = 106.6f
-private const val RING_VIEW_H = 145f
-
-/**
- * 그림 안에서 동그라미 글자가 서는 두 끝. 판을 오른끝에서 잘랐으므로
- * [RING_INK_RIGHT] 는 판의 오른끝과 같다. 왼끝은 가운데를 셈하는 데 쓴다.
- */
-private const val RING_INK_LEFT = 17.5f
-private const val RING_INK_RIGHT = 106.6f
-
-/**
- * deco_a 의 그림이 제 오른선에서 안으로 물러난 만큼.
- *
- * 눈대중으로 8.7 을 넣었더니 링의 오른끝이 25px 모자랐다. 폰에서 재어
- * 되짚으니 그림은 오른선에 거의 닿아 있다.
- */
-private val DECO_A_INSET = 0.4.dp
-
-/** 링과 LICENSES 사이. */
-private val LIC_GAP = 8.dp
 
 /**
  * c_sub1(81x42)의 캔버스와, 그 안에서 LICENSES 글자가 앉은 줄.
@@ -976,18 +942,19 @@ private fun UpdateMark(top: Float, fresh: Boolean, onOpen: () -> Unit) {
  * 키가 같아지도록 [LIC_W] 로 되짚어 잡고, 서는 자리는 문의 아랫선에서
  * [LIC_LIFT] 만큼 끌어올려 잡는다 — 문이 움직이면 이것도 따라 움직인다.
  *
- * 보이는 조각이 22dp 남짓이라 손끝에는 얕으므로 누를 자리만 [TOUCH] 로 넓혀
+ * 왼선은 새 모양(deco_b)의 왼선에 맞춘다([licPull]).
+ *
+ * 보이는 조각이 24dp 남짓이라 손끝에는 얕으므로 누를 자리만 [TOUCH] 로 넓혀
  * 그림을 그 가운데 둔다.
  */
 @Composable
-private fun LicenseTag(top: Float, onOpen: () -> Unit) {
+private fun LicenseTag(top: Float, strip: Dp, onOpen: () -> Unit) {
     val tall = LIC_W * (LIC_VIEW_H / LIC_VIEW_W)
     val room = maxOf(TOUCH, tall)
     Box(
         Modifier
             .offset { IntOffset(0, top.roundToInt()) }
-            // 링의 왼쪽에 한 뼘 떼고 선다
-            .offset(x = -LIC_PULL, y = -(room - tall) / 2)
+            .offset(x = -licPull(strip), y = -(room - tall) / 2)
             .width(LIC_W)
             .height(room)
             .clickable(
@@ -1004,6 +971,22 @@ private fun LicenseTag(top: Float, onOpen: () -> Unit) {
         )
     }
 }
+
+/**
+ * 새 모양의 잉크가 화면에서 [B_INK_PX] 로 서도록 되짚은 판의 폭. 그림에서
+ * 도형이 차지하는 몫이 [B_W]/[DECO_B_VIEW] 이므로 판은 그만큼 넓어야 한다.
+ */
+@Composable
+private fun birdStrip(): Dp =
+    with(LocalDensity.current) { (B_INK_PX * DECO_B_VIEW / B_W).toDp() }
+
+/**
+ * LICENSES 가 기둥의 오른선에서 물러나는 만큼 — 제 왼선이 새 모양의 왼선에
+ * 놓이는 자리다. 새 모양은 제 판의 오른끝에서 [B_PULL] 만큼 더 왼쪽에 서고,
+ * 그 판 안에서 도형은 [B_LEFT] 칸부터 그려진다.
+ */
+private fun licPull(strip: Dp): Dp =
+    strip + B_PULL - strip * (B_LEFT / DECO_B_VIEW) - LIC_W
 
 /** 수가 앉는 상자의 너비. 오른쪽 끝을 맞춰 두고 왼쪽으로 자라게 한다. */
 private val ROUNDS_BOX = 14.dp
@@ -1312,29 +1295,6 @@ private val LIC_W = DOOR_SETTINGS *
 private val LIC_LIFT = DOOR_SETTINGS * ((DOOR_VIEW_H - DOOR_INK_TOP) / DOOR_VIEW_W) +
     LIC_W * (LIC_INK_TOP / LIC_VIEW_W)
 
-/**
- * 링을 오른쪽으로 미는 만큼. 동그라미 글자의 오른끝을 deco_a 그림의 오른끝에
- * 맞춘다 — 그림 오른쪽에 남은 빈 칸만큼 내밀고, deco_a 가 물러난 만큼 되돌린다.
- * 내밀린 자리는 빈 칸이라 기둥의 자르기에 걸릴 것이 없다.
- */
-private val RING_PUSH =
-    DECO_RING * (1f - RING_INK_RIGHT / RING_VIEW_W) - DECO_A_INSET
-
-/** 링의 동그라미 가운데가 기둥의 오른선에서 물러난 만큼. */
-private val RING_MID = DECO_RING *
-    ((RING_VIEW_W - (RING_INK_LEFT + RING_VIEW_W) / 2f) / RING_VIEW_W) - RING_PUSH
-
-/**
- * LICENSES 가 기둥의 오른선에서 물러나는 만큼.
- *
- * 동그라미의 두 끝이 곧 잣대이므로, 그 사이의 가운데는 동그라미의 가운데다.
- * LICENSES 는 거기에 제 가운데를 맞춘다 — 링이 커지거나 밀려도 둘의 가운데는
- * 함께 움직인다.
- */
-private val LIC_PULL = RING_MID - LIC_W / 2
-
-/** 기둥이 차지하는 폭. 가장 넓은 조각과, 링에 LICENSES 를 붙인 줄 중 넓은 쪽이다. */
-private val DECO_COLUMN = maxOf(DECO_W, LIC_PULL + LIC_W)
 
 /**
  * 마지막 단추(Known Cards)와 설정 문 사이. 판이 다 자랐을 때 문의 아랫선이
@@ -1618,6 +1578,7 @@ private const val B_H = 68.0f            // 그 높이
 private const val B_APEX_X = 42.4932f    // 삼각형 윗 꼭지점
 private const val B_APEX_Y = 4.0f
 private const val B_RIGHT = 80.0664f     // 새 모양의 오른쪽 끝
+private const val B_LEFT = B_RIGHT - B_W // 그 왼쪽 끝 — LICENSES 가 여기에 맞선다
 private const val B_TOP = 18.5605f       // 몸통의 어깨선
 
 /** 새 모양의 잉크가 화면에서 서는 폭(px). 높이는 그림의 비로 따라온다. */
@@ -1654,12 +1615,9 @@ private val B_APEX = Color(0xFFFFFFFF)
 private val DIM_INK = 5.5.sp
 
 @Composable
-private fun DecoB(top: Float) {
+private fun DecoB(top: Float, strip: Dp) {
     val density = LocalDensity.current
     var origin by remember { mutableStateOf(Offset.Zero) }
-    // 새 모양의 잉크가 화면에서 72px 폭으로 서도록 판을 되짚어 잡는다. 그림에서
-    // 도형이 차지하는 몫이 75.868/259 이므로 판은 그만큼 넓어야 한다.
-    val strip = with(density) { (B_INK_PX * DECO_B_VIEW / B_W).toDp() }
     Box(
         Modifier
             .offset { IntOffset(0, top.roundToInt()) }

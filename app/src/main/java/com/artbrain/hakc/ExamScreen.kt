@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -572,16 +573,28 @@ fun SettingsPanel(
         // 사전 판의 높이, 그 아래 틈까지 그대로 받아 온다. 서랍이 밀려 들어와도
         // 오른쪽에 남은 자락과 선이 나란히 이어진다.
         Spacer(Modifier.height(DRAWER_TOP))
-        // 위 덩이 — 자료 날짜와 판 번호만 든다. 글씨는 앱의 기본 코레일체 그대로다.
-        Column(
+        // 위 덩이 — 왼쪽에 사인, 오른쪽에 자료 날짜와 판 번호. 수와 판 번호가
+        // 서는 자리라 글씨는 폭이 고른 [Mono] 다.
+        Row(
             Modifier
                 .fillMaxWidth()
                 .height(head)
                 .background(face, RoundedCornerShape(radius))
                 .padding(DRAWER_PAD),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Data ${day(built)}", fontSize = 20.sp, color = Hak3.TextSoft)
-            Text("Version ${BuildConfig.VERSION_NAME}", fontSize = 20.sp, color = Hak3.TextSoft)
+            Image(
+                painterResource(R.drawable.deco_ring),
+                contentDescription = null,
+                modifier = Modifier.size(DRAWER_SIGN),
+            )
+            Spacer(Modifier.width(DRAWER_PAD))
+            Column {
+                Text("Data ${day(built)}", fontFamily = Mono, fontSize = DRAWER_INK,
+                     color = Hak3.TextSoft)
+                Text("Version ${BuildConfig.VERSION_NAME}", fontFamily = Mono,
+                     fontSize = DRAWER_INK, color = Hak3.TextSoft)
+            }
         }
 
         Spacer(Modifier.height(gap))
@@ -629,6 +642,12 @@ private val DRAWER_TOP = 4.dp
 
 /** 덩이 안쪽의 마진. 덩이가 넓으므로 판 위의 글보다 넉넉히 둔다. */
 private val DRAWER_PAD = 24.dp
+
+/** 위 덩이 왼쪽에 서는 사인. 그림이 정사각에 가까워 한 변으로 잡는다. */
+private val DRAWER_SIGN = 64.dp
+
+/** 날짜와 판 번호의 글자 크기. 20 에서 2sp 물러났다. */
+private val DRAWER_INK = 18.sp
 
 /** 날짜는 YYYY.MM.DD 로 적는다. 데이터는 하이픈으로 적어 오므로 그것만 바꾼다. */
 private fun day(s: String?): String = s?.replace('-', '.') ?: "unknown"
