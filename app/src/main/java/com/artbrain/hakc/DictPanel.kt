@@ -752,8 +752,21 @@ private val INPUT_RULE = Color.Black.copy(alpha = 0.58f)
  */
 private val HUNEUM = 18.sp
 
-/** 그 아래 뜻풀이. 訓音보다 한 걸음 더 물러나 딸린 말로 읽힌다. */
-private val GLOSS = 17.4.sp
+/**
+ * 그 아래 뜻풀이. 訓音보다 한 걸음 더 물러나 딸린 말로 읽힌다.
+ *
+ * 17.4 에서는 訓音과 갈리지 않았다 — 곁에 서면 1.6sp 차이는 눈에 안 잡힌다.
+ * 1sp 를 더 물려 두 줄이 서로 다른 말임이 보이게 한다.
+ */
+private val GLOSS = 16.4.sp
+
+/**
+ * 줄과 줄 사이. 19sp 글자에 27sp 이던 비를 그대로 물려, 글자를 줄인 만큼
+ * 행간도 함께 좁아진다 — 글자만 줄이면 줄 사이가 저 혼자 벌어져 성글어진다.
+ */
+private const val LEAD = 27f / 19f
+private val HUNEUM_LEAD = (HUNEUM.value * LEAD).sp
+private val GLOSS_LEAD = (GLOSS.value * LEAD).sp
 
 /**
  * 표기 하나의 풀이 — 글자마다 `음 : 급수 훈`, 그 아래 뜻.
@@ -770,7 +783,7 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                 Text(
                     "${g.eum} :",
                     fontSize = HUNEUM,
-                    lineHeight = 27.sp,
+                    lineHeight = HUNEUM_LEAD,
                     // 흰 글씨는 판에서 가장 밝아 한자보다 앞으로 나온다.
                     // 訓音은 한자에 딸린 말이니 한자와 같은 색을 쓴다.
                     // 담아 둔 글자만 노랑으로 도드라진다.
@@ -800,7 +813,7 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                         }
                     },
                     fontSize = HUNEUM,
-                    lineHeight = 27.sp,
+                    lineHeight = HUNEUM_LEAD,
                     color = INK_HANJA,
                     modifier = Modifier.alignByBaseline(),
                     inlineContent = mapOf(
@@ -847,7 +860,7 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                 Text(
                     body,
                     fontSize = GLOSS,
-                    lineHeight = 27.sp,
+                    lineHeight = GLOSS_LEAD,
                     color = INK_GLOSS,
                     maxLines = if (open) Int.MAX_VALUE else 1,
                     overflow = TextOverflow.Ellipsis,
