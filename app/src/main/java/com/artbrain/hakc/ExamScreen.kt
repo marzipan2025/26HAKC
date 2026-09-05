@@ -1042,7 +1042,16 @@ private fun AnswerSlot(item: Item, revealed: Boolean, ink: (Color) -> Color) {
     }
 }
 
-private val BAR = 58.dp
+/**
+ * 바닥 줄의 높이. 양옆 두 단추는 이 값을 한 변으로 하는 정사각이라 지름이 곧
+ * 이것이고, 가운데 슬라이더의 알약도 이 높이를 따른다. 그러므로 이 하나가
+ * 줄 전체의 크기다. 노랑·초록 단추만 [PICK_TRIM] 만큼 작게 서서 50dp 다.
+ *
+ * 위 캡슐([TOP])과 같은 값이다 — 화면 위아래에 같은 두께로 한 켤레가 선다.
+ * 58dp 이던 것을 낮춘 값이고, 안에 앉는 글씨(슬라이더 15sp, ✕ 22sp)는 제
+ * 크기로 따로 박혀 있으므로 줄만 얇아지고 글자는 그대로다.
+ */
+private val BAR = 52.dp
 private val DOT = 28.dp
 private val TOP = 52.dp
 
@@ -1187,6 +1196,7 @@ private fun PickDot(enabled: Boolean, hue: Color?, onPick: () -> Unit) {
     Box(
         Modifier
             .size(BAR)
+            .padding(PICK_TRIM / 2)
             .background(if (enabled) hue else hue.copy(alpha = 0.2f), CircleShape)
             .clickable(enabled = enabled, onClick = onPick),
         contentAlignment = Alignment.Center,
@@ -1200,10 +1210,20 @@ private fun AmberDot(enabled: Boolean, onPick: () -> Unit) {
     Box(
         Modifier
             .size(BAR)
+            .padding(PICK_TRIM / 2)
             .background(if (enabled) Hak3.Pink else Hak3.Pink.copy(alpha = 0.2f), CircleShape)
             .clickable(enabled = enabled, onClick = onPick)
     )
 }
+
+/**
+ * 노랑·초록 단추가 다른 것들보다 지름을 줄이는 만큼. 꽉 찬 색면은 같은 크기라도
+ * 더 커 보이므로, 이만큼 깎아야 건너편 ✕ 나 가운데 슬라이더와 한 크기로 읽힌다.
+ *
+ * 자리(BAR)는 그대로 두고 그리는 면만 사방으로 절반씩 물린다 — 줄 안에서 차지하는
+ * 칸이 흔들리지 않아 건너편 단추와 좌우가 어긋나지 않는다.
+ */
+private val PICK_TRIM = 2.dp
 
 /**
  * 채워진 부분이 0%에서는 높이와 같은 지름의 정원, 100%에서는 가운데 영역을
