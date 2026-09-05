@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- deco_ring 에서 떼어 낸 안의 표. 글자 띠(ring_text)와 캔버스가 같아 겹쳐
+     놓으면 원래 그림이 된다. 이것은 돌지 않는다.
+     원래 판(106.6x145)에서 x 17.5, y 29 만큼 물러나 있던 것을 group 으로 끌어당긴다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="89.1dp"
+    android:height="89.4dp"
+    android:viewportWidth="89.1"
+    android:viewportHeight="89.4">
+    <group android:translateX="-17.5" android:translateY="-29">
+        <path
+            android:fillColor="#95A5C2"
+            android:pathData="M59.0824 68.2275C61.5679 68.4311 64.6058 69.5165 67.7127 71.0089C65.9176 71.0089 62.8107 70.8733 58.6681 69.7878L55.2851 68.9738C56.735 68.2275 57.8396 68.2275 59.0824 68.2275ZM78 72.6371C78 67.3456 66.4699 60.9688 59.2895 60.9688C53.6971 60.9688 47 63.0718 47 71.8909C47 77.3858 48.7951 81.5919 48.7951 81.5919L54.5947 80.1672L54.8708 87.9688H62.0512L61.637 77.5894C64.6058 78.0642 67.2294 78.3356 69.3007 78.3356C73.167 78.3356 78 76.911 78 72.6371Z" />
+    </group>
+</vector>

@@ -321,8 +321,8 @@ fun RoundPicker(
                 SettingsPanel(
                     radius = radius,
                     face = Hak3.Card.copy(alpha = DIM),
-                    head = with(density) { height.toDp() },
                     gap = band,
+                    spinning = drawer == Drawer.SETTINGS,
                     built = built,
                     markOnLeft = markOnLeft,
                     onMarkSide = { left ->
@@ -622,7 +622,7 @@ fun RoundPicker(
                         .padding(top = ROOF, end = SIDE + DECO_PULL)
                         // 폭은 여백 '안쪽' 을 재는 것이라야 한다. 앞에 두면
                         // 여백이 이 폭을 파먹어 LICENSES 의 왼쪽이 잘린다.
-                        .width(maxOf(DECO_W, licPull(strip) + LIC_W))
+                        .width(maxOf(DECO_W, LIC_PULL + LIC_W))
                         // 장식을 끌어도 목록이 굴러가고 판이 함께 자란다 — 왼쪽
                         // 어깨와 같은 길이다. 판이 자라는 길은 [nested] 하나뿐이고,
                         // 제 스크롤러가 없는 기둥은 [rounds] 를 끌어 그 길에
@@ -668,12 +668,12 @@ fun RoundPicker(
                     DecoB(bTop, strip)
                     // 링은 설정 서랍으로 옮겨 갔다. 남은 LICENSES 는 왼쪽 어깨의
                     // SETTINGS 와 한 줄로 읽히도록 문의 아랫선에서 되짚어 잡은
-                    // 자리에 서고, 왼선은 새 모양(deco_b)의 왼선에 맞춘다.
+                    // 자리에 서고, 오른선은 위 세 표(원·갱신 표·다이얼)에 맞춘다.
                     val licTop = with(density) {
                         (doorBottom - panelTop - ROOF.toPx() - LIC_LIFT.toPx())
                             .coerceAtLeast(0f)
                     }
-                    LicenseTag(licTop, strip) { drawer = Drawer.LICENSE }
+                    LicenseTag(licTop) { drawer = Drawer.LICENSE }
                 }
             }
         }
@@ -745,6 +745,16 @@ private const val LIC_Y1 = 185f
 
 /** 그 자리를 누를 수 있는 키. 보이는 글은 얇아도 손끝은 이만큼이라야 한다. */
 private val LIC_TOUCH = 48.dp
+
+/**
+ * 위 세 표(회차 원·갱신 표·다이얼)의 잉크가 끝나는 자리 — deco_a 캔버스(255)
+ * 안의 값이다. 셋이 한 그림에서 나왔으므로 오른끝이 모두 같다. 그림을 재어
+ * 잡았고, 그림이 바뀌면 다시 재야 한다.
+ */
+private const val MARK_RIGHT = 254.43f
+
+/** LICENSES 그림의 잉크가 끝나는 자리 — 제 캔버스(81) 안의 값이다. */
+private const val LIC_INK_RIGHT = 80f
 
 /** 장식이 차지하는 폭. 원본은 258 이나 그대로 두면 판의 절반을 넘는다. */
 private val DECO_W = 96.dp
@@ -942,19 +952,19 @@ private fun UpdateMark(top: Float, fresh: Boolean, onOpen: () -> Unit) {
  * 키가 같아지도록 [LIC_W] 로 되짚어 잡고, 서는 자리는 문의 아랫선에서
  * [LIC_LIFT] 만큼 끌어올려 잡는다 — 문이 움직이면 이것도 따라 움직인다.
  *
- * 왼선은 새 모양(deco_b)의 왼선에 맞춘다([licPull]).
+ * 오른선은 위 세 표의 오른선에 맞춘다([LIC_PULL]).
  *
  * 보이는 조각이 24dp 남짓이라 손끝에는 얕으므로 누를 자리만 [TOUCH] 로 넓혀
  * 그림을 그 가운데 둔다.
  */
 @Composable
-private fun LicenseTag(top: Float, strip: Dp, onOpen: () -> Unit) {
+private fun LicenseTag(top: Float, onOpen: () -> Unit) {
     val tall = LIC_W * (LIC_VIEW_H / LIC_VIEW_W)
     val room = maxOf(TOUCH, tall)
     Box(
         Modifier
             .offset { IntOffset(0, top.roundToInt()) }
-            .offset(x = -licPull(strip), y = -(room - tall) / 2)
+            .offset(x = -LIC_PULL, y = -(room - tall) / 2)
             .width(LIC_W)
             .height(room)
             .clickable(
@@ -979,14 +989,6 @@ private fun LicenseTag(top: Float, strip: Dp, onOpen: () -> Unit) {
 @Composable
 private fun birdStrip(): Dp =
     with(LocalDensity.current) { (B_INK_PX * DECO_B_VIEW / B_W).toDp() }
-
-/**
- * LICENSES 가 기둥의 오른선에서 물러나는 만큼 — 제 왼선이 새 모양의 왼선에
- * 놓이는 자리다. 새 모양은 제 판의 오른끝에서 [B_PULL] 만큼 더 왼쪽에 서고,
- * 그 판 안에서 도형은 [B_LEFT] 칸부터 그려진다.
- */
-private fun licPull(strip: Dp): Dp =
-    strip + B_PULL - strip * (B_LEFT / DECO_B_VIEW) - LIC_W
 
 /** 수가 앉는 상자의 너비. 오른쪽 끝을 맞춰 두고 왼쪽으로 자라게 한다. */
 private val ROUNDS_BOX = 14.dp
@@ -1286,6 +1288,20 @@ private val DOOR_SETTINGS = 64.dp
 private val LIC_W = DOOR_SETTINGS *
     ((DOOR_INK_BOTTOM - DOOR_INK_TOP) / DOOR_VIEW_W) *
     (LIC_VIEW_W / (LIC_INK_BOTTOM - LIC_INK_TOP))
+
+/**
+ * LICENSES 가 기둥의 오른선에서 물러나는 만큼 — 제 잉크의 오른끝이 위 세 표
+ * (회차 원·갱신 표·다이얼)의 오른끝과 한 선에 놓이는 자리다.
+ *
+ * 셋은 모두 deco_a 의 캔버스 안에서 [MARK_RIGHT] 칸에서 끝나고, LICENSES 의
+ * 잉크는 제 캔버스 안에서 [LIC_INK_RIGHT] 칸에서 끝난다. 둘을 각자의 화면
+ * 크기로 옮겨 빼면 물러날 거리가 나온다.
+ *
+ * 값이 음수다 — 조각의 상자가 기둥 오른선을 0.33dp 만큼 넘어선다. 넘어가는 것은
+ * 그림의 빈 오른 여백뿐이라 기둥이 잘라도 보이는 것이 없다.
+ */
+private val LIC_PULL = DECO_W * ((DECO_A_VIEW - MARK_RIGHT) / DECO_A_VIEW) -
+    LIC_W * ((LIC_VIEW_W - LIC_INK_RIGHT) / LIC_VIEW_W)
 
 /**
  * 문의 아랫선에서 LICENSES 조각의 윗선까지. 두 글자의 윗선이 한 줄에 놓이는

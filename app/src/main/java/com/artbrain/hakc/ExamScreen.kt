@@ -7,6 +7,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Row
@@ -24,6 +25,7 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animate
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -551,8 +553,9 @@ private fun Deck(
 fun SettingsPanel(
     radius: Dp,
     face: Color,
-    head: Dp,
     gap: Dp,
+    /** 서랍이 열려 있는가. 열려 있는 동안에만 사인의 글자 띠가 돈다. */
+    spinning: Boolean,
     built: String?,
     markOnLeft: Boolean,
     onMarkSide: (Boolean) -> Unit,
@@ -569,32 +572,29 @@ fun SettingsPanel(
                 indication = null,
             ) {},
     ) {
-        // 위아래로 갈리는 자리는 본 화면의 두 판과 똑같다 — 위에서 물러난 4dp,
-        // 사전 판의 높이, 그 아래 틈까지 그대로 받아 온다. 서랍이 밀려 들어와도
-        // 오른쪽에 남은 자락과 선이 나란히 이어진다.
+        // 위에서 물러나는 4dp 와 두 덩이 사이의 틈은 본 화면의 두 판에서 그대로
+        // 받아 온다.
         Spacer(Modifier.height(DRAWER_TOP))
-        // 위 덩이 — 왼쪽에 사인, 오른쪽에 자료 날짜와 판 번호. 수와 판 번호가
-        // 서는 자리라 글씨는 폭이 고른 [Mono] 다.
-        Row(
+        // 위 덩이 — 사인은 오른위 귀에 못 박히고, 자료 날짜와 판 번호는 왼쪽에
+        // 붙어 선다. 수와 판 번호가 서는 자리라 글씨는 폭이 고른 [Mono] 다.
+        //
+        // 키는 사인이 정한다. 안쪽 마진이 사방으로 같으므로 사인의 위아래 여백도
+        // 같아지고, 그러면 덩이의 세로 한가운데가 곧 사인의 한가운데다 — 글은
+        // 그 자리에 서기만 하면 사인과 눈높이가 맞는다.
+        Box(
             Modifier
                 .fillMaxWidth()
-                .height(head)
+                .height(DRAWER_PAD * 2 + DRAWER_SIGN)
                 .background(face, RoundedCornerShape(radius))
                 .padding(DRAWER_PAD),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Image(
-                painterResource(R.drawable.deco_ring),
-                contentDescription = null,
-                modifier = Modifier.size(DRAWER_SIGN),
-            )
-            Spacer(Modifier.width(DRAWER_PAD))
-            Column {
+            Column(Modifier.align(Alignment.CenterStart)) {
                 Text("Data ${day(built)}", fontFamily = Mono, fontSize = DRAWER_INK,
                      color = Hak3.TextSoft)
                 Text("Version ${BuildConfig.VERSION_NAME}", fontFamily = Mono,
                      fontSize = DRAWER_INK, color = Hak3.TextSoft)
             }
+            Sign(Modifier.align(Alignment.TopEnd), spinning)
         }
 
         Spacer(Modifier.height(gap))
@@ -643,11 +643,50 @@ private val DRAWER_TOP = 4.dp
 /** 덩이 안쪽의 마진. 덩이가 넓으므로 판 위의 글보다 넉넉히 둔다. */
 private val DRAWER_PAD = 24.dp
 
-/** 위 덩이 왼쪽에 서는 사인. 그림이 정사각에 가까워 한 변으로 잡는다. */
-private val DRAWER_SIGN = 64.dp
+/**
+ * 사인. 글자 띠와 안의 표를 따로 그려, 서랍이 열려 있는 동안 띠만 천천히
+ * 시계방향으로 돈다 — 안의 표는 제자리다. 둘은 캔버스가 같아 겹치면 한 그림이다.
+ *
+ * 각은 [Animatable] 로 이어 간다. 서랍을 닫으면 코루틴이 끊기면서 그 각에 그대로
+ * 멈추고, 다시 열면 거기서부터 돈다 — 열고 닫을 때마다 처음으로 튀지 않는다.
+ */
+@Composable
+private fun Sign(modifier: Modifier, spinning: Boolean) {
+    val turn = remember { Animatable(0f) }
+    LaunchedEffect(spinning) {
+        if (!spinning) return@LaunchedEffect
+        while (true) {
+            turn.animateTo(turn.value + 360f, tween(RING_TURN, easing = LinearEasing))
+            // 한 바퀴마다 각을 0..360 으로 되접는다. 그대로 두면 수가 끝없이 자라
+            // 언젠가 부동소수의 눈금이 성겨진다.
+            turn.snapTo(turn.value % 360f)
+        }
+    }
+    Box(modifier.size(DRAWER_SIGN)) {
+        Image(
+            painterResource(R.drawable.ring_text),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize().rotate(turn.value),
+        )
+        Image(
+            painterResource(R.drawable.ring_mark),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
 
-/** 날짜와 판 번호의 글자 크기. 20 에서 2sp 물러났다. */
-private val DRAWER_INK = 18.sp
+/** 글자 띠가 한 바퀴 도는 데 걸리는 참. (ms) */
+private const val RING_TURN = 30_000
+
+/**
+ * 위 덩이 오른위 귀에 못 박히는 사인. 그림이 정사각에 가까워 한 변으로 잡는다.
+ * 64dp 이던 것을 112% 로 키웠다 — 글 곁에 나란히 서던 때보다 제 자리를 넓게 쓴다.
+ */
+private val DRAWER_SIGN = 64.dp * 1.12f
+
+/** 날짜와 판 번호의 글자 크기. 20 에서 세 걸음(2·2·3sp) 물러났다. */
+private val DRAWER_INK = 13.sp
 
 /** 날짜는 YYYY.MM.DD 로 적는다. 데이터는 하이픈으로 적어 오므로 그것만 바꾼다. */
 private fun day(s: String?): String = s?.replace('-', '.') ?: "unknown"
