@@ -183,6 +183,16 @@ fun RoundPicker(
 
     // 묶음을 열었다 닫고 돌아오면 서랍이 열린 채로 다시 선다 — 방금 있던 자리다
     var drawer by remember { mutableStateOf(Drawer.NONE) }
+    // 다 지운 뒤에는 화면을 통째로 다시 짓는다 — 여기저기 붙잡아 둔 수와 표시를
+    // 하나씩 되돌리는 것보다 이 편이 틀림없다. 다만 서랍이 닫힌 뒤에 짓는다.
+    // 곧바로 지으면 서랍이 결과를 보이기도 전에 사라진다.
+    var wiped by remember { mutableStateOf(false) }
+    LaunchedEffect(drawer, wiped) {
+        if (wiped && drawer == Drawer.NONE) {
+            wiped = false
+            (context as? android.app.Activity)?.recreate()
+        }
+    }
     var last by remember { mutableIntStateOf(Settings.lastRound(context)) }
     var markOnLeft by remember { mutableStateOf(Settings.markOnLeft(context)) }
 
@@ -322,7 +332,7 @@ fun RoundPicker(
                     radius = radius,
                     face = Hak3.Card.copy(alpha = DIM),
                     gap = band,
-                    spinning = drawer == Drawer.SETTINGS,
+                    open = drawer == Drawer.SETTINGS,
                     built = built,
                     markOnLeft = markOnLeft,
                     onMarkSide = { left ->
@@ -331,10 +341,9 @@ fun RoundPicker(
                     },
                     // 지운 뒤에는 화면을 처음부터 다시 짓는다 — 여기저기 붙잡아 둔
                     // 수와 표시를 하나씩 되돌리는 것보다 이 편이 틀림없다.
-                    onWipe = {
-                        Settings.wipe(context)
-                        (context as? android.app.Activity)?.recreate()
-                    },
+                    // 지우기만 하고 화면은 그대로 둔다 — 서랍이 결과를 보여야
+                    // 하기 때문이다. 다시 짓는 것은 서랍이 닫힌 뒤다.
+                    onWipe = { Settings.wipe(context); wiped = true },
                 )
             }
         Column(Modifier.fillMaxSize()) {
@@ -571,9 +580,10 @@ fun RoundPicker(
                         Image(
                             painterResource(R.drawable.door_settings),
                             contentDescription = null,
-                            // 회차 번호가 쉬고 있을 때의 잉크로 통일한다 — 그림이
-                            // 제 색을 둘(#96A5C3·#D9D9D9) 씩 들고 있어 판 위에서
-                            // 저 혼자 다른 결로 섰다.
+                            // 회차 번호가 쉬고 있을 때의 잉크로 통일한다 —
+                            // 그림이 제 색을 둘(#96A5C3·#D9D9D9) 들고 있어
+                            // 판 위에서 저 혼자 다른 결로 섰다. 글자든 화살표든
+                            // 도형이든 한 색으로 세운다.
                             colorFilter = ColorFilter.tint(Hak3.Hanja),
                             modifier = Modifier
                                 .offset(y = SHOULDER_LIFT + DOOR_DROP)
@@ -720,14 +730,14 @@ private const val DECO_B = 259f / 79f
  * icon_settings(118x62)의 것도 함께 둔다 — 두 글자를 견주어야 하기 때문이다.
  * 넷 다 그림을 재어 잡았고, 그림이 바뀌면 다시 재야 한다.
  */
-private const val LIC_VIEW_W = 81f
+private const val LIC_VIEW_W = 113f
 private const val LIC_VIEW_H = 45f
 private const val LIC_INK_TOP = 28.52f
 private const val LIC_INK_BOTTOM = 40.23f
 private const val DOOR_VIEW_W = 118f
 private const val DOOR_VIEW_H = 62f
-private const val DOOR_INK_TOP = 49.33f
-private const val DOOR_INK_BOTTOM = 61f
+private const val DOOR_INK_TOP = 49.39f
+private const val DOOR_INK_BOTTOM = 61.16f
 
 
 
@@ -753,8 +763,11 @@ private val LIC_TOUCH = 48.dp
  */
 private const val MARK_RIGHT = 254.43f
 
-/** LICENSES 그림의 잉크가 끝나는 자리 — 제 캔버스(81) 안의 값이다. */
-private const val LIC_INK_RIGHT = 80f
+/**
+ * LICENSES 그림의 잉크가 끝나는 자리 — 제 캔버스(113) 안의 값이다. 오른위의 표가
+ * 판 오른끝까지 닿으므로 판 폭과 같다.
+ */
+private const val LIC_INK_RIGHT = 113f
 
 /** 장식이 차지하는 폭. 원본은 258 이나 그대로 두면 판의 절반을 넘는다. */
 private val DECO_W = 96.dp
@@ -977,6 +990,9 @@ private fun LicenseTag(top: Float, onOpen: () -> Unit) {
         Image(
             painterResource(R.drawable.lic_block),
             contentDescription = null,
+            // 설정 문과 같은 잉크로 통일한다 — 두 조각이 한 줄로 읽히는 자리라
+            // 한쪽만 제 색을 들고 서면 짝이 어긋난다
+            colorFilter = ColorFilter.tint(Hak3.Hanja),
             modifier = Modifier.fillMaxWidth().aspectRatio(LIC_VIEW_W / LIC_VIEW_H),
         )
     }
