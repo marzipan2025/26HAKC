@@ -34,6 +34,9 @@ class Marks(context: Context, round: Int) {
     companion object {
         private const val PREFS = "marks"
 
+        /** 마지막으로 문제를 펼쳐 본 때. 회차 이름이 아니므로 rounds() 가 걸러 낸다. */
+        private const val KEY_STUDIED = "studied"
+
         private fun keyOf(round: Int) = "round_$round"
 
         private fun tag(m: Mark) = when (m) {
@@ -92,8 +95,17 @@ class Marks(context: Context, round: Int) {
 
         fun setLastSeen(context: Context, round: Int, no: Int) {
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .edit().putInt("last_$round", no).apply()
+                .edit()
+                .putInt("last_$round", no)
+                // 문항을 펼칠 때마다 그때를 함께 적어 둔다 — 이것이 마지막으로
+                // 공부한 날이 된다. 표시를 남기지 않고 넘겨만 봐도 공부다.
+                .putLong(KEY_STUDIED, System.currentTimeMillis())
+                .apply()
         }
+
+        /** 마지막으로 문제를 펼쳐 본 때. 한 번도 없으면 0 이다. */
+        fun studied(context: Context): Long =
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong(KEY_STUDIED, 0L)
 
         /** 회차 목록에 표기할 개수. */
         fun counts(context: Context, round: Int): Counts {

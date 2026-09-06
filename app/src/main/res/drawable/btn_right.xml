@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- hakc_asset2/btn_left-1.svg 에서 옮겨 온 것 — 이름은 left 로 떨어졌으나 흰 동그라미가 오른쪽에 선 그림이다. 표시 단추가 오른쪽에 설 때 쓴다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="914dp"
+    android:height="368dp"
+    android:viewportWidth="914"
+    android:viewportHeight="368">
+    <path
+        android:fillColor="#96A5C3"
+        android:pathData="M667 365V368H247V365H667ZM739 293C739 253.236 706.765 221 667 221H247C207.236 221 175 253.236 175 293C175 332.765 207.235 365 247 365V368L246.03 367.994C205.056 367.475 172 334.098 172 293C172 251.579 205.579 218 247 218H667C708.421 218 742 251.579 742 293C742 334.098 708.944 367.475 667.97 367.994L667 368V365C706.765 365 739 332.765 739 293Z" />
+    <path
+        android:fillColor="#EBEBEB"
+        android:pathData="M764,293 A75,75 0 1 0 914,293 A75,75 0 1 0 764,293 Z" />
+    <path
+        android:fillColor="#96A5C3"
+        android:pathData="M147 293C147 253.236 114.765 221 75 221C35.2355 221 3 253.236 3 293C3 332.765 35.2355 365 75 365V368C33.5786 368 0 334.421 0 293C0 251.579 33.5786 218 75 218C116.421 218 150 251.579 150 293C150 334.421 116.421 368 75 368V365C114.765 365 147 332.765 147 293Z" />
+    <path
+        android:fillColor="#96A5C3"
+        android:pathData="M94.7192,271 L97.5476,273.8284 L55.8283,315.5477 L52.9999,312.7193 Z" />
+    <path
+        android:fillColor="#96A5C3"
+        android:pathData="M97.7192,313 L94.8908,315.8284 L53.1715,274.1091 L55.9999,271.2807 Z" />
+    <path
+        android:fillColor="#96A5C3"
+        android:pathData="M914 88L913.992 89.293C913.305 143.495 869.495 187.305 815.293 187.992L814 188H100C45.2032 188 0.70008 143.926 0.0078125 89.293L0 88V0H3V88C3 141.572 46.4284 185 100 185H814C867.572 185 911 141.572 911 88V0H914V88Z" />
+</vector>

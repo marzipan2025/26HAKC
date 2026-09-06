@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -554,15 +556,23 @@ fun SettingsPanel(
     radius: Dp,
     face: Color,
     gap: Dp,
-    /** 서랍이 열려 있는가. 열려 있는 동안에만 사인의 글자 띠가 돈다. */
-    spinning: Boolean,
+    /**
+     * 서랍이 열려 있는가. 열려 있는 동안에만 사인의 글자 띠가 돌고, 닫히면
+     * 지우는 자리도 처음으로 되돌아간다 — 본 화면에 갔다 오면 늘 같은 얼굴이다.
+     */
+    open: Boolean,
     built: String?,
     markOnLeft: Boolean,
     onMarkSide: (Boolean) -> Unit,
     onWipe: () -> Unit,
 ) {
-    // 한 번에 지워지지 않는다. 물음이 그 자리에 서고, 대답해야 지운다.
+    // 한 번에 지워지지 않는다. 물음이 단추 자리에 서고, 대답해야 지운다.
+    // 지운 뒤에는 그 자리에 결과만 남는다. 서랍을 닫으면 셋 다 처음으로 돌아간다.
     var asking by remember { mutableStateOf(false) }
+    var wiped by remember { mutableStateOf(false) }
+    LaunchedEffect(open) {
+        if (!open) { asking = false; wiped = false }
+    }
     Column(
         Modifier
             .fillMaxSize()
@@ -588,49 +598,122 @@ fun SettingsPanel(
                 .background(face, RoundedCornerShape(radius))
                 .padding(DRAWER_PAD),
         ) {
-            Column(Modifier.align(Alignment.CenterStart)) {
-                Text("Data ${day(built)}", fontFamily = Mono, fontSize = DRAWER_INK,
-                     color = Hak3.TextSoft)
-                Text("Version ${BuildConfig.VERSION_NAME}", fontFamily = Mono,
-                     fontSize = DRAWER_INK, color = Hak3.TextSoft)
+            // 세 줄이 사인의 키를 나눠 쓴다. 위 둘과 아래 하나를 따로 붙이는
+            // 것은, 셀 안쪽이 사인의 키에 딱 맞아 기둥을 그보다 크게 잡을 수
+            // 없기 때문이다 — 크게 잡으면 그대로 눌려 아랫줄만 끌려 올라간다.
+            Column(
+                Modifier.align(Alignment.TopStart).offset(y = -DRAWER_LINE_TOP),
+            ) {
+                Text("Data ${day(built)}", style = DRAWER_LINE)
+                Text("Version ${BuildConfig.VERSION_NAME}", style = DRAWER_LINE)
             }
-            Sign(Modifier.align(Alignment.TopEnd), spinning)
+            Text(
+                "Last Study ${studiedOn(LocalContext.current)}",
+                style = DRAWER_LINE,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .offset(y = DRAWER_LINE_BOTTOM),
+            )
+            Sign(Modifier.align(Alignment.TopEnd), open)
         }
 
         Spacer(Modifier.height(gap))
 
-        // 아래 덩이 — 손댈 것 둘. 표시 단추가 설 쪽과, 다 지우는 자리다.
+        // 아래 — 한 단씩 폭을 다 쓴다. 나란히 두었더니 칸이 좁아 이름이 접히고
+        // 그림도 반으로 줄었다.
+        Spacer(Modifier.height(gap))
         Column(
+            Modifier
+                .fillMaxWidth()
+                .background(face, RoundedCornerShape(radius))
+                .padding(DRAWER_PAD),
+        ) {
+            // 이름은 두지 않는다 — 그림이 문제 화면의 바닥 줄을 줄여 그린
+            // 것이라 무엇을 고르는 자리인지 스스로 말한다.
+            //
+            // 고르는 글자를 그림 오른쪽에 위아래로 세운다. 아래에 늘어놓으면
+            // 그림이 폭을 다 써서 칸이 그만큼 높아진다.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    painterResource(
+                        if (markOnLeft) R.drawable.btn_left else R.drawable.btn_right
+                    ),
+                    contentDescription = null,
+                    modifier = Modifier.weight(1f).aspectRatio(BTN_VIEW_W / BTN_VIEW_H),
+                )
+                Spacer(Modifier.width(20.dp))
+                // 고르는 것은 글자뿐이다 — 그림이 이미 상태를 말하므로 색면까지
+                // 둘 까닭이 없다.
+                Column(verticalArrangement = Arrangement.spacedBy(SIDE_GAP)) {
+                    Side("Left", markOnLeft) { onMarkSide(true) }
+                    Side("Right", !markOnLeft) { onMarkSide(false) }
+                }
+            }
+        }
+
+        // 아직 아무것도 들지 않은 칸. 남은 자리를 그대로 받아 선다.
+        Spacer(Modifier.height(gap))
+        Box(
             Modifier
                 .fillMaxWidth()
                 .weight(1f)
                 .background(face, RoundedCornerShape(radius))
-                .padding(DRAWER_PAD),
-        ) {
-            Label("MARK BUTTON")
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Side("Left", markOnLeft) { onMarkSide(true) }
-                Side("Right", !markOnLeft) { onMarkSide(false) }
-            }
+        )
 
-            Spacer(Modifier.height(36.dp))
-            Label("RESET")
-            Spacer(Modifier.height(12.dp))
-            if (!asking) {
-                Key("Erase everything", Hak3.Knob, Hak3.TextDim) { asking = true }
+        // 맨 아래 — 다 지우는 자리. 이름을 두지 않는다. 되돌릴 수 없는 자리라
+        // 다른 묶음처럼 이름부터 세우지 않고, 무엇이 사라지는지를 먼저 적는다.
+        //
+        // 아래 마진만 단추가 제 안에 두른 [PICK_ROOM_Y] 만큼 얕다. 그래야 글 위와
+        // 단추 아래의 빈 자리가 눈에 같아 보인다.
+        Spacer(Modifier.height(gap))
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .background(face, RoundedCornerShape(radius))
+                .padding(
+                    start = DRAWER_PAD,
+                    end = DRAWER_PAD,
+                    top = DRAWER_PAD,
+                    bottom = DRAWER_PAD - PICK_ROOM_Y,
+                ),
+        ) {
+            if (wiped) {
+                // 지운 뒤에는 결과만 남는다. 무엇을 지웠는지 다시 일러 줄
+                // 까닭이 없다 — 이미 없다.
+                Text("Erased.", fontSize = DRAWER_INK, lineHeight = 20.sp,
+                     color = Hak3.TextSoft)
+                // 단추가 없으니 그 몫을 여기서 채운다
+                Spacer(Modifier.height(PICK_ROOM_Y))
             } else {
+                // 무엇이 사라지는지는 늘 적어 둔다. 누르기 전에 읽는 글이다.
                 Text(
-                    "Marks, wordbook and search history\nwill be gone for good.",
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp,
+                    "Erases all activity and records.",
+                    fontSize = DRAWER_INK,
+                    lineHeight = 20.sp,
                     color = Hak3.TextSoft,
                 )
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // 되돌릴 수 없는 쪽만 붉은 면으로. 검정 글이 그 위에 앉는다.
-                    Key("Erase", Hak3.Red, Color.Black) { asking = false; onWipe() }
-                    Key("Cancel", Hak3.Knob, Hak3.TextDim) { asking = false }
+                // 사이를 따로 두지 않는다. 단추가 제 안에 [PICK_ROOM_Y] 를 두르고
+                // 있어 그것만으로 눈에 알맞다 — 12dp 를 더 두었을 때의 60% 남짓이다.
+                if (!asking) {
+                    Pick("Erase everything", false) { asking = true }
+                } else {
+                    // 물음은 단추가 섰던 그 자리에 서고, 무르는 길이 그 곁에 선다.
+                    // 되돌릴 수 없는 쪽만 핑크로 두어 눈에 걸리게 한다.
+                    Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                        Text(
+                            "Are you sure?",
+                            fontSize = 15.sp,
+                            color = Hak3.Pink,
+                            modifier = Modifier
+                                .offset(x = -PICK_ROOM)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) { asking = false; wiped = true; onWipe() }
+                                .padding(vertical = PICK_ROOM_Y, horizontal = PICK_ROOM),
+                        )
+                        Pick("Cancel", false) { asking = false }
+                    }
                 }
             }
         }
@@ -688,6 +771,44 @@ private val DRAWER_SIGN = 64.dp * 1.12f
 /** 날짜와 판 번호의 글자 크기. 20 에서 세 걸음(2·2·3sp) 물러났다. */
 private val DRAWER_INK = 13.sp
 
+/**
+ * 그 세 줄의 줄 간격. 본디 20.33dp 였고 잉크 사이가 12.67dp 였는데, 그 사이를
+ * 절반으로 좁힌 값이다(20.33 − 12.67/2).
+ */
+private val DRAWER_LEAD = 14.sp
+
+/**
+ * 글줄 상자가 잉크보다 위아래로 남기는 틈. 첫 줄의 잉크 윗선을 사인의 윗선에,
+ * 끝 줄의 잉크 아랫선을 사인의 아랫선에 대려면 기둥을 이 둘만큼 늘려 잡고 위쪽
+ * 몫만큼 끌어올려야 한다 — 하나로는 위아래를 함께 맞출 수 없다.
+ *
+ * 폰에서 재어 잡았다. 아래쪽 몫이 작은 것은 끝 줄의 y 가 밑선 아래로 내려가
+ * 그만큼 상자를 채우기 때문이다.
+ */
+private val DRAWER_LINE_TOP = 3.67.dp
+private val DRAWER_LINE_BOTTOM = 0.67.dp
+
+/** 서랍 위 덩이의 글. 줄 상자를 잉크에 바짝 붙여 사인의 위·아랫선에 댈 수 있게 한다. */
+private val DRAWER_LINE = TextStyle(
+    fontFamily = Mono,
+    fontSize = DRAWER_INK,
+    lineHeight = DRAWER_LEAD,
+    color = Hak3.TextSoft,
+    platformStyle = PlatformTextStyle(includeFontPadding = false),
+    lineHeightStyle = LineHeightStyle(
+        alignment = LineHeightStyle.Alignment.Center,
+        trim = LineHeightStyle.Trim.Both,
+    ),
+)
+
+/** 마지막으로 공부한 날. 한 번도 없으면 줄표만 둔다. */
+private fun studiedOn(context: android.content.Context): String {
+    val at = Marks.studied(context)
+    if (at <= 0L) return "—"
+    return java.text.SimpleDateFormat("yyyy.MM.dd", java.util.Locale.US)
+        .format(java.util.Date(at))
+}
+
 /** 날짜는 YYYY.MM.DD 로 적는다. 데이터는 하이픈으로 적어 오므로 그것만 바꾼다. */
 private fun day(s: String?): String = s?.replace('-', '.') ?: "unknown"
 
@@ -714,16 +835,66 @@ private fun Key(label: String, face: Color, ink: Color, onPick: () -> Unit) {
     )
 }
 
-/** 고른 쪽만 앰버로 채운다. */
+/** 표시 단추가 설 쪽을 고르는 글자. 색면이 아니라 글자만으로 선다. */
 @Composable
-private fun Side(label: String, on: Boolean, onPick: () -> Unit) {
-    Key(
+private fun Pick(label: String, on: Boolean, onPick: () -> Unit) {
+    Text(
         label,
-        face = if (on) Hak3.Pink else Hak3.Knob,
-        ink = if (on) Color.Black else Hak3.TextDim,
-        onPick = onPick,
+        fontSize = 15.sp,
+        color = if (on) Hak3.Text else Hak3.TextDim,
+        modifier = Modifier
+            // 넓힌 자리만큼 도로 끌어당긴다. 그러지 않으면 글자가 곁의 이름·설명
+            // 보다 그만큼 오른쪽으로 밀려 왼선이 어긋난다.
+            .offset(x = -PICK_ROOM)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onPick,
+            )
+            // 글자만으로는 손끝에 얕다. 누르는 자리를 사방으로 넓혀 둔다.
+            .padding(vertical = PICK_ROOM_Y, horizontal = PICK_ROOM),
     )
 }
+
+/**
+ * 표시 단추가 설 쪽을 고르는 단추. 글자만으로는 누를 데인지 읽히지 않아 테를
+ * 하나 두른다 — 색면은 아니다. 둘의 폭을 같게 잡고 글을 가운데 두므로 위아래로
+ * 세워도 서로 어긋나지 않는다.
+ */
+@Composable
+private fun Side(label: String, on: Boolean, onPick: () -> Unit) {
+    Text(
+        label,
+        fontSize = 15.sp,
+        color = if (on) Hak3.Text else Hak3.TextDim,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .width(SIDE_W)
+            .border(1.dp, if (on) Hak3.Hanja else Hak3.Rule, CircleShape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onPick,
+            )
+            .padding(vertical = PICK_ROOM_Y),
+    )
+}
+
+/** 그 두 단추의 폭. 긴 쪽(Right)이 넉넉히 들어가는 자리다. */
+private val SIDE_W = 72.dp
+
+/** 두 단추 사이. */
+private val SIDE_GAP = 8.dp
+
+/** 글자 단추가 손끝을 받으려고 좌우로 넓히는 만큼. 그린 자리는 이만큼 되돌린다. */
+private val PICK_ROOM = 6.dp
+
+/** 그 단추가 위아래로 넓히는 만큼. 칸의 아래 마진이 이만큼 얕아진다. */
+private val PICK_ROOM_Y = 8.dp
+
+/** 단추 자리 그림의 캔버스. 폭을 정하면 높이는 이 비로 따라온다. */
+private const val BTN_VIEW_W = 914f
+private const val BTN_VIEW_H = 368f
 
 @Composable
 private fun TopBar(
