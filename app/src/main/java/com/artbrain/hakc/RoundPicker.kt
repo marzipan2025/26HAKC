@@ -617,6 +617,43 @@ fun RoundPicker(
                     }
                 }
 
+                // 3급 합격증. LICENSES 위에 비스듬히 얹힌다 — 카드의 오른귀가
+                // LICENSES 의 오른선에 닿고, 아랫귀는 그 윗선에서 [CERT_GAP] 만큼
+                // 뜬다. 기둥보다 넓어 기둥 안에 두지 못하고 판에 따로 세운다.
+                // 자리는 LICENSES 와 같은 셈으로 문을 따라간다.
+                //
+                // 기둥보다 먼저 그린다. 그림의 투명한 가장자리가 LICENSES 의
+                // 누를 자리에 걸치는데, 기둥이 위에 서야 그 톡을 기둥이 받는다.
+                if (!sunk) Box(Modifier.matchParentSize().clipToBounds()) {
+                    val certTop = with(density) {
+                        val lic = (doorBottom - panelTop - ROOF.toPx() - LIC_LIFT.toPx())
+                            .coerceAtLeast(0f)
+                        ROOF.toPx() + lic - CERT_GAP.toPx() -
+                            CERT_W.toPx() * (CERT_CARD_BOTTOM / CERT_VIEW)
+                    }
+                    Image(
+                        painterResource(R.drawable.cert),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(end = CERT_END)
+                            .offset { IntOffset(0, certTop.roundToInt()) }
+                            .offset(x = -CERT_SHIFT)
+                            // 자리는 [CERT_W] 로 잡고, 그림은 그 왼위 귀를 붙든 채
+                            // 오른아래로 [CERT_GROW] 만큼 더 자란다
+                            .size(CERT_W)
+                            .wrapContentSize(Alignment.TopStart, unbounded = true)
+                            .size(CERT_W + CERT_GROW)
+                            .rotate(CERT_TILT)
+                            .then(veil)
+                            // 기둥과 같다 — 끌면 목록이 굴러가고, 톡은 여기서 삼켜
+                            // 뒤의 회차가 열리지 않게 한다
+                            .nestedScroll(nested)
+                            .scrollable(rounds, Orientation.Vertical, reverseDirection = true)
+                            .pointerInput(Unit) { detectTapGestures { } },
+                    )
+                }
+
                 // 오른쪽 어깨의 장식. 위에서부터 a·b 이고, 그 아래 LICENSES 가
                 // 선다. 링이던 c 는 설정 서랍으로 옮겨 갔다.
                 //
@@ -1326,6 +1363,36 @@ private val LIC_PULL = DECO_W * ((DECO_A_VIEW - MARK_RIGHT) / DECO_A_VIEW) -
  */
 private val LIC_LIFT = DOOR_SETTINGS * ((DOOR_VIEW_H - DOOR_INK_TOP) / DOOR_VIEW_W) +
     LIC_W * (LIC_INK_TOP / LIC_VIEW_W)
+
+/**
+ * 합격증 그림(cert.png, 370x370)의 캔버스와, 그 안에서 카드의 오른귀·아랫귀가
+ * 닿는 자리. 나머지는 그림자다. 그림을 재어 잡았고, 그림이 바뀌면 다시 재야 한다.
+ */
+private const val CERT_VIEW = 370f
+private const val CERT_CARD_RIGHT = 332f
+private const val CERT_CARD_BOTTOM = 292f
+
+/** 합격증 그림의 한 변. 목업에서 LICENSES·설정 문과 견주어 잡았다. */
+private val CERT_W = 180.dp
+
+/** 카드의 아랫귀에서 LICENSES 조각의 윗선까지. */
+private val CERT_GAP = 12.dp
+
+/** LICENSES 의 오른선에 맞춘 자리에서 왼쪽으로 더 물러나는 만큼. 폰에서 보고 잡았다. */
+private val CERT_SHIFT = 16.dp
+
+/** 그림째 시계 방향으로 더 기우는 각. 폰에서 보고 잡았다. */
+private const val CERT_TILT = 2f
+
+/** 자리는 그대로 둔 채 그림만 키우는 만큼. 왼위 귀가 붙박이고 비율은 그대로다. */
+private val CERT_GROW = 8.dp
+
+/**
+ * 그림이 판 오른벽에서 물러나는 만큼. 카드의 오른귀가 LICENSES 의 오른선과 한
+ * 줄에 서도록, 기둥이 물러나는 만큼에서 그림자 몫을 뺀다.
+ */
+private val CERT_END = SIDE + DECO_PULL + LIC_PULL -
+    CERT_W * ((CERT_VIEW - CERT_CARD_RIGHT) / CERT_VIEW)
 
 
 /**
