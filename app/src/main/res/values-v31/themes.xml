@@ -3,9 +3,10 @@
         <item name="android:statusBarColor">#000000</item>
         <item name="android:navigationBarColor">#000000</item>
         <item name="android:windowBackground">#000000</item>
-        <!-- 첫 화면. 아이콘을 동그랗게 도려내지 않고 사각 그대로 세운다 —
-             바탕도 아이콘의 바탕과 같은 검정이라 도려낼 자리가 없다. -->
-        <item name="android:windowSplashScreenBackground">#000000</item>
+        <!-- 첫 화면. 그림만 세우고 바탕은 아이콘 판과 같은 먹빛으로 둔다 —
+             둘이 같은 색이라 런처에서 앱이 열릴 때 판이 그대로 이어진다.
+             그림은 판(288dp) 안에서 143dp 로, 도려내는 원(192dp) 안에 든다. -->
+        <item name="android:windowSplashScreenBackground">#21252D</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
     </style>
 </resources>
