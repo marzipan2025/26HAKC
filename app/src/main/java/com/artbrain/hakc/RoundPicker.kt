@@ -625,12 +625,39 @@ fun RoundPicker(
                 // 기둥보다 먼저 그린다. 그림의 투명한 가장자리가 LICENSES 의
                 // 누를 자리에 걸치는데, 기둥이 위에 서야 그 톡을 기둥이 받는다.
                 if (!sunk) Box(Modifier.matchParentSize().clipToBounds()) {
-                    val certTop = with(density) {
-                        val lic = (doorBottom - panelTop - ROOF.toPx() - LIC_LIFT.toPx())
+                    // LICENSES 의 윗선에서 재는 두 자리다 — 둘 다 문을 따라 움직인다.
+                    val licTop = with(density) {
+                        ROOF.toPx() + (doorBottom - panelTop - ROOF.toPx() - LIC_LIFT.toPx())
                             .coerceAtLeast(0f)
-                        ROOF.toPx() + lic - CERT_GAP.toPx() -
-                            CERT_W.toPx() * (CERT_CARD_BOTTOM / CERT_VIEW)
                     }
+                    val certTop = with(density) {
+                        licTop - CERT_GAP.toPx() - CERT_W.toPx() * (CERT_CARD_BOTTOM / CERT_VIEW)
+                    }
+                    // 앱의 표. LICENSES 와 같은 폭으로 그 오른선에 맞춰 서고,
+                    // 아랫선은 LICENSES 의 윗선에서 [LOGO_GAP] 만큼 뜬다.
+                    // 합격증보다 먼저 그려 그 카드에 한쪽이 가린다.
+                    Image(
+                        painterResource(R.drawable.logo_26),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(end = SIDE + DECO_PULL + LIC_PULL - LOGO_PUSH)
+                            .offset {
+                                IntOffset(
+                                    0,
+                                    (licTop - (LOGO_GAP + LOGO_W * (LOGO_H_VIEW / LOGO_W_VIEW))
+                                        .toPx()).roundToInt(),
+                                )
+                            }
+                            .width(LOGO_W)
+                            .aspectRatio(LOGO_W_VIEW / LOGO_H_VIEW)
+                            .alpha(LOGO_FADE)
+                            .then(veil)
+                            // 합격증과 같다 — 끌면 목록이 굴러가고 톡은 삼킨다
+                            .nestedScroll(nested)
+                            .scrollable(rounds, Orientation.Vertical, reverseDirection = true)
+                            .pointerInput(Unit) { detectTapGestures { } },
+                    )
                     Image(
                         painterResource(R.drawable.cert),
                         contentDescription = null,
@@ -1376,16 +1403,48 @@ private const val CERT_CARD_BOTTOM = 292f
 private val CERT_W = 180.dp
 
 /** 카드의 아랫귀에서 LICENSES 조각의 윗선까지. */
-private val CERT_GAP = 12.dp
+private val CERT_GAP = 16.dp
 
 /** LICENSES 의 오른선에 맞춘 자리에서 왼쪽으로 더 물러나는 만큼. 폰에서 보고 잡았다. */
 private val CERT_SHIFT = 16.dp
 
 /** 그림째 시계 방향으로 더 기우는 각. 폰에서 보고 잡았다. */
-private const val CERT_TILT = 2f
+private const val CERT_TILT = 6f
 
 /** 자리는 그대로 둔 채 그림만 키우는 만큼. 왼위 귀가 붙박이고 비율은 그대로다. */
 private val CERT_GROW = 8.dp
+
+/**
+ * 앱의 표(logo_26.png)의 캔버스. 첫 화면과 런처 아이콘이 쓰는 그 그림이다.
+ */
+private const val LOGO_W_VIEW = 444f
+private const val LOGO_H_VIEW = 509f
+
+/**
+ * 표의 오른선이 LICENSES 의 오른선에서 더 나가는 만큼. 왼선은 제자리에 남고,
+ * 아랫선은 [LOGO_GAP] 이 붙들고 있으므로 키가 자라는 쪽은 절로 위다.
+ */
+private val LOGO_PUSH = 8.dp
+
+/**
+ * 표가 LICENSES 보다 넓어지는 만큼. 폰에서 보고 잡았다. 먼저 6dp 를 왼쪽으로
+ * 키웠고, 뒤이어 왼아래 귀를 붙든 채 오른위로 [LOGO_PUSH] 만큼 더 키웠다.
+ * 이 줄은 [LOGO_PUSH] 아래라야 한다 — 값은 적은 차례대로 채워진다.
+ */
+private val LOGO_GROW = 6.dp + LOGO_PUSH
+
+/**
+ * 표의 폭. LICENSES 의 키에서 [LOGO_GROW] 만큼 넓게 서고, 오른선은 그대로
+ * LICENSES 에 맞춘다 — 넓어지는 쪽은 왼쪽이다. 이 줄은 [LOGO_GROW] 아래라야
+ * 한다 — 파일 안의 값은 적은 차례대로 채워지므로, 위에 두면 0 을 읽는다.
+ */
+private val LOGO_W = LIC_W + LOGO_GROW
+
+/** 표의 아랫선에서 LICENSES 조각의 윗선까지. */
+private val LOGO_GAP = 30.dp
+
+/** 표가 판 위에서 묽어지는 만큼. 장식이라 뒤로 한 걸음 물러나 선다. */
+private const val LOGO_FADE = 0.8f
 
 /**
  * 그림이 판 오른벽에서 물러나는 만큼. 카드의 오른귀가 LICENSES 의 오른선과 한
