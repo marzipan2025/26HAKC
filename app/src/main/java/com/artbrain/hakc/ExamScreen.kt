@@ -1393,7 +1393,7 @@ private fun CloseDot(onClick: () -> Unit) {
 
 /**
  * 오른쪽 단추. 회차에서는 노랑을 찍는 자리이고, 단어장에서는 그 카드를 묶음에서
- * 빼는 자리다 — 카드와 같은 색 위에 검은 ✕ 를 얹어 닫기와 같은 뜻으로 읽힌다.
+ * 빼는 자리다. 색면 위에 ✕ 를 얹었던 것은 걷었다 — 색만으로 선다.
  */
 @Composable
 private fun PickDot(enabled: Boolean, hue: Color?, onPick: () -> Unit) {
@@ -1406,11 +1406,8 @@ private fun PickDot(enabled: Boolean, hue: Color?, onPick: () -> Unit) {
             .size(BAR)
             .padding(PICK_TRIM / 2)
             .background(if (enabled) hue else hue.copy(alpha = 0.2f), CircleShape)
-            .clickable(enabled = enabled, onClick = onPick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Cross(if (enabled) Color.Black else Hak3.TextDim)
-    }
+            .clickable(enabled = enabled, onClick = onPick)
+    )
 }
 
 @Composable
