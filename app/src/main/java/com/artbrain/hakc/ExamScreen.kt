@@ -617,8 +617,6 @@ fun SettingsPanel(
             Sign(Modifier.align(Alignment.TopEnd), open)
         }
 
-        Spacer(Modifier.height(gap))
-
         // 아래 — 한 단씩 폭을 다 쓴다. 나란히 두었더니 칸이 좁아 이름이 접히고
         // 그림도 반으로 줄었다.
         Spacer(Modifier.height(gap))
