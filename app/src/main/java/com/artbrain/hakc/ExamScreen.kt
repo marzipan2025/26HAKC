@@ -1351,13 +1351,9 @@ private fun GlossFoot(body: String, card: Dp, modifier: Modifier) {
             .drawBehind {
                 drawRect(Color.White.copy(alpha = FOOT_VEIL), blendMode = BlendMode.Overlay)
             }
-            // 위는 아래보다 [FOOT_LIFT] 만큼 얕다 — 눈에는 그래야 같아 보인다.
-            .padding(
-                start = FOOT_PAD,
-                end = FOOT_PAD,
-                top = FOOT_ROOM - FOOT_LIFT,
-                bottom = FOOT_ROOM,
-            ),
+            // 아래위가 같다 — 한 줄일 때 글이 띠의 한가운데에 앉는다. 줄 상자가
+            // 잉크 위아래로 같은 만큼(3.3dp) 남기므로, 여백이 같으면 잉크도 가운데다.
+            .padding(horizontal = FOOT_PAD, vertical = FOOT_ROOM),
     ) {
     Row(
         Modifier.clickable(
@@ -1397,11 +1393,8 @@ private val FOOT = 17.sp
 private val FOOT_LEAD = (FOOT.value * 27f / 19f).sp
 private val FOOT_INK = Color.Black
 
-/** 글 아래로 두는 여백. */
-private val FOOT_ROOM = 23.dp
-
-/** 위쪽이 아래보다 얕은 만큼. 폰에서 보고 잡았다. */
-private val FOOT_LIFT = 2.dp
+/** 글 아래위로 두는 여백. 둘이 같아야 한 줄일 때 글이 띠의 가운데에 선다. */
+private val FOOT_ROOM = 22.dp
 
 /** 띠가 카드 벽에서 물러나는 만큼. 좌우와 아래가 같은 값이다. */
 private val FOOT_INSET = 14.dp
@@ -1410,7 +1403,7 @@ private val FOOT_INSET = 14.dp
 private val FOOT_PAD = 22.dp
 
 /** 그 색면의 짙기. 흰빛을 overlay 로 얹어 카드 색을 그만큼 들어 올린다. */
-private const val FOOT_VEIL = 0.25f
+private const val FOOT_VEIL = 0.4f
 
 @Composable
 private fun AnswerSlot(item: Item, revealed: Boolean, ink: (Color) -> Color) {
