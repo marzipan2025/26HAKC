@@ -170,6 +170,10 @@ private fun Root() {
     // 목록과 상세는 판 하나를 나눠 갖는다. 회차를 누르면 목록의 판이 상세의
     // 카드 자리까지 늘어나고, 나머지는 그동안 지워졌다가 뒤이어 떠오른다.
     // 단어장도 같은 길로 연다 — 어깨의 단추에서 눌러도 판이 그렇게 늘어난다.
+    // 폴더를 다 읽기 전에는 첫 화면과 같은 빛(#21252D)으로 덮어 둔다. 판이 빈 채로
+    // 한 번 섰다가 채워지는 것을 보이지 않게 하려는 것이고, 색이 첫 화면과 같아
+    // 갈아드는 자리가 눈에 띄지 않는다.
+    Box(Modifier.fillMaxSize()) {
     SharedTransitionLayout {
             AnimatedContent(
                 targetState = where,
@@ -229,6 +233,8 @@ private fun Root() {
                 }
             }
     }
+    if (state == null) Box(Modifier.fillMaxSize().background(Hak3.Surface))
+    }
 }
 
 /** 지금 서 있는 자리. 목록이거나, 한 회차이거나, 단어장 한 묶음이다. */
@@ -266,7 +272,10 @@ private fun Picker(
         db = ready,
         dict = book,
         built = ready?.meta()?.get("built"),
-        trouble = if (ready == null) trouble(state, DataFile.prefix(context)) else null,
+        // [state] 가 null 이면 아직 폴더를 들여다보기 전이다 — 그때는 안내를 세우지
+        // 않는다. 세웠더니 폴더가 멀쩡히 지정된 앱에서도 뜰 때마다 'Choose folder'
+        // 가 한 번 번쩍했다.
+        trouble = if (ready == null && state != null) trouble(state, DataFile.prefix(context)) else null,
         grade = grade,
         onGrade = onGrade,
         onFolder = { pickFolder.launch(null) },
