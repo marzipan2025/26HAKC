@@ -1399,8 +1399,11 @@ private val SHOULDER_LIFT = 2.dp
 /** 설정 문이 제자리에서 더 내려앉는 만큼. 오른쪽 c 도 문을 따라 내려간다. */
 private val DOOR_DROP = 18.dp
 
-/** 등과 그 아래 것들이 한 덩이로 왼쪽에 물러나 서는 만큼. */
-private val LANTERN_PULL = 11.dp
+/**
+ * 등과 그 아래 것들(단추 넷, 설정 문)이 한 덩이로 왼쪽에 물러나 서는 만큼.
+ * 11dp 이던 것을 6dp 오른쪽으로 옮겼다.
+ */
+private val LANTERN_PULL = 5.dp
 
 
 /**
