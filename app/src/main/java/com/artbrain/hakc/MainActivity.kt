@@ -210,7 +210,7 @@ private fun Root() {
                         // 판은 넘어오는 동안에만 그린다. 뒤에 남겨 두면 카드를
                         // 들췄을 때 그 뒤로 비쳐 카드가 겹쳐 있는 것처럼 보인다.
                         ExamScreen(
-                            w.no, ready, morph, veil,
+                            w.no, ready, dict, morph, veil,
                             { if (isTransitionActive) 1f else 0f },
                             // 이 조각이 지금 자리를 내주는 중인가
                             leaving = w != where,

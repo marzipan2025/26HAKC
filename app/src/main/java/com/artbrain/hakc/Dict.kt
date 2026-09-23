@@ -214,6 +214,18 @@ class Dict private constructor(private val db: SQLiteDatabase) {
         return hits.ifEmpty { listOf(ofHanja(han)) }
     }
 
+    /**
+     * 낱말 하나의 뜻. 표기(販促)와 읽기(판촉)가 둘 다 맞는 줄에서 꺼낸다 —
+     * 노란 판이 보여 주는 그 뜻이고, 문제 카드의 바닥에도 같은 것을 적는다.
+     * 같은 표기를 여러 낱말이 나눠 쓰므로 읽기까지 맞춰야 엉뚱한 뜻이 따라오지 않는다.
+     */
+    fun wordMeaning(hanja: String, ko: String): String? = db.rawQuery(
+        "SELECT meaning FROM words WHERE ko=? AND hanja=? AND meaning IS NOT NULL LIMIT 1",
+        arrayOf(ko, hanja)
+    ).use { c ->
+        if (c.moveToNext()) c.getString(0)?.takeIf { it.isNotBlank() } else null
+    }
+
     /** 한자를 그대로 넣었을 때 — 글자마다 訓音만 돌려준다. */
     private fun ofHanja(text: String): Found {
         val only = text.filter(::isHan)

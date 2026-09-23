@@ -74,7 +74,11 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
@@ -228,6 +232,8 @@ private val HEAD = 80.sp
 fun ExamScreen(
     round: Int,
     db: ExamDb,
+    /** 카드 바닥에 낱말의 뜻을 적으려고 본다. 단어장은 건네지 않는다. */
+    dict: Dict?,
     morph: Modifier = Modifier,
     veil: Modifier = Modifier,
     morphLit: () -> Float = { 0f },
@@ -260,6 +266,7 @@ fun ExamScreen(
         veil = veil,
         morphLit = morphLit,
         leaving = leaving,
+        dict = dict,
         onMark = { p, m ->
             book.set(p.item.no, m)
             if (m == null) marks.remove(p.id) else marks[p.id] = m
@@ -364,6 +371,8 @@ private fun Deck(
     morphLit: () -> Float,
     /** 단어장이면 그 묶음의 색. 회차면 null 이고 카드는 판 색 그대로다. */
     face: Color? = null,
+    /** 회차의 문제 카드에서만 건네진다 — 바닥에 적는 뜻이 여기서 나온다. */
+    dict: Dict? = null,
     /** 이 화면이 지금 빠져나가는 중인가. 색을 되돌리며 줄어들게 하려고 본다. */
     leaving: Boolean = false,
     onMark: (Page, Mark?) -> Unit,
@@ -465,6 +474,7 @@ private fun Deck(
                             revealed = open[p.id] == true,
                             mark = marks[p.id],
                             face = face != null,
+                            dict = dict,
                             radius = radius,
                             onLifted = { lifted = it },
                             // 담기든 풀리든 자리가 바뀌면 딸깍
@@ -1078,6 +1088,7 @@ private fun QuestionPage(
     revealed: Boolean,
     mark: Mark?,
     face: Boolean,
+    dict: Dict?,
     radius: Dp,
     onLifted: (Boolean) -> Unit,
     onMark: (Mark?) -> Unit,
@@ -1259,8 +1270,106 @@ private fun QuestionPage(
                 Box(Modifier.padding(start = SHIFT)) { AnswerSlot(item, revealed, ::ink) }
             }
         }
+
+        // 카드 바닥의 뜻풀이. 두 자 이상의 한자어의 讀音을 묻는 문항에서, 사전에
+        // 그 낱말의 뜻이 있을 때만 선다 — 노란 판이 보여 주는 그 뜻이다.
+        // 정답을 펼쳐야 함께 나온다.
+        val meaning = remember(item.no, dict) { wordGloss(dict, item) }
+        if (revealed && meaning != null) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    // 아래 두 귀는 카드와 같은 곡률로 깎는다 — 색면이 카드 밖으로
+                    // 삐져나오지 않게.
+                    .clip(RoundedCornerShape(bottomStart = radius, bottomEnd = radius))
+                    // 흰 색면 한 겹을 overlay 로 얹는다 — 카드 색을 덮지 않고
+                    // 그만큼 들어 올린다. 글 아래위의 여백까지 함께 덮는다.
+                    .drawBehind {
+                        drawRect(Color.White.copy(alpha = FOOT_VEIL), blendMode = BlendMode.Overlay)
+                    }
+                    // 위는 아래보다 [FOOT_LIFT] 만큼 얕다 — 눈에는 그래야 같아 보인다.
+                    .padding(
+                        start = 24.dp,
+                        end = 24.dp,
+                        top = FOOT_ROOM - FOOT_LIFT,
+                        bottom = FOOT_ROOM,
+                    )
+                    .padding(start = SHIFT),
+            ) { GlossFoot(meaning) }
+        }
     }
 }
+
+/**
+ * 이 문항이 낱말의 讀音을 묻고 있고 사전에 그 뜻이 있으면 그 뜻. 아니면 null.
+ *
+ * 묻는 낱말은 [Item.target] 이 들고 있고(販促), 답이 곧 그 읽기다(판촉). 표기가
+ * 온통 한자이고 두 자 이상일 때, 답이 온통 한글일 때만 사전에 묻는다 — 訓音이나
+ * 部首, 略字를 묻는 문항은 이 그물에 걸리지 않는다.
+ */
+private fun wordGloss(dict: Dict?, item: Item): String? {
+    val word = item.target ?: return null
+    val read = item.answer ?: return null
+    if (word.length < 2 || !word.all { HANJA.matches(it.toString()) }) return null
+    if (read.isEmpty() || !read.all { it in '가'..'힣' }) return null
+    return dict?.wordMeaning(word, read)
+}
+
+/**
+ * 뜻풀이 한 줄. 노란 판의 것과 같은 규칙으로 접고 편다 — 넘치면 +, 펴면 −.
+ * 다만 아랫선을 맞춰 세우므로 펼치면 위로 자란다. 카드 바닥에 붙어 있어
+ * 아래로는 자랄 데가 없기 때문이다.
+ */
+@Composable
+private fun GlossFoot(body: String) {
+    var open by remember(body) { mutableStateOf(false) }
+    var long by remember(body) { mutableStateOf(false) }
+    Row(
+        Modifier.clickable(
+            enabled = long,
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+        ) { open = !open },
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Text(
+            if (!long) "" else if (open) "−" else "+",
+            fontSize = 15.sp,
+            color = FOOT_INK,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.width(14.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            body,
+            // 같은 서체의 가장 얇은 획으로 적는다 — 카드에서 가장 작은 말이다
+            fontFamily = Korail,
+            fontWeight = FontWeight.Light,
+            fontSize = FOOT,
+            lineHeight = FOOT_LEAD,
+            color = FOOT_INK,
+            maxLines = if (open) Int.MAX_VALUE else 1,
+            overflow = TextOverflow.Ellipsis,
+            // 접힌 채로만 잰다 — 펴고 나면 넘칠 일이 없어 그때의 답은 늘 거짓이다.
+            onTextLayout = { if (!open) long = it.hasVisualOverflow },
+        )
+    }
+}
+
+/** 카드 바닥의 뜻풀이가 서는 크기와 잉크. */
+private val FOOT = 17.sp
+private val FOOT_LEAD = (FOOT.value * 27f / 19f).sp
+private val FOOT_INK = Color.Black
+
+/** 글 아래로 두는 여백. */
+private val FOOT_ROOM = 26.dp
+
+/** 위쪽이 아래보다 얕은 만큼. 폰에서 보고 잡았다. */
+private val FOOT_LIFT = 2.dp
+
+/** 그 색면의 짙기. 흰빛을 overlay 로 얹어 카드 색을 그만큼 들어 올린다. */
+private const val FOOT_VEIL = 0.25f
 
 @Composable
 private fun AnswerSlot(item: Item, revealed: Boolean, ink: (Color) -> Color) {
