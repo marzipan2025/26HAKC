@@ -4,6 +4,9 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewTreeObserver
 import androidx.activity.ComponentActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.launch
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
@@ -34,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -60,6 +64,16 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * 화면에서 내려갈 때마다 기록을 폴더에 한 벌 적어 둔다([UserData]). 앱이 지워지거나
+     * 다른 판으로 갈아 끼워져도 그 폴더를 다시 가리키면 기록이 돌아온다.
+     */
+    override fun onStop() {
+        super.onStop()
+        val app = applicationContext
+        lifecycleScope.launch(NonCancellable) { UserData.save(app) }
     }
 
     /**
@@ -100,6 +114,9 @@ private fun Root() {
     var grade by remember { mutableStateOf(Settings.grade(context)) }
     // 마지막으로 제대로 읽힌 급수. 바꾼 급수의 파일이 없으면 이리로 되돌아온다.
     var good by remember { mutableStateOf(grade) }
+    // 폴더의 기록을 들인 횟수. 들이면 목록을 처음부터 다시 짓는다 — 여기저기 붙잡아
+    // 둔 표시와 설정(노랑 단추의 좌우 등)이 들인 값으로 새로 선다.
+    var restored by remember { mutableStateOf(0) }
     var open by remember { mutableStateOf<Int?>(null) }
     var words by remember { mutableStateOf<Triple<Mark, Collect.Kind, Int>?>(null) }
     val dict = remember { Dict.open(context) }
@@ -114,6 +131,17 @@ private fun Root() {
     }
 
     LaunchedEffect(reload, grade) {
+        // 새로 깔린 앱이면 폴더에 적어 둔 기록부터 들인다. 급수도 그 기록을 따른다 —
+        // 급수가 바뀌면 이 효과가 그 급수로 다시 돈다.
+        if (UserData.restoreIfFresh(context)) {
+            restored++
+            val g = Settings.grade(context)
+            if (g != grade) {
+                grade = g
+                good = g
+                return@LaunchedEffect
+            }
+        }
         val r = DataFile.sync(context)
         // 급수를 바꿨는데 그 파일이 없으면 바꾸지 않은 것으로 한다. 그대로 두면
         // 안내 화면이 서랍까지 덮어 원래 급수로 돌아갈 길이 막힌다.
@@ -188,7 +216,7 @@ private fun Root() {
                             leaving = w != where,
                         ) { open = null }
                     }
-                    else -> {
+                    else -> key(restored) {
                         Picker(state, reload, ready, dict, pickFolder, morph, veil,
                             grade = grade,
                             onGrade = { g ->
@@ -254,6 +282,8 @@ private fun trouble(state: DataFile.Result?, prefix: String): String = when (sta
     DataFile.Result.NoFolder, null -> ""
     DataFile.Result.NoFile ->
         "No $prefix…${DataFile.SUFFIX} in that folder."
+    DataFile.Result.NeedWrite ->
+        "Choose the folder once more — the app now keeps your records there too."
     is DataFile.Result.Failed -> state.why
     is DataFile.Result.Ok -> "That file is not exam data."
 }

@@ -42,6 +42,11 @@ object DataFile {
         data class Ok(val file: File, val name: String) : Result
         data object NoFolder : Result
         data object NoFile : Result
+        /**
+         * 폴더는 읽히지만 적을 수 없다 — 쓰는 이의 기록([UserData])을 두려면 한 번
+         * 다시 골라야 한다. 0.5.13 까지는 읽기 권한만 받아 두었다.
+         */
+        data object NeedWrite : Result
         data class Failed(val why: String) : Result
     }
 
@@ -53,7 +58,11 @@ object DataFile {
     }
 
     fun remember(c: Context, uri: Uri, kind: String) {
-        c.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        // 적기도 받아 둔다 — 쓰는 이의 기록을 같은 폴더에 적는다([UserData]).
+        // 한 파일만 고른 경우는 적을 자리가 없으니 읽기만 받는다.
+        val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+            (if (kind == "tree") Intent.FLAG_GRANT_WRITE_URI_PERMISSION else 0)
+        c.contentResolver.takePersistableUriPermission(uri, flags)
         prefs(c).edit()
             .putString(KEY_URI, uri.toString())
             .putString(KEY_KIND, kind)
@@ -65,6 +74,23 @@ object DataFile {
     fun forget(c: Context) {
         prefs(c).edit().clear().apply()
         Settings.GRADES.forEach { File(c.filesDir, "hanja$it.db").delete() }
+    }
+
+    /** 지정한 폴더. 파일 하나를 골랐거나 아직 고르지 않았으면 null. */
+    fun readableFolder(c: Context): DocumentFile? {
+        val (uri, kind) = source(c) ?: return null
+        if (kind != "tree") return null
+        return runCatching { DocumentFile.fromTreeUri(c, uri)?.takeIf { it.canRead() } }.getOrNull()
+    }
+
+    /** 적을 수도 있는 폴더. 읽기 권한만 받아 둔 옛 지정이면 null. */
+    fun writableFolder(c: Context): DocumentFile? {
+        val (uri, _) = source(c) ?: return null
+        val granted = c.contentResolver.persistedUriPermissions.any {
+            it.uri == uri && it.isWritePermission
+        }
+        if (!granted) return null
+        return readableFolder(c)?.takeIf { it.canWrite() }
     }
 
     private fun local(c: Context) = File(c.filesDir, "${prefix(c)}.db")
@@ -92,6 +118,10 @@ object DataFile {
         }.getOrNull()
         val pick = found
             ?: return@withContext if (kind == "file") Result.NoFolder else Result.NoFile
+        // 폴더를 읽기만 받아 둔 옛 지정이면 한 번 다시 고르게 한다 — 그래야 기록을
+        // 같은 폴더에 적을 수 있다. 기출은 읽히므로 급할 것은 없지만, 적지 못한 채
+        // 두면 앱을 다시 깔 때 기록이 돌아올 자리가 없다.
+        if (kind == "tree" && writableFolder(c) == null) return@withContext Result.NeedWrite
 
         val name = pick.name ?: "${prefix(c)}.db"
         val stamp = "$name:${pick.length()}:${pick.lastModified()}"

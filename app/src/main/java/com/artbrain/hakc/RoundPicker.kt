@@ -356,7 +356,13 @@ fun RoundPicker(
                     // 수와 표시를 하나씩 되돌리는 것보다 이 편이 틀림없다.
                     // 지우기만 하고 화면은 그대로 둔다 — 서랍이 결과를 보여야
                     // 하기 때문이다. 다시 짓는 것은 서랍이 닫힌 뒤다.
-                    onWipe = { Settings.wipe(context); wiped = true },
+                    // 폴더에 적어 둔 기록도 곧바로 비운 것으로 덮는다. 그러지 않으면 앱을
+                    // 다시 깔았을 때 지운 기록이 폴더에서 되살아난다.
+                    onWipe = {
+                        Settings.wipe(context)
+                        scope.launch { UserData.save(context) }
+                        wiped = true
+                    },
                 )
             }
         Column(Modifier.fillMaxSize()) {
