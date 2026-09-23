@@ -334,7 +334,8 @@ fun WordScreen(
     Deck(
         all = all,
         // 서랍의 이름과 같은 꼴로 적는다 — 거기서 눌러 온 자리다
-        title = (if (bin == Mark.AMBER) "Pink " else "Green ") + if (chars) "Letters" else "Cards",
+        title = (if (bin == Mark.AMBER) "${Hak3.AccentName} " else "Green ") +
+            if (chars) "Letters" else "Cards",
         // 문제 묶음의 카드는 제 회차에서 온 것이라 어느 회차인지 밝혀 둔다
         subOf = { p -> if (chars) null else "第 ${roundNo(p.round)} 回" },
         marks = marks,

@@ -54,9 +54,20 @@ object Hak3 {
     // [Accent] 하나만 보면 되고, 급수가 정해지거나 바뀔 때 [accentFor] 가 갈아 끼운다.
     private val PINK_3 = Color(0xFFFF69B4)
     private val RED_1 = Color(0xFFFA321C)
+    private const val NAME_3 = "Pink"
+    private const val NAME_1 = "Red"
     private val accent = mutableStateOf(PINK_3)
     val Accent: Color get() = accent.value
-    fun accentFor(grade: Int) { accent.value = if (grade == 1) RED_1 else PINK_3 }
+
+    // 글에 적는 이름도 색을 따라간다 — 단어장의 이름이 'Pink Cards' 이거나
+    // 'Red Cards' 가 된다. 색과 말이 어긋나면 어느 묶음인지 읽히지 않는다.
+    private val accentName = mutableStateOf(NAME_3)
+    val AccentName: String get() = accentName.value
+
+    fun accentFor(grade: Int) {
+        accent.value = if (grade == 1) RED_1 else PINK_3
+        accentName.value = if (grade == 1) NAME_1 else NAME_3
+    }
 
     val Sun = Color(0xFFFFE600)             // 마지막으로 열어 본 회차의 눈금
     val Green = Color(0xFF29C745)           // 외웠음 — 색면·테·도형이 쓴다
