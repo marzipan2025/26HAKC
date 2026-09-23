@@ -154,7 +154,7 @@ private class Page(val round: Int, val section: Section, val item: Item, val id:
 private fun markInk(m: Mark?) = if (m == Mark.KNOWN) Hak3.GreenInk else borderColor(m)
 
 private fun borderColor(m: Mark?) = when (m) {
-    Mark.AMBER -> Hak3.Pink
+    Mark.AMBER -> Hak3.Accent
     Mark.KNOWN -> Hak3.Green
     null -> Hak3.Rule
 }
@@ -343,7 +343,7 @@ fun WordScreen(
         morph = morph,
         veil = veil,
         morphLit = morphLit,
-        face = if (bin == Mark.AMBER) Hak3.Pink else Hak3.Green,
+        face = if (bin == Mark.AMBER) Hak3.Accent else Hak3.Green,
         dict = dict,
         leaving = leaving,
         onMark = { p, m ->
@@ -730,7 +730,7 @@ fun SettingsPanel(
                         Text(
                             "Are you sure?",
                             fontSize = 15.sp,
-                            color = Hak3.Pink,
+                            color = Hak3.Accent,
                             modifier = Modifier
                                 .offset(x = -PICK_ROOM)
                                 .clickable(
@@ -758,7 +758,7 @@ private fun GradeBlock(grade: Int, on: Boolean, radius: Dp, face: Color, onPick:
         Modifier
             .fillMaxWidth()
             .height(GRADE_BLOCK)
-            .background(if (on) Hak3.Pink else face, RoundedCornerShape(radius))
+            .background(if (on) Hak3.Accent else face, RoundedCornerShape(radius))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -1007,7 +1007,7 @@ private fun TopBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             FilterDot(
-                if (amber > 0) Hak3.Pink else Hak3.Knob,
+                if (amber > 0) Hak3.Accent else Hak3.Knob,
                 filter == Mark.AMBER,
                 amber,
                 hollow,
@@ -1628,7 +1628,7 @@ private fun AmberDot(enabled: Boolean, onPick: () -> Unit) {
         Modifier
             .size(BAR)
             .padding(PICK_TRIM / 2)
-            .background(if (enabled) Hak3.Pink else Hak3.Pink.copy(alpha = 0.2f), CircleShape)
+            .background(if (enabled) Hak3.Accent else Hak3.Accent.copy(alpha = 0.2f), CircleShape)
             .clickable(enabled = enabled, onClick = onPick)
     )
 }

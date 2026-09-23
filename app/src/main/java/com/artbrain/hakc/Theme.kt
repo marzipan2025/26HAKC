@@ -10,6 +10,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.material3.LocalTextStyle
@@ -49,7 +50,14 @@ object Hak3 {
     val HanjaDim = Color(0xCC647185)        // 고르지 않은 한자
 
     // 01haka 신호등. 애매/외움을 가르고, 알림에도 그대로 쓴다.
-    val Pink = Color(0xFFFF69B4)            // 애매하게 모름
+    // 애매하게 모름 — 급수마다 갈린다. 3급은 핑크, 1급은 붉은빛이다. 읽는 쪽은
+    // [Accent] 하나만 보면 되고, 급수가 정해지거나 바뀔 때 [accentFor] 가 갈아 끼운다.
+    private val PINK_3 = Color(0xFFFF69B4)
+    private val RED_1 = Color(0xFFFA321C)
+    private val accent = mutableStateOf(PINK_3)
+    val Accent: Color get() = accent.value
+    fun accentFor(grade: Int) { accent.value = if (grade == 1) RED_1 else PINK_3 }
+
     val Sun = Color(0xFFFFE600)             // 마지막으로 열어 본 회차의 눈금
     val Green = Color(0xFF29C745)           // 외웠음 — 색면·테·도형이 쓴다
     val Neon = Color(0xFF3DFF6E)            // 펼쳐진 정답의 점 — 형광 녹색

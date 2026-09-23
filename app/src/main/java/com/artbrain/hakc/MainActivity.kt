@@ -40,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +52,8 @@ import androidx.compose.ui.unit.sp
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 강조색은 급수를 따른다. 첫 프레임부터 제 색으로 서도록 여기서 한 번 잡는다.
+        Hak3.accentFor(Settings.grade(this))
         holdSplash()
         setContent {
             Hak3Theme {
@@ -112,6 +115,8 @@ private fun Root() {
     var reload by remember { mutableStateOf(0) }
     // 지금 보는 급수. 설정에서 바꾸면 그 급수의 파일을 다시 읽어 목록이 새로 선다.
     var grade by remember { mutableStateOf(Settings.grade(context)) }
+    // 급수를 바꾸면 강조색도 함께 갈린다 — 3급은 핑크, 1급은 붉은빛이다.
+    SideEffect { Hak3.accentFor(grade) }
     // 마지막으로 제대로 읽힌 급수. 바꾼 급수의 파일이 없으면 이리로 되돌아온다.
     var good by remember { mutableStateOf(grade) }
     // 폴더의 기록을 들인 횟수. 들이면 목록을 처음부터 다시 짓는다 — 여기저기 붙잡아

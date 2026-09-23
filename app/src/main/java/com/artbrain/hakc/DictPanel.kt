@@ -369,7 +369,7 @@ private fun Modifier.frozen(on: Boolean): Modifier =
 private val FROZEN_INK = Color(0xFFC79324)
 
 /** 단어장 묶음의 색. */
-private fun binColor(m: Mark) = if (m == Mark.AMBER) Hak3.Pink else Hak3.GreenInk
+private fun binColor(m: Mark) = if (m == Mark.AMBER) Hak3.Accent else Hak3.GreenInk
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

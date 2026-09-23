@@ -623,7 +623,7 @@ fun RoundPicker(
                                     Tally(
                                         title = tallyName(bin, kind),
                                         n = counts[bin]?.get(kind) ?: 0,
-                                        color = if (bin == Mark.AMBER) Hak3.Pink else Hak3.GreenInk,
+                                        color = if (bin == Mark.AMBER) Hak3.Accent else Hak3.GreenInk,
                                         solid = kind == Collect.Kind.CHARS,
                                     ) { onWords(bin, kind, 0) }
                                 }
@@ -1326,7 +1326,7 @@ private fun Setup(trouble: String, onFolder: () -> Unit) {
         // 있었으나 걷었다 — 파일을 지웠다 다시 받으면 안드로이드가 새 문서 id 를
         // 주어 자리가 끊기는데, 폴더는 그런 일이 없다. DataFile 의 kind 갈래는
         // 그대로 두어, 전에 파일로 골라 둔 자리도 계속 읽힌다.
-        Capsule("Choose folder", Hak3.Pink, Color.Black, onFolder)
+        Capsule("Choose folder", Hak3.Accent, Color.Black, onFolder)
     }
 }
 
@@ -1708,7 +1708,7 @@ private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit)
             han,
             style = LANTERN_INK.copy(fontSize = glyph, lineHeight = glyph),
             // 못 외운 글자를 돌려 보이는 자리라, 그 묶음의 색으로 선다
-            color = Hak3.Pink,
+            color = Hak3.Accent,
             maxLines = 1,
             modifier = Modifier.wrapContentSize(unbounded = true),
         )
@@ -1819,7 +1819,7 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                         Text(
                             "${counts.amber}",
                             style = COUNT,
-                            color = Hak3.Pink,
+                            color = Hak3.Accent,
                             modifier = Modifier.offset(y = (-2).dp),
                         )
                     }
