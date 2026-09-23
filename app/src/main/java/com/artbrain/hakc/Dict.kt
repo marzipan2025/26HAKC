@@ -226,6 +226,19 @@ class Dict private constructor(private val db: SQLiteDatabase) {
         if (c.moveToNext()) c.getString(0)?.takeIf { it.isNotBlank() } else null
     }
 
+    /**
+     * 읽기를 모를 때 표기만으로 찾는 뜻. 그 표기를 나눠 쓰는 낱말이 여럿이면
+     * 돌려주지 않는다 — 엉뚱한 뜻을 다는 것보다 아무 말도 없는 편이 낫다.
+     * (3급 기출의 한자 답 2,835 가운데 이 그물에 걸리는 것은 두 개뿐이다.)
+     */
+    fun wordMeaning(hanja: String): String? = db.rawQuery(
+        "SELECT DISTINCT meaning FROM words WHERE hanja=? AND meaning IS NOT NULL LIMIT 2",
+        arrayOf(hanja)
+    ).use { c ->
+        val first = if (c.moveToNext()) c.getString(0) else return@use null
+        if (c.moveToNext()) null else first?.takeIf { it.isNotBlank() }
+    }
+
     /** 한자를 그대로 넣었을 때 — 글자마다 訓音만 돌려준다. */
     private fun ofHanja(text: String): Found {
         val only = text.filter(::isHan)

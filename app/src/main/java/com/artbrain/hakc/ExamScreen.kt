@@ -290,6 +290,8 @@ fun WordScreen(
     db: ExamDb,
     bin: Mark,
     kind: Collect.Kind,
+    /** 카드 바닥에 낱말의 뜻을 적으려고 본다. 訓音 카드는 그물에 걸리지 않는다. */
+    dict: Dict?,
     /** 묶음에서 먼저 펴 볼 자리. 묶음이 그새 줄었으면 있는 데까지만 간다. */
     start: Int = 0,
     morph: Modifier = Modifier,
@@ -339,6 +341,7 @@ fun WordScreen(
         veil = veil,
         morphLit = morphLit,
         face = if (bin == Mark.AMBER) Hak3.Pink else Hak3.Green,
+        dict = dict,
         leaving = leaving,
         onMark = { p, m ->
             if (chars) {
@@ -1276,55 +1279,80 @@ private fun QuestionPage(
         // 정답을 펼쳐야 함께 나온다.
         val meaning = remember(item.no, dict) { wordGloss(dict, item) }
         if (revealed && meaning != null) {
-            Box(
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    // 아래 두 귀는 카드와 같은 곡률로 깎는다 — 색면이 카드 밖으로
-                    // 삐져나오지 않게.
-                    .clip(RoundedCornerShape(bottomStart = radius, bottomEnd = radius))
-                    // 흰 색면 한 겹을 overlay 로 얹는다 — 카드 색을 덮지 않고
-                    // 그만큼 들어 올린다. 글 아래위의 여백까지 함께 덮는다.
-                    .drawBehind {
-                        drawRect(Color.White.copy(alpha = FOOT_VEIL), blendMode = BlendMode.Overlay)
-                    }
-                    // 위는 아래보다 [FOOT_LIFT] 만큼 얕다 — 눈에는 그래야 같아 보인다.
-                    .padding(
-                        start = 24.dp,
-                        end = 24.dp,
-                        top = FOOT_ROOM - FOOT_LIFT,
-                        bottom = FOOT_ROOM,
-                    )
-                    .padding(start = SHIFT),
-            ) { GlossFoot(meaning) }
+            GlossFoot(
+                meaning,
+                card = radius,
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+            )
         }
     }
 }
 
 /**
- * 이 문항이 낱말의 讀音을 묻고 있고 사전에 그 뜻이 있으면 그 뜻. 아니면 null.
+ * 이 문항이 두 자 이상의 한자어를 묻고 있고 사전에 그 뜻이 있으면 그 뜻. 아니면 null.
  *
- * 묻는 낱말은 [Item.target] 이 들고 있고(販促), 답이 곧 그 읽기다(판촉). 표기가
- * 온통 한자이고 두 자 이상일 때, 답이 온통 한글일 때만 사전에 묻는다 — 訓音이나
- * 部首, 略字를 묻는 문항은 이 그물에 걸리지 않는다.
+ * 낱말은 문항의 어느 쪽에나 설 수 있다. 어느 쪽이든 표기(한자)와 읽기(한글)를
+ * 짝지어 사전에 묻는다 — 한 표기를 여러 낱말이 나눠 쓰기 때문이다.
+ *
+ * - 讀音을 묻는 유형: 표기는 [Item.target] 이 들고 있고(販促) 답이 곧 그 읽기다(판촉).
+ * - 한자로 쓰라는 유형: 답이 표기이고(構想), 읽기는 [Item.target] 이 들고 있거나
+ *   예문에서 밑줄 친 자리에 있다(구상). 읽기를 어디에서도 못 찾으면 표기만으로 묻되,
+ *   그 표기를 나눠 쓰는 낱말이 여럿이면 아무 말도 달지 않는다.
+ *
+ * 한 글자를 묻는 유형(訓音·部首·略字·四字成語의 빈칸)은 두 자 문턱에서 걸러진다.
  */
 private fun wordGloss(dict: Dict?, item: Item): String? {
-    val word = item.target ?: return null
-    val read = item.answer ?: return null
-    if (word.length < 2 || !word.all { HANJA.matches(it.toString()) }) return null
-    if (read.isEmpty() || !read.all { it in '가'..'힣' }) return null
-    return dict?.wordMeaning(word, read)
+    if (dict == null) return null
+    val target = item.target.orEmpty()
+    val answer = item.answer.orEmpty()
+    // 讀音을 묻는 유형
+    if (isWord(target) && isRead(answer)) return dict.wordMeaning(target, answer)
+    // 한자로 쓰라는 유형
+    if (!isWord(answer)) return null
+    val read = target.takeIf(::isRead) ?: UNDERLINED.find(item.html.orEmpty())
+        ?.groupValues?.get(1)?.takeIf(::isRead)
+    return read?.let { dict.wordMeaning(answer, it) } ?: dict.wordMeaning(answer)
 }
 
+/** 두 자 이상의 온전한 한자 표기인가. */
+private fun isWord(s: String) = s.length >= 2 && s.all { HANJA.matches(it.toString()) }
+
+/** 온전한 한글 읽기인가. */
+private fun isRead(s: String) = s.isNotEmpty() && s.all { it in '가'..'힣' }
+
+/** 예문에서 밑줄 친 자리 — 한자로 쓰라는 유형에서 읽기가 거기에 있다. */
+private val UNDERLINED = Regex("<u>(.*?)</u>")
+
 /**
- * 뜻풀이 한 줄. 노란 판의 것과 같은 규칙으로 접고 편다 — 넘치면 +, 펴면 −.
- * 다만 아랫선을 맞춰 세우므로 펼치면 위로 자란다. 카드 바닥에 붙어 있어
- * 아래로는 자랄 데가 없기 때문이다.
+ * 뜻풀이 한 줄과 그것이 앉는 색면. 노란 판의 것과 같은 규칙으로 접고 편다 —
+ * 넘치면 +, 펴면 −. 다만 아랫선을 맞춰 세우므로 펼치면 위로 자란다. 카드 바닥에
+ * 붙어 있어 아래로는 자랄 데가 없기 때문이다.
+ *
+ * 색면은 흰빛 [FOOT_VEIL] 을 overlay 로 얹은 것이다 — 카드 색을 덮지 않고 그만큼
+ * 들어 올린다. 회차의 문제 카드든 단어장의 색면 카드든 꼴은 하나다: 벽에서
+ * [FOOT_INSET] 만큼(좌·우·아래 같은 값) 떨어져 서고, 곡률은 카드의 것에서 그 거리를
+ * 뺀 값이다 — 두 곡선의 중심이 한자리에 놓여야(동심원) 띠의 귀가 카드 귀와 나란히
+ * 돈다.
  */
 @Composable
-private fun GlossFoot(body: String) {
+private fun GlossFoot(body: String, card: Dp, modifier: Modifier) {
     var open by remember(body) { mutableStateOf(false) }
     var long by remember(body) { mutableStateOf(false) }
+    Box(
+        modifier
+            .padding(start = FOOT_INSET, end = FOOT_INSET, bottom = FOOT_INSET)
+            .clip(RoundedCornerShape((card - FOOT_INSET).coerceAtLeast(0.dp)))
+            .drawBehind {
+                drawRect(Color.White.copy(alpha = FOOT_VEIL), blendMode = BlendMode.Overlay)
+            }
+            // 위는 아래보다 [FOOT_LIFT] 만큼 얕다 — 눈에는 그래야 같아 보인다.
+            .padding(
+                start = FOOT_PAD,
+                end = FOOT_PAD,
+                top = FOOT_ROOM - FOOT_LIFT,
+                bottom = FOOT_ROOM,
+            ),
+    ) {
     Row(
         Modifier.clickable(
             enabled = long,
@@ -1355,6 +1383,7 @@ private fun GlossFoot(body: String) {
             onTextLayout = { if (!open) long = it.hasVisualOverflow },
         )
     }
+    }
 }
 
 /** 카드 바닥의 뜻풀이가 서는 크기와 잉크. */
@@ -1363,10 +1392,16 @@ private val FOOT_LEAD = (FOOT.value * 27f / 19f).sp
 private val FOOT_INK = Color.Black
 
 /** 글 아래로 두는 여백. */
-private val FOOT_ROOM = 26.dp
+private val FOOT_ROOM = 23.dp
 
 /** 위쪽이 아래보다 얕은 만큼. 폰에서 보고 잡았다. */
 private val FOOT_LIFT = 2.dp
+
+/** 띠가 카드 벽에서 물러나는 만큼. 좌우와 아래가 같은 값이다. */
+private val FOOT_INSET = 14.dp
+
+/** 글이 띠 안쪽 벽에서 물러나는 만큼. 둥근 귀에 글이 닿지 않을 만큼이다. */
+private val FOOT_PAD = 22.dp
 
 /** 그 색면의 짙기. 흰빛을 overlay 로 얹어 카드 색을 그만큼 들어 올린다. */
 private const val FOOT_VEIL = 0.25f

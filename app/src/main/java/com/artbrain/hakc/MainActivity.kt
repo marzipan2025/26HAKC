@@ -199,7 +199,7 @@ private fun Root() {
                     w is Where.Book && ready != null -> {
                         BackHandler { words = null }
                         WordScreen(
-                            ready, w.bin, w.kind, w.start,
+                            ready, w.bin, w.kind, dict, w.start,
                             morph, veil, { if (isTransitionActive) 1f else 0f },
                             // 이 조각이 지금 자리를 내주는 중인가
                             leaving = w != where,
