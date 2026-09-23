@@ -139,6 +139,12 @@ private val INK_ICON = Color.Black.copy(alpha = 0.40f)
 private val INK_HANJA = Color.Black.copy(alpha = 0.75f)     // 한자
 private val INK_HANJA_DIM = Color.Black.copy(alpha = 0.40f) // 훑고 지나가는 한자
 
+/**
+ * 訓音 줄과 입력 칸의 글씨. 검정은 노랑 판 위에서 너무 진해 판을 누르므로, 판의
+ * 노랑과 같은 결의 짙은 황갈색으로 둔다.
+ */
+private val INK_BROWN = Color(0xFF563F01)
+
 /** 訓 앞에 끼워 넣는 급수 표시의 이름. 글 흐름을 타야 해서 인라인으로 둔다. */
 private const val GRADE_SLOT = "grade"
 
@@ -646,9 +652,9 @@ fun DictPanel(
                     value = text,
                     onValueChange = { DictInput.type(it) },
                     singleLine = true,
-                    textStyle = TextStyle(color = INK, fontSize = 22.sp, fontFamily = Korail),
+                    textStyle = TextStyle(color = INK_BROWN, fontSize = 22.sp, fontFamily = Korail),
                     // 커서는 적히는 글자와 같은 색이다
-                    cursorBrush = SolidColor(INK),
+                    cursorBrush = SolidColor(INK_BROWN),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     // 키보드의 찾기 단추도 엔터와 같은 일을 한다
                     keyboardActions = KeyboardActions(onSearch = {
@@ -836,7 +842,7 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                     // 흰 글씨는 판에서 가장 밝아 한자보다 앞으로 나온다.
                     // 訓音은 한자에 딸린 말이니 한자와 같은 색을 쓴다.
                     // 담아 둔 글자만 노랑으로 도드라진다.
-                    color = kept[ch.toString()]?.let(::binColor) ?: INK_HANJA,
+                    color = kept[ch.toString()]?.let(::binColor) ?: INK_BROWN,
                     // 너비를 못 채우면 줄이 갈리므로 한 줄로 못 박는다
                     maxLines = 1,
                     modifier = Modifier.width(EUM).alignByBaseline(),
@@ -864,7 +870,7 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                     },
                     fontSize = HUNEUM,
                     lineHeight = HUNEUM_LEAD,
-                    color = INK_HANJA,
+                    color = INK_BROWN,
                     modifier = Modifier.alignByBaseline(),
                     inlineContent = mapOf(
                         GRADE_SLOT to InlineTextContent(
