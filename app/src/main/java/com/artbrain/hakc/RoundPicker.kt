@@ -93,6 +93,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.PlatformTextStyle
@@ -141,6 +143,9 @@ fun RoundPicker(
     dict: Dict?,
     built: String?,
     trouble: String?,
+    /** 지금 보는 급수(1·3). 설정 서랍에서 바꾸고, 오른쪽 기둥에 마름모로 적는다. */
+    grade: Int,
+    onGrade: (Int) -> Unit,
     onFolder: () -> Unit,
     onPick: (Int) -> Unit,
     onWords: (Mark, Collect.Kind, Int) -> Unit,
@@ -193,7 +198,7 @@ fun RoundPicker(
             (context as? android.app.Activity)?.recreate()
         }
     }
-    var last by remember { mutableIntStateOf(Settings.lastRound(context)) }
+    var last by remember(grade) { mutableIntStateOf(Settings.lastRound(context)) }
     var markOnLeft by remember { mutableStateOf(Settings.markOnLeft(context)) }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -335,6 +340,8 @@ fun RoundPicker(
                     open = drawer == Drawer.SETTINGS,
                     built = built,
                     markOnLeft = markOnLeft,
+                    grade = grade,
+                    onGrade = onGrade,
                     onMarkSide = { left ->
                         markOnLeft = left
                         Settings.setMarkOnLeft(context, left)
@@ -608,7 +615,9 @@ fun RoundPicker(
                     state = rounds,
                     contentPadding = PaddingValues(top = ROOF + DECO_A_DROP - LIST_INK, bottom = LIST_FLOOR),
                 ) {
-                    items(exams, key = { it.round }) { e ->
+                    // 회차 번호는 급수끼리 겹친다. 급수를 키에 넣어야 급수를 바꿨을 때
+                    // 줄마다 붙잡아 둔 수가 남의 급수 것으로 남지 않는다.
+                    items(exams, key = { "$grade-${it.round}" }) { e ->
                         RoundRow(e, e.round == last) {
                             last = it
                             Settings.setLastRound(context, it)
@@ -737,6 +746,8 @@ fun RoundPicker(
                     // 원 안의 수도 그림에서 떼어 여기서 적는다 — 여태 들어가 본
                     // 회차의 수다.
                     SeenRounds(aTop, seenRounds)
+                    // 26HAKC 아래에 지금 보는 급수
+                    GradeMark(aTop, grade)
                     // 갱신 표도 따로 그린다 — 새 판이 있으면 노랗게 물든다
                     UpdateMark(aTop, fresh != null) { updateShut = false }
                     DecoB(bTop, strip)
@@ -999,6 +1010,68 @@ private fun SeenRounds(top: Float, n: Int) {
 }
 
 /**
+ * 지금 보는 급수. 기둥에 세로로 적힌 26HAKC 의 끝에서 [GRADE_DROP] 아래에, 그
+ * 글줄과 같은 가운데에 선다. 마름모의 폭은 그 글자의 키와 같고, 안에 급수를 적는다.
+ * 숫자는 눕히지 않는다 — 한 자리라 눕히면 1 이 줄표로 읽힌다.
+ *
+ * 자리는 deco_a 캔버스(255×475) 안의 값이다. 그림을 재어 잡았고, 그림이 바뀌면
+ * 다시 재야 한다.
+ */
+private const val HAKC_X0 = 118.9f       // 26HAKC 글자의 왼끝·오른끝 (= 글자의 키)
+private const val HAKC_X1 = 168.6f
+private const val HAKC_END = 267.5f      // 글줄이 끝나는 자리 (C 의 아랫끝)
+
+/** 26HAKC 끝에서 마름모 윗꼭짓점까지. */
+private val GRADE_DROP = 12.dp
+
+/** 마름모의 낯 — HAKC 글자와 같은 색. 숫자는 판 색으로 파낸 듯 선다. */
+private val GRADE_FACE = Color(0xFFFFFAEE)
+
+@Composable
+private fun GradeMark(top: Float, grade: Int) {
+    val density = LocalDensity.current
+    val k = DECO_W.value / DECO_A_VIEW        // 캔버스 한 칸이 몇 dp 인가
+    val w = ((HAKC_X1 - HAKC_X0) * k).dp
+    Box(
+        Modifier
+            .offset { IntOffset(0, top.roundToInt()) }
+            .width(DECO_W)
+            .aspectRatio(DECO_A),
+    ) {
+        Box(
+            Modifier
+                .offset(x = (HAKC_X0 * k).dp, y = (HAKC_END * k).dp + GRADE_DROP)
+                .size(w)
+                .drawBehind {
+                    val c = size.width / 2
+                    drawPath(
+                        Path().apply {
+                            moveTo(c, 0f)
+                            lineTo(size.width, c)
+                            lineTo(c, size.height)
+                            lineTo(0f, c)
+                            close()
+                        },
+                        GRADE_FACE,
+                    )
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                "$grade",
+                fontFamily = Mono,
+                fontWeight = FontWeight.Bold,
+                // 마름모 안에 넉넉히 드는 크기 — 폭의 절반
+                fontSize = with(density) { (w * 0.5f).toSp() },
+                lineHeight = with(density) { (w * 0.5f).toSp() },
+                color = Hak3.Card,
+                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+            )
+        }
+    }
+}
+
+/**
  * 갱신 표. deco_a 에서 떼어 낸 조각이라 자리는 그림과 같고, 여기서는 색만 준다 —
  * 새 판이 있으면 노랗게, 없으면 장식이 본디 쓰던 잉크로.
  */
@@ -1201,7 +1274,7 @@ private fun Setup(trouble: String, onFolder: () -> Unit) {
         Text("No exam data yet", fontFamily = Mono, fontSize = 22.sp, color = Hak3.Text)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Put hanja3.db in a folder inside Downloads, " +
+            "Put ${DataFile.prefix(LocalContext.current)}.db in a folder inside Downloads, " +
                 "then point the app at that folder.",
             fontFamily = Mono,
             fontSize = 15.sp,

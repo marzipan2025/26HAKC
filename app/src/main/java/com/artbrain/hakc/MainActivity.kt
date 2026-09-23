@@ -96,6 +96,10 @@ private fun Root() {
     var db by remember { mutableStateOf<ExamDb?>(null) }
     var state by remember { mutableStateOf<DataFile.Result?>(null) }
     var reload by remember { mutableStateOf(0) }
+    // 지금 보는 급수. 설정에서 바꾸면 그 급수의 파일을 다시 읽어 목록이 새로 선다.
+    var grade by remember { mutableStateOf(Settings.grade(context)) }
+    // 마지막으로 제대로 읽힌 급수. 바꾼 급수의 파일이 없으면 이리로 되돌아온다.
+    var good by remember { mutableStateOf(grade) }
     var open by remember { mutableStateOf<Int?>(null) }
     var words by remember { mutableStateOf<Triple<Mark, Collect.Kind, Int>?>(null) }
     val dict = remember { Dict.open(context) }
@@ -109,8 +113,16 @@ private fun Root() {
         }
     }
 
-    LaunchedEffect(reload) {
+    LaunchedEffect(reload, grade) {
         val r = DataFile.sync(context)
+        // 급수를 바꿨는데 그 파일이 없으면 바꾸지 않은 것으로 한다. 그대로 두면
+        // 안내 화면이 서랍까지 덮어 원래 급수로 돌아갈 길이 막힌다.
+        if (r !is DataFile.Result.Ok && grade != good && db != null) {
+            Settings.setGrade(context, good)
+            grade = good
+            return@LaunchedEffect
+        }
+        if (r is DataFile.Result.Ok) good = grade
         state = r
         db?.close()
         db = (r as? DataFile.Result.Ok)?.let { ExamDb.open(it.file) }
@@ -178,6 +190,11 @@ private fun Root() {
                     }
                     else -> {
                         Picker(state, reload, ready, dict, pickFolder, morph, veil,
+                            grade = grade,
+                            onGrade = { g ->
+                                Settings.setGrade(context, g)
+                                grade = g
+                            },
                             onPick = { open = it },
                             onWords = { bin, kind, at -> words = Triple(bin, kind, at) })
                     }
@@ -209,16 +226,21 @@ private fun Picker(
     pickFolder: androidx.activity.result.ActivityResultLauncher<android.net.Uri?>,
     morph: Modifier,
     veil: Modifier,
+    grade: Int,
+    onGrade: (Int) -> Unit,
     onPick: (Int) -> Unit,
     onWords: (Mark, Collect.Kind, Int) -> Unit,
 ) {
+    val context = LocalContext.current
     RoundPicker(
         // 사전은 기출 데이터가 없어도 선다 — 앱 안에 든 자료라 남을 기다릴 것이 없다
         exams = ready?.exams() ?: emptyList(),
         db = ready,
         dict = book,
         built = ready?.meta()?.get("built"),
-        trouble = if (ready == null) trouble(state) else null,
+        trouble = if (ready == null) trouble(state, DataFile.prefix(context)) else null,
+        grade = grade,
+        onGrade = onGrade,
         onFolder = { pickFolder.launch(null) },
         onPick = onPick,
         onWords = onWords,
@@ -228,10 +250,10 @@ private fun Picker(
 }
 
 /** 데이터 파일을 못 읽었을 때 무엇이 잘못됐는지. 아직 고르지 않았으면 null. */
-private fun trouble(state: DataFile.Result?): String = when (state) {
+private fun trouble(state: DataFile.Result?, prefix: String): String = when (state) {
     DataFile.Result.NoFolder, null -> ""
     DataFile.Result.NoFile ->
-        "No ${DataFile.PREFIX}…${DataFile.SUFFIX} in that folder."
+        "No $prefix…${DataFile.SUFFIX} in that folder."
     is DataFile.Result.Failed -> state.why
     is DataFile.Result.Ok -> "That file is not exam data."
 }

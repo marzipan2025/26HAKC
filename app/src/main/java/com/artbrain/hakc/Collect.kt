@@ -23,7 +23,7 @@ object Collect {
     /** 묶음의 갈래. */
     enum class Kind { CHARS, CARDS }
 
-    private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private fun prefs(c: Context) = c.getSharedPreferences(Settings.scoped(c, PREFS), Context.MODE_PRIVATE)
 
     private fun tag(m: Mark) = if (m == Mark.AMBER) "A" else "K"
 

@@ -11,6 +11,28 @@ object Settings {
     private const val KEY_MARK_LEFT = "mark_left"
     private const val KEY_LAST_ROUND = "last_round"
     private const val KEY_KEYBOARD = "keyboard_px"
+    private const val KEY_GRADE = "grade"
+
+    /** 고를 수 있는 급수. 급수마다 기출 파일(hanja1·hanja3)이 따로 있다. */
+    val GRADES = listOf(1, 3)
+
+    /** 지금 보는 급수. 기본은 3급 — 앱이 처음 3급만 들고 나왔다. */
+    fun grade(c: Context): Int =
+        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_GRADE, 3)
+            .takeIf { it in GRADES } ?: 3
+
+    fun setGrade(c: Context, grade: Int) {
+        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putInt(KEY_GRADE, grade).apply()
+    }
+
+    /**
+     * 급수마다 따로 적는 기록의 이름. 회차 번호는 급수끼리 겹치므로(3급 113회와
+     * 1급 113회) 한 곳에 적으면 표시가 남의 문항에 붙는다. 3급은 원래 이름 그대로
+     * 두어 여태 쌓인 기록을 잇고, 다른 급수는 뒤에 번호를 단다 — marks → marks1.
+     */
+    fun scoped(c: Context, name: String): String =
+        grade(c).let { if (it == 3) name else "$name$it" }
 
     /** 노란 판정 단추를 왼쪽에 둘 것인가. 기본은 오른쪽이다. */
     fun markOnLeft(c: Context): Boolean =
@@ -23,11 +45,11 @@ object Settings {
 
     /** 마지막으로 열어 본 회차. 목록에서 그 줄에 알약을 두른다. 없으면 0. */
     fun lastRound(c: Context): Int =
-        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_LAST_ROUND, 0)
+        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(scoped(c, KEY_LAST_ROUND), 0)
 
     fun setLastRound(c: Context, round: Int) {
         c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit().putInt(KEY_LAST_ROUND, round).apply()
+            .edit().putInt(scoped(c, KEY_LAST_ROUND), round).apply()
     }
 
     /**
@@ -51,10 +73,15 @@ object Settings {
      * 이 기기의 채비라 그대로 둔다.
      */
     fun wipe(c: Context) {
-        listOf("marks", "collect", "seen").forEach {
+        // 급수마다 따로 적은 기록까지 모두 — 지금 보는 급수만이 아니다
+        val scopedNames = GRADES.flatMap { g ->
+            listOf("marks", "collect").map { if (g == 3) it else "$it$g" }
+        }
+        (scopedNames + "seen").forEach {
             c.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().apply()
         }
-        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .remove(KEY_LAST_ROUND).apply()
+        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().apply {
+            GRADES.forEach { g -> remove(if (g == 3) KEY_LAST_ROUND else "$KEY_LAST_ROUND$g") }
+        }.apply()
     }
 }

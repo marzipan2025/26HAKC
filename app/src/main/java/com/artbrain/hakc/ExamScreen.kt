@@ -563,6 +563,9 @@ fun SettingsPanel(
     open: Boolean,
     built: String?,
     markOnLeft: Boolean,
+    /** 지금 보는 급수. 누르면 그 급수의 기출로 갈아 끼운다. */
+    grade: Int,
+    onGrade: (Int) -> Unit,
     onMarkSide: (Boolean) -> Unit,
     onWipe: () -> Unit,
 ) {
@@ -649,6 +652,13 @@ fun SettingsPanel(
             }
         }
 
+        // 급수 — 덩이 하나가 곧 단추 하나다. 위에서부터 1급, 3급. 고르면 본 화면의
+        // 목록이 그 급수의 것으로 새로 선다.
+        for (g in Settings.GRADES) {
+            Spacer(Modifier.height(gap))
+            GradeBlock(g, g == grade, radius, face) { if (g != grade) onGrade(g) }
+        }
+
         // 아직 아무것도 들지 않은 칸. 남은 자리를 그대로 받아 선다.
         Spacer(Modifier.height(gap))
         Box(
@@ -717,6 +727,36 @@ fun SettingsPanel(
         }
     }
 }
+
+/**
+ * 급수 덩이. 다른 덩이와 같은 낯으로 서되 키가 [GRADE_BLOCK] 로 낮아 캡슐이 된다.
+ * 고른 쪽은 Left·Right 단추처럼 글이 밝아지고 테가 선다.
+ */
+@Composable
+private fun GradeBlock(grade: Int, on: Boolean, radius: Dp, face: Color, onPick: () -> Unit) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(GRADE_BLOCK)
+            .background(face, RoundedCornerShape(radius))
+            .border(1.dp, if (on) Hak3.Hanja else Color.Transparent, RoundedCornerShape(radius))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onPick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            "${grade}급",
+            fontSize = 15.sp,
+            color = if (on) Hak3.Text else Hak3.TextDim,
+        )
+    }
+}
+
+/** 급수 덩이 하나의 키. */
+private val GRADE_BLOCK = 30.dp
 
 /** 첫 덩이가 위에서 물러나는 만큼. 본 화면에서 사전 판이 물러난 것과 같다. */
 private val DRAWER_TOP = 4.dp

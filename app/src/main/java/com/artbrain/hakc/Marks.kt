@@ -18,7 +18,7 @@ enum class Mark { AMBER, KNOWN }
  * 저장 형식은 `12:A,37:R,55:K` — 사람이 읽고 고칠 수 있는 편이 뒤탈이 적다.
  */
 class Marks(context: Context, round: Int) {
-    private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val prefs = store(context)
     private val key = keyOf(round)
 
     val state: SnapshotStateMap<Int, Mark> =
@@ -33,6 +33,10 @@ class Marks(context: Context, round: Int) {
 
     companion object {
         private const val PREFS = "marks"
+
+        /** 기록은 급수마다 따로 적는다 — [Settings.scoped]. */
+        private fun store(context: Context) =
+            context.getSharedPreferences(Settings.scoped(context, PREFS), Context.MODE_PRIVATE)
 
         /** 마지막으로 문제를 펼쳐 본 때. 회차 이름이 아니므로 rounds() 가 걸러 낸다. */
         private const val KEY_STUDIED = "studied"
@@ -63,11 +67,11 @@ class Marks(context: Context, round: Int) {
 
         /** 그 회차의 표시들. 모음을 꾸릴 때 회차를 훑는 데 쓴다. */
         fun of(context: Context, round: Int): Map<Int, Mark> =
-            read(context.getSharedPreferences(PREFS, Context.MODE_PRIVATE), keyOf(round))
+            read(store(context), keyOf(round))
 
         /** 표시가 하나라도 남아 있는 회차들. */
         fun rounds(context: Context): List<Int> =
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).all.keys
+            store(context).all.keys
                 .mapNotNull { it.removePrefix("round_").takeIf { n -> it != n }?.toIntOrNull() }
                 .sortedDescending()
 
@@ -76,7 +80,7 @@ class Marks(context: Context, round: Int) {
          * 회차마다 한 번씩만 적는다 — 같은 문제가 여러 회차에 걸쳐 있을 때 쓴다.
          */
         fun setAll(context: Context, keys: List<Pair<Int, Int>>, mark: Mark?) {
-            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val prefs = store(context)
             val edit = prefs.edit()
             keys.groupBy({ it.first }, { it.second }).forEach { (round, nos) ->
                 val key = keyOf(round)
@@ -91,10 +95,10 @@ class Marks(context: Context, round: Int) {
 
         /** 그 회차에서 마지막으로 보던 문항 번호. */
         fun lastSeen(context: Context, round: Int): Int =
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt("last_$round", 0)
+            store(context).getInt("last_$round", 0)
 
         fun setLastSeen(context: Context, round: Int, no: Int) {
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            store(context)
                 .edit()
                 .putInt("last_$round", no)
                 // 문항을 펼칠 때마다 그때를 함께 적어 둔다 — 이것이 마지막으로
@@ -105,11 +109,11 @@ class Marks(context: Context, round: Int) {
 
         /** 마지막으로 문제를 펼쳐 본 때. 한 번도 없으면 0 이다. */
         fun studied(context: Context): Long =
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getLong(KEY_STUDIED, 0L)
+            store(context).getLong(KEY_STUDIED, 0L)
 
         /** 회차 목록에 표기할 개수. */
         fun counts(context: Context, round: Int): Counts {
-            val m = read(context.getSharedPreferences(PREFS, Context.MODE_PRIVATE), keyOf(round))
+            val m = read(store(context), keyOf(round))
             return Counts(
                 amber = m.count { it.value == Mark.AMBER },
                 known = m.count { it.value == Mark.KNOWN },

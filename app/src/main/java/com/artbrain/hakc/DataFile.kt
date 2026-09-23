@@ -25,8 +25,12 @@ import java.io.File
  */
 object DataFile {
 
-    /** 다운로드 폴더에 이 이름으로 두면 된다. 여럿이면 가장 최근 것을 쓴다. */
-    const val PREFIX = "hanja3"
+    /**
+     * 다운로드 폴더에 이 이름으로 두면 된다. 여럿이면 가장 최근 것을 쓴다.
+     * 급수마다 이름이 다르다 — hanja1…db, hanja3…db. 한 폴더에 나란히 두고
+     * 설정에서 급수를 바꾸면 그 급수의 것을 읽는다.
+     */
+    fun prefix(c: Context) = "hanja${Settings.grade(c)}"
     const val SUFFIX = ".db"
 
     private const val PREFS = "datafile"
@@ -53,16 +57,20 @@ object DataFile {
         prefs(c).edit()
             .putString(KEY_URI, uri.toString())
             .putString(KEY_KIND, kind)
-            .remove(KEY_STAMP)
+            // 자리가 바뀌었으니 어느 급수든 다시 베낀다
+            .apply { Settings.GRADES.forEach { remove("$KEY_STAMP$it") } }
             .apply()
     }
 
     fun forget(c: Context) {
         prefs(c).edit().clear().apply()
-        local(c).delete()
+        Settings.GRADES.forEach { File(c.filesDir, "hanja$it.db").delete() }
     }
 
-    private fun local(c: Context) = File(c.filesDir, "hanja3.db")
+    private fun local(c: Context) = File(c.filesDir, "${prefix(c)}.db")
+
+    /** 베껴 둔 것이 원본 그대로인지 알아보는 표. 급수마다 따로 둔다. */
+    private fun stampKey(c: Context) = "$KEY_STAMP${Settings.grade(c)}"
 
     /**
      * 지정한 폴더에서 데이터 파일을 찾아 앱 안으로 들인다.
@@ -76,7 +84,7 @@ object DataFile {
             } else {
                 DocumentFile.fromTreeUri(c, uri)?.takeIf { it.canRead() }?.listFiles()
                     ?.filter {
-                        it.isFile && (it.name ?: "").startsWith(PREFIX) &&
+                        it.isFile && (it.name ?: "").startsWith(prefix(c)) &&
                             (it.name ?: "").endsWith(SUFFIX)
                     }
                     ?.maxByOrNull { it.lastModified() }
@@ -85,10 +93,10 @@ object DataFile {
         val pick = found
             ?: return@withContext if (kind == "file") Result.NoFolder else Result.NoFile
 
-        val name = pick.name ?: "hanja3.db"
+        val name = pick.name ?: "${prefix(c)}.db"
         val stamp = "$name:${pick.length()}:${pick.lastModified()}"
         val out = local(c)
-        if (out.exists() && prefs(c).getString(KEY_STAMP, null) == stamp) {
+        if (out.exists() && prefs(c).getString(stampKey(c), null) == stamp) {
             return@withContext Result.Ok(out, name)
         }
         try {
@@ -96,7 +104,7 @@ object DataFile {
                 if (input == null) return@withContext Result.Failed("Could not open the file.")
                 out.outputStream().use { input.copyTo(it) }
             }
-            prefs(c).edit().putString(KEY_STAMP, stamp).apply()
+            prefs(c).edit().putString(stampKey(c), stamp).apply()
             Result.Ok(out, name)
         } catch (e: Exception) {
             Result.Failed(e.message ?: "Could not read the file.")
