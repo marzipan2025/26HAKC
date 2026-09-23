@@ -613,7 +613,9 @@ fun RoundPicker(
                             // 도형이든 한 색으로 세운다.
                             colorFilter = ColorFilter.tint(Hak3.Hanja),
                             modifier = Modifier
-                                .offset(y = SHOULDER_LIFT + DOOR_DROP)
+                                // 위 단추 넷과 가운데를 맞춘다 — 넷이 [TALLY_SHIFT] 만큼
+                                // 오른쪽에 서므로 문도 그만큼 옮긴다
+                                .offset(x = TALLY_SHIFT, y = SHOULDER_LIFT + DOOR_DROP)
                                 .width(DOOR_SETTINGS)
                                 .onGloballyPositioned {
                                     doorBottom = it.positionInRoot().y + it.size.height
@@ -662,7 +664,8 @@ fun RoundPicker(
                             .coerceAtLeast(0f)
                     }
                     val certTop = with(density) {
-                        licTop - CERT_GAP.toPx() - CERT_W.toPx() * (CERT_CARD_BOTTOM / CERT_VIEW)
+                        licTop - CERT_GAP.toPx() - CERT_W.toPx() * (CERT_CARD_BOTTOM / CERT_VIEW) -
+                            CERT_LIFT.toPx()
                     }
                     // 앱의 표. LICENSES 와 같은 폭으로 그 오른선에 맞춰 서고,
                     // 아랫선은 LICENSES 의 윗선에서 [LOGO_GAP] 만큼 뜬다.
@@ -1422,8 +1425,14 @@ private val TALLY_RISE = 10.dp
 /** 단추끼리 벌어지는 만큼. 14dp 이던 것을 4dp 좁혔다. */
 private val TALLY_GAP = 10.dp
 
-/** 단추 넷을 오른쪽으로 더 옮겨 그리는 만큼. 등과 설정 문은 따라가지 않는다. */
+/**
+ * 단추 넷을 오른쪽으로 더 옮겨 그리는 만큼. 설정 문도 같은 만큼 옮겨 넷과 가운데를
+ * 맞춘다. 등은 따라가지 않는다.
+ */
 private val TALLY_SHIFT = 3.dp
+
+/** 합격증 카드를 제자리보다 더 올려 세우는 만큼. */
+private val CERT_LIFT = 8.dp
 
 /**
  * 단추 넷이 예전(간격 14dp, 수 32sp)보다 짧아진 만큼. 설정 문은 단추 아래에 서므로
