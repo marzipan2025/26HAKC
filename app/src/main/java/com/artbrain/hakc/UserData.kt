@@ -34,7 +34,7 @@ object UserData {
         } + listOf("seen", "dict", "settings")
 
     /** 이 기기에서만 뜻이 있는 값. 다른 폰에 들이면 틀린 값이 된다. */
-    private val DEVICE_ONLY = setOf("keyboard_px")
+    private val DEVICE_ONLY = setOf("keyboard_px", Settings.KEY_IMPORTED)
 
     /** 기록으로 셈하는 칸 — 이것들이 모두 비었으면 새로 깔린 앱이다. */
     private fun records(): List<String> = prefNames() - listOf("dict", "settings")
@@ -67,6 +67,9 @@ object UserData {
      * 들였으면 참 — 그때는 급수 같은 설정도 바뀌었을 수 있다.
      */
     suspend fun restoreIfFresh(c: Context): Boolean = withContext(Dispatchers.IO) {
+        // 한 번 들였으면 다시 들이지 않는다. 기록이 비었다는 것만 보면, 다 지운 뒤에
+        // 지운 것을 도로 들이고 급수도 폴더에 적힌 것으로 끌려간다.
+        if (Settings.imported(c)) return@withContext false
         if (records().any { prefs(c, it).all.isNotEmpty() }) return@withContext false
         val dir = DataFile.readableFolder(c) ?: return@withContext false
         val file = dir.findFile(NAME) ?: return@withContext false
@@ -77,6 +80,7 @@ object UserData {
         prefNames().forEach { name ->
             all.optJSONObject(name)?.let { load(prefs(c, name), it) }
         }
+        Settings.setImported(c)
         true
     }
 

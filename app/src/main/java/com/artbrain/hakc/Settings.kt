@@ -13,6 +13,13 @@ object Settings {
     private const val KEY_KEYBOARD = "keyboard_px"
     private const val KEY_GRADE = "grade"
 
+    /**
+     * 폴더에 적어 둔 기록을 이 앱이 한 번 들였는가([UserData.restoreIfFresh]).
+     * 다 지운 뒤에도 참으로 둔다 — 지운 것을 폴더에서 도로 들이면 지운 것이 아니다.
+     * 이 기기에서만 뜻이 있는 값이라 폴더에 적지 않는다([UserData.DEVICE_ONLY]).
+     */
+    const val KEY_IMPORTED = "imported"
+
     /** 고를 수 있는 급수. 급수마다 기출 파일(hanja1·hanja3)이 따로 있다. */
     val GRADES = listOf(1, 3)
 
@@ -33,6 +40,14 @@ object Settings {
      */
     fun scoped(c: Context, name: String): String =
         grade(c).let { if (it == 3) name else "$name$it" }
+
+    fun imported(c: Context): Boolean =
+        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_IMPORTED, false)
+
+    fun setImported(c: Context) {
+        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_IMPORTED, true).apply()
+    }
 
     /** 노란 판정 단추를 왼쪽에 둘 것인가. 기본은 오른쪽이다. */
     fun markOnLeft(c: Context): Boolean =
@@ -82,6 +97,10 @@ object Settings {
         }
         c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().apply {
             GRADES.forEach { g -> remove(if (g == 3) KEY_LAST_ROUND else "$KEY_LAST_ROUND$g") }
+            // 다 지운 뒤에도 '한 번 들였다' 를 세워 둔다. 그러지 않으면 기록이 비었다는
+            // 이유로 폴더의 것을 도로 들여, 지운 것이 되살아나고 급수도 폴더에 적힌
+            // 것으로 끌려간다 — 지우고 나서 급수를 바꿔도 곧장 되돌아오던 까닭이다.
+            putBoolean(KEY_IMPORTED, true)
         }.apply()
     }
 }
