@@ -729,8 +729,9 @@ fun SettingsPanel(
 }
 
 /**
- * 급수 덩이. 다른 덩이와 같은 낯으로 서되 키가 [GRADE_BLOCK] 로 낮아 캡슐이 된다.
- * 고른 쪽은 Left·Right 단추처럼 글이 밝아지고 테가 선다.
+ * 급수 덩이. 다른 덩이와 같은 낯으로 서되 키가 [GRADE_BLOCK] 로 낮다. 글은 맨 위
+ * 덩이의 Data·Version 줄과 같은 글꼴·크기·색으로, 같은 왼쪽 선([DRAWER_PAD])에
+ * 선다. 고른 쪽은 테 없이 핑크 면으로 선다.
  */
 @Composable
 private fun GradeBlock(grade: Int, on: Boolean, radius: Dp, face: Color, onPick: () -> Unit) {
@@ -738,25 +739,29 @@ private fun GradeBlock(grade: Int, on: Boolean, radius: Dp, face: Color, onPick:
         Modifier
             .fillMaxWidth()
             .height(GRADE_BLOCK)
-            .background(face, RoundedCornerShape(radius))
-            .border(1.dp, if (on) Hak3.Hanja else Color.Transparent, RoundedCornerShape(radius))
+            .background(if (on) Hak3.Pink else face, RoundedCornerShape(radius))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onPick,
-            ),
-        contentAlignment = Alignment.Center,
+            )
+            .padding(horizontal = DRAWER_PAD),
+        contentAlignment = Alignment.CenterStart,
     ) {
-        Text(
-            "${grade}급",
-            fontSize = 15.sp,
-            color = if (on) Hak3.Text else Hak3.TextDim,
-        )
+        Text(gradeName(grade), style = DRAWER_LINE)
     }
 }
 
-/** 급수 덩이 하나의 키. */
-private val GRADE_BLOCK = 30.dp
+/** 급수의 영문 이름 — 1st Grade, 3rd Grade. */
+private fun gradeName(grade: Int) = when (grade) {
+    1 -> "1st Grade"
+    2 -> "2nd Grade"
+    3 -> "3rd Grade"
+    else -> "${grade}th Grade"
+}
+
+/** 급수 덩이 하나의 키. 30dp 이던 것을 150% 로 키웠다. */
+private val GRADE_BLOCK = 45.dp
 
 /** 첫 덩이가 위에서 물러나는 만큼. 본 화면에서 사전 판이 물러난 것과 같다. */
 private val DRAWER_TOP = 4.dp

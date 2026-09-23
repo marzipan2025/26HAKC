@@ -685,7 +685,7 @@ fun DictPanel(
                                     bottom = 7.dp,
                                     end = 7.dp + WIPE_SHIFT,
                                 )
-                        ) { Wipe(sole * 0.34f) }
+                        ) { Wipe(sole * WIPE_SCALE) }
                     }
                     Icon(
                         painterResource(R.drawable.ic_enter),
@@ -713,6 +713,9 @@ fun DictPanel(
 
 /** 지우개가 차지하는 폭 — 표와 그 둘레의 여백, 그리고 엔터와의 사이. */
 private val WIPE_ROOM = 40.dp
+
+/** 지우개의 지름 — 입력 칸 높이에 대한 몫. 0.34 이던 것을 80% 로 줄였다. */
+private const val WIPE_SCALE = 0.34f * 0.8f
 
 /** 지우개를 엔터에서 이만큼 더 떼어 놓는다. */
 private val WIPE_SHIFT = 6.dp
