@@ -578,6 +578,9 @@ fun RoundPicker(
                         // 있는 급수가 서로 다른 얼굴이 되던 까닭이다.
                         else Spacer(Modifier.height(lanternSide() + TALLY_TOP))
                         Column(
+                            // 넷만 [TALLY_RISE] 만큼 올려 그린다. 자리는 그대로라 아래의
+                            // 설정 문은 움직이지 않는다.
+                            modifier = Modifier.offset(x = TALLY_SHIFT, y = -TALLY_RISE),
                             verticalArrangement = Arrangement.spacedBy(TALLY_GAP),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
@@ -600,7 +603,7 @@ fun RoundPicker(
                         //
                         // 라이선스로 드는 길은 오른쪽 기둥의 장식이 가져갔다 —
                         // 그림에 LICENSES 라 적힌 자리다. 그래서 문은 하나뿐이다.
-                        Spacer(Modifier.height(GEAR_TOP))
+                        Spacer(Modifier.height(GEAR_TOP + tallyShrink()))
                         Image(
                             painterResource(R.drawable.door_settings),
                             contentDescription = null,
@@ -1413,8 +1416,24 @@ private val LANTERN_PULL = 5.dp
  */
 private val TALLY_TOP = 14.dp
 
-/** 단추끼리 벌어지는 만큼. */
-private val TALLY_GAP = 14.dp
+/** 단추 넷(Unsure·Known)을 제자리보다 올려 그리는 만큼. 설정 문은 따라 오르지 않는다. */
+private val TALLY_RISE = 10.dp
+
+/** 단추끼리 벌어지는 만큼. 14dp 이던 것을 4dp 좁혔다. */
+private val TALLY_GAP = 10.dp
+
+/** 단추 넷을 오른쪽으로 더 옮겨 그리는 만큼. 등과 설정 문은 따라가지 않는다. */
+private val TALLY_SHIFT = 3.dp
+
+/**
+ * 단추 넷이 예전(간격 14dp, 수 32sp)보다 짧아진 만큼. 설정 문은 단추 아래에 서므로
+ * 이만큼을 문 위에 되돌려 두어야 문이 제자리를 지킨다 — 문을 따라 서는 LICENSES·
+ * 합격증·앱의 표도 함께 제자리다.
+ */
+@Composable
+private fun tallyShrink(): Dp = with(LocalDensity.current) {
+    (14.dp - TALLY_GAP) * 3 + (32f - TALLY_NUM.fontSize.value).sp.toDp() * 4
+}
 
 
 /**
@@ -1580,8 +1599,8 @@ private val TALLY_NAME = TextStyle(
 /** 단추의 수. 이름 바로 아래에 한 뼘 크게 선다. */
 private val TALLY_NUM = TextStyle(
     fontFamily = Mono,
-    fontSize = 32.sp,
-    lineHeight = 32.sp,
+    fontSize = 30.sp,
+    lineHeight = 30.sp,
     platformStyle = PlatformTextStyle(includeFontPadding = false),
     lineHeightStyle = LineHeightStyle(
         alignment = LineHeightStyle.Alignment.Center,
