@@ -733,8 +733,8 @@ fun SettingsPanel(
 
 /**
  * 급수 덩이. 다른 덩이와 같은 낯으로 서되 키가 [GRADE_BLOCK] 로 낮다. 글은 맨 위
- * 덩이의 Data·Version 줄과 같은 글꼴·크기로, 같은 왼쪽 선([DRAWER_PAD])에 흰색으로
- * 선다. 고른 쪽은 테 없이 핑크 면으로 서고 글이 굵어진다.
+ * 덩이의 Data·Version 줄과 같은 글꼴·크기로, 같은 왼쪽 선([DRAWER_PAD])에 선다.
+ * 고른 쪽은 테 없이 핑크 면으로 서고 글이 희고 굵어진다.
  */
 @Composable
 private fun GradeBlock(grade: Int, on: Boolean, radius: Dp, face: Color, onPick: () -> Unit) {
@@ -757,7 +757,8 @@ private fun GradeBlock(grade: Int, on: Boolean, radius: Dp, face: Color, onPick:
             // 쏠려 글이 덩이의 가운데보다 떠 보인다. 크기·글꼴만 받아 오고 줄 상자는
             // 글꼴 그대로 두어 가운데에 앉힌다.
             style = GRADE_LINE,
-            color = Color.White,
+            // 고른 쪽만 희고 굵다. 고르지 않은 쪽은 서랍 윗줄의 글과 같은 결로 물러난다.
+            color = if (on) Color.White else Hak3.TextSoft,
             fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
         )
     }

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ~/Downloads/grade1.svg 에서 옮겨 온 것. 마름모에서 급수 숫자를 도려낸 그림이고, 색도 원본 그대로다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="317dp"
+    android:height="317dp"
+    android:viewportWidth="317"
+    android:viewportHeight="317">
+    <path
+        android:fillColor="#96A6C3"
+        android:pathData="M316.783 158.392L158.392 316.784L0 158.392L158.392 0L316.783 158.392ZM153.752 101L120.792 131.88L130.712 141.96L160.632 114.12H162.071L147.991 197.96H116.792L114.392 212.68H190.231L192.632 197.96H165.592L181.752 101H153.752Z" />
+</vector>

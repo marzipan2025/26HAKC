@@ -93,8 +93,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.PlatformTextStyle
@@ -1026,8 +1024,8 @@ private fun SeenRounds(top: Float, n: Int) {
 
 /**
  * 지금 보는 급수. 기둥에 세로로 적힌 26HAKC 의 끝에서 [GRADE_DROP] 아래에, 그
- * 글줄과 같은 가운데에 선다. 마름모의 폭은 그 글자의 키와 같고, 안에 급수를 적는다.
- * 숫자는 눕히지 않는다 — 한 자리라 눕히면 1 이 줄표로 읽힌다.
+ * 글줄과 같은 가운데에 선다. 마름모의 폭은 그 글자의 키와 같다. 그림은 마름모에서
+ * 급수 숫자를 도려낸 것(grade_1·grade_3)이고 색도 그림이 들고 있다.
  *
  * 자리는 deco_a 캔버스(255×475) 안의 값이다. 그림을 재어 잡았고, 그림이 바뀌면
  * 다시 재야 한다.
@@ -1039,50 +1037,22 @@ private const val HAKC_END = 267.5f      // 글줄이 끝나는 자리 (C 의 �
 /** 26HAKC 끝에서 마름모 윗꼭짓점까지. */
 private val GRADE_DROP = 12.dp
 
-/** 마름모의 낯 — HAKC 글자와 같은 색. 숫자는 판 색으로 파낸 듯 선다. */
-private val GRADE_FACE = Color(0xFFFFFAEE)
-
 @Composable
 private fun GradeMark(top: Float, grade: Int) {
-    val density = LocalDensity.current
     val k = DECO_W.value / DECO_A_VIEW        // 캔버스 한 칸이 몇 dp 인가
-    val w = ((HAKC_X1 - HAKC_X0) * k).dp
     Box(
         Modifier
             .offset { IntOffset(0, top.roundToInt()) }
             .width(DECO_W)
             .aspectRatio(DECO_A),
     ) {
-        Box(
-            Modifier
+        Image(
+            painterResource(if (grade == 1) R.drawable.grade_1 else R.drawable.grade_3),
+            contentDescription = null,
+            modifier = Modifier
                 .offset(x = (HAKC_X0 * k).dp, y = (HAKC_END * k).dp + GRADE_DROP)
-                .size(w)
-                .drawBehind {
-                    val c = size.width / 2
-                    drawPath(
-                        Path().apply {
-                            moveTo(c, 0f)
-                            lineTo(size.width, c)
-                            lineTo(c, size.height)
-                            lineTo(0f, c)
-                            close()
-                        },
-                        GRADE_FACE,
-                    )
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                "$grade",
-                fontFamily = Mono,
-                fontWeight = FontWeight.Bold,
-                // 마름모 안에 넉넉히 드는 크기 — 폭의 절반
-                fontSize = with(density) { (w * 0.5f).toSp() },
-                lineHeight = with(density) { (w * 0.5f).toSp() },
-                color = Hak3.Card,
-                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
-            )
-        }
+                .size(((HAKC_X1 - HAKC_X0) * k).dp),
+        )
     }
 }
 
