@@ -708,7 +708,7 @@ fun RoundPicker(
                         contentDescription = null,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(end = SIDE + DECO_PULL + LIC_PULL - LOGO_PUSH)
+                            .padding(end = SIDE + DECO_PULL + LIC_PULL + LOGO_PULL)
                             .offset {
                                 IntOffset(
                                     0,
@@ -1549,33 +1549,23 @@ private const val CERT_TILT = 6f
 private val CERT_GROW = 8.dp
 
 /**
- * 앱의 표(logo_26.png)의 캔버스. 첫 화면과 런처 아이콘이 쓰는 그 그림이다.
+ * 앱의 표(logo_26.png)의 캔버스. 첫 화면·런처 아이콘과 같은 그림이되, 판만 남기고
+ * 얼룩은 도려낸 것이다 — 뚫린 자리로 판 색이 그대로 비친다.
  */
-private const val LOGO_W_VIEW = 444f
-private const val LOGO_H_VIEW = 509f
+private const val LOGO_W_VIEW = 325f
+private const val LOGO_H_VIEW = 439f
 
 /**
- * 표의 오른선이 LICENSES 의 오른선에서 더 나가는 만큼. 왼선은 제자리에 남고,
- * 아랫선은 [LOGO_GAP] 이 붙들고 있으므로 키가 자라는 쪽은 절로 위다.
+ * 표의 폭. 앞서 쓰던 그림(444x509)에서 판이 서던 크기를 그대로 잇는다 —
+ * 그림이 판만 남게 잘려 왔으므로 캔버스는 작아졌지만 눈에 보이는 크기는 같다.
  */
-private val LOGO_PUSH = 8.dp
+private val LOGO_W = 55.dp
 
-/**
- * 표가 LICENSES 보다 넓어지는 만큼. 폰에서 보고 잡았다. 먼저 6dp 를 왼쪽으로
- * 키웠고, 뒤이어 왼아래 귀를 붙든 채 오른위로 [LOGO_PUSH] 만큼 더 키웠다.
- * 이 줄은 [LOGO_PUSH] 아래라야 한다 — 값은 적은 차례대로 채워진다.
- */
-private val LOGO_GROW = 6.dp + LOGO_PUSH
-
-/**
- * 표의 폭. LICENSES 의 키에서 [LOGO_GROW] 만큼 넓게 서고, 오른선은 그대로
- * LICENSES 에 맞춘다 — 넓어지는 쪽은 왼쪽이다. 이 줄은 [LOGO_GROW] 아래라야
- * 한다 — 파일 안의 값은 적은 차례대로 채워지므로, 위에 두면 0 을 읽는다.
- */
-private val LOGO_W = LIC_W + LOGO_GROW
+/** 표의 오른선이 LICENSES 의 오른선에서 물러나는 만큼. */
+private val LOGO_PULL = 2.dp
 
 /** 표의 아랫선에서 LICENSES 조각의 윗선까지. */
-private val LOGO_GAP = 30.dp
+private val LOGO_GAP = 36.dp
 
 /** 표가 판 위에서 묽어지는 만큼. 장식이라 뒤로 한 걸음 물러나 선다. */
 private const val LOGO_FADE = 0.8f
@@ -1848,7 +1838,6 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                                 .copy(alpha = EMPTY_COUNT),
                         )
                     }
-
                     if (!live) Text("no text", fontSize = 13.sp, color = Hak3.TextDim)
                 }
             }
