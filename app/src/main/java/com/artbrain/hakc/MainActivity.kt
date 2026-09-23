@@ -7,6 +7,8 @@ import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
@@ -23,17 +25,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,12 +36,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -124,7 +114,11 @@ private fun Root() {
     var restored by remember { mutableStateOf(0) }
     var open by remember { mutableStateOf<Int?>(null) }
     var words by remember { mutableStateOf<Triple<Mark, Collect.Kind, Int>?>(null) }
-    val dict = remember { Dict.open(context) }
+    // 사전은 곁줄에서 연다. 처음 한 번은 26MB 를 앱 안으로 베끼는 일이라, 본줄에서
+    // 열면 그동안 화면이 붙잡힌다. 열리기 전까지는 null 이고, 사전 판은 그때
+    // 자리만 지킨다.
+    var dict by remember { mutableStateOf<Dict?>(null) }
+    LaunchedEffect(Unit) { dict = withContext(Dispatchers.IO) { Dict.open(context) } }
 
     val pickFolder = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -271,9 +265,13 @@ private fun Picker(
     onWords: (Mark, Collect.Kind, Int) -> Unit,
 ) {
     val context = LocalContext.current
+    // 회차 목록은 한 번만 캔다. 그릴 때마다 캐면 DB 를 다시 치는 것도 그렇거니와,
+    // 목록이 새 것이 되어 그것을 딛고 선 셈(진행 눈금은 회차마다 기록을 읽는다)까지
+    // 다시 돈다.
+    val exams = remember(ready) { ready?.exams() ?: emptyList() }
     RoundPicker(
         // 사전은 기출 데이터가 없어도 선다 — 앱 안에 든 자료라 남을 기다릴 것이 없다
-        exams = ready?.exams() ?: emptyList(),
+        exams = exams,
         db = ready,
         dict = book,
         built = ready?.meta()?.get("built"),

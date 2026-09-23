@@ -1,7 +1,6 @@
 package com.artbrain.hakc
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -33,10 +32,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -46,9 +41,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.requiredHeight
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.zIndex
-import androidx.compose.material3.Icon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.graphics.GraphicsLayerScope
@@ -76,7 +69,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -97,12 +89,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.PlatformTextStyle
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -167,18 +156,17 @@ fun RoundPicker(
     val radius = (screenCornerRadius() - 8.dp).coerceAtLeast(0.dp)
     // 묶음은 회차의 표시에서 그때그때 모아 낸다. 쌓아 두지 않으므로 표시를
     // 바꾸고 돌아오면 수도 따라 바뀌어 있다. 넷 — 낱글자 둘, 문제 둘.
-    val counts = remember(db) {
+    val shelf = remember(db) { db?.let { Collect.shelf(context, it) } ?: Collect.Shelf.EMPTY }
+    val counts = remember(shelf) {
         Mark.entries.associateWith { bin ->
-            Collect.Kind.entries.associateWith { kind ->
-                db?.let { Collect.count(context, it, bin, kind) } ?: 0
-            }
+            Collect.Kind.entries.associateWith { kind -> shelf.count(bin, kind) }
         }
     }
     // 사전에서 알릴 글자 — 어느 묶음의 글자인지까지 함께 본다
-    val bins = remember(db) { db?.let { Collect.bins(context, it) } ?: emptyMap() }
+    val bins = shelf.bins
     // 어깨의 등에 띄울 글자. 못 외운 낱글자가 열 자를 넘으면 그 안에서 뽑아 제
     // 글자를 돌려 보이고, 아직 몇 자 안 되면 3급 배정한자 전체에서 뽑는다.
-    val pink = remember(db) { db?.let { Collect.list(context, it, Mark.AMBER) } ?: emptyList() }
+    val pink = shelf.chars[Mark.AMBER] ?: emptyList()
     val pool = remember(pink, dict) {
         if (pink.size > LANTERN_MIN) pink else dict?.grade3 ?: emptyList()
     }
@@ -872,23 +860,6 @@ private const val DOOR_VIEW_H = 62f
 private const val DOOR_INK_TOP = 49.39f
 private const val DOOR_INK_BOTTOM = 61.16f
 
-
-
-/** deco_c 의 캔버스. 그림 속 한 자리를 화면으로 옮기는 데 쓴다. */
-private const val DECO_C_VIEW = 279f
-
-/**
- * 그림에서 LICENSES 덩이(눈·화살표·글자)가 앉은 네 귀. 캔버스 좌표다 —
- * 렌더를 재어 잡았고, 그림이 바뀌면 다시 재야 한다.
- */
-private const val LIC_X0 = 4f
-private const val LIC_X1 = 84.7f
-private const val LIC_Y0 = 148f
-private const val LIC_Y1 = 185f
-
-/** 그 자리를 누를 수 있는 키. 보이는 글은 얇아도 손끝은 이만큼이라야 한다. */
-private val LIC_TOUCH = 48.dp
-
 /**
  * 위 세 표(회차 원·갱신 표·다이얼)의 잉크가 끝나는 자리 — deco_a 캔버스(255)
  * 안의 값이다. 셋이 한 그림에서 나왔으므로 오른끝이 모두 같다. 그림을 재어
@@ -907,18 +878,6 @@ private val DECO_W = 96.dp
 
 /** 장식이 판 벽에서 한 뼘 더 물러나는 만큼. */
 private val DECO_PULL = 8.dp
-
-/** c 만 더 넓게 선다. 오른끝에 붙어 있으므로 넓어지는 쪽은 왼쪽이다. */
-private val DECO_C_WIDE = 7.dp
-
-/**
- * c 가 문의 아랫선에서 더 내려앉는 만큼. 문을 따라 서되 이만큼 어긋난다.
- * 8dp 였던 것을 다시 8dp 걷어 지금은 문의 아랫선에 그대로 맞춰 선다.
- */
-private val DECO_C_DROP = 0.dp
-
-/** c 만 오른쪽으로 더 나가는 만큼. 셋 중 이것만 벽에 더 붙어 선다. */
-private val DECO_C_PUSH = 3.dp
 
 /** a 와 b 사이. b 는 이 거리에 못 박혀 c 를 따라 움직이지 않는다. */
 private val DECO_AB_GAP = 44.dp
@@ -1222,9 +1181,6 @@ private val GAUGE_FILL = Hak3.HanjaDim.copy(alpha = Hak3.HanjaDim.alpha * 0.6f)
 /** 끝까지 간 것. 흰빛이되 옅게 — 온전한 흰색은 이 자리에 너무 세다. */
 private val GAUGE_DONE = Color.White.copy(alpha = 0.32f)
 
-/** 마지막으로 열어 본 줄의 바닥이 판 벽에서 물러나는 만큼. */
-private val INSET = 8.dp
-
 
 /**
  * 회차 숫자를 알약 한가운데에 앉히는 값. 잉크의 가운데를 재어 잡았다.
@@ -1367,57 +1323,6 @@ private val CAPSULE_NUDGE = 2.dp
  */
 private val CAPSULE_DROP = 16.dp
 
-/** 회차 칸과 같은 얼굴을 한 칸. 큰 줄과 작은 줄만 밖에서 정한다. */
-@Composable
-private fun Cell(
-    big: String,
-    small: String,
-    color: Color,
-    enabled: Boolean,
-    solid: Boolean = true,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    // 채운 쪽은 묶음 안의 카드와 같이 앞면이 통째로 그 색이고 글은 검정이다.
-    // 비운 쪽은 테와 글만 그 색으로 서고 속은 바탕 그대로 둔다.
-    // 어느 쪽이든 비어 있는 묶음은 색을 죽여 지금 열 것이 없음을 알린다.
-    val face = if (enabled) color else Hak3.Knob
-    val ink = when {
-        !enabled -> Hak3.TextDim
-        solid -> Color.Black
-        else -> color
-    }
-    Column(
-        modifier
-            // 네모가 아니라 정원이다. 폭이 곧 지름이고, 글은 그 한가운데 앉는다.
-            .aspectRatio(1f)
-            .then(
-                if (solid) Modifier.background(face, CircleShape)
-                else Modifier.border(RING, face, CircleShape)
-            )
-            .clickable(enabled = enabled, onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        // 한자가 아니므로 회차 줄과 같은 코레일체로. 얇은 한자 서체는 큰 한자에만 쓴다.
-        Text(
-            big,
-            fontFamily = Korail,
-            fontWeight = FontWeight.Light,
-            fontSize = 44.sp,
-            color = ink,
-            maxLines = 1,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            small,
-            fontSize = 20.sp,
-            color = ink.copy(alpha = if (enabled) 0.55f else 1f),
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
 /** 회차 목록이 판 위에서 물러나는 만큼. 어깨의 위 여백도 이 자에서 잰다. */
 private val ROOF = 18.dp
 
@@ -1483,13 +1388,6 @@ private fun tallyShrink(): Dp = with(LocalDensity.current) {
     (14.dp - TALLY_GAP) * 3 + (32f - TALLY_NUM.fontSize.value).sp.toDp() * 4
 }
 
-
-/**
- * 설정 문 앞에 서는 표. 예전에 두 판 사이에 박혀 있던 그 표다 — 네모를 45도
- * 돌려 세운 마름모, 한 변은 점 지름 8.4dp 의 80% 다.
- */
-private val GEAR = 8.4.dp * 0.8f
-private val GEAR_GAP = 8.dp
 
 /** 설정 문 그림이 서는 폭. 높이는 그림의 비(118x62)로 따라온다. */
 private val DOOR_SETTINGS = 64.dp
@@ -1693,8 +1591,13 @@ private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit)
     LaunchedEffect(pool) {
         while (pool.isNotEmpty()) {
             delay(BEAT)
-            // 같은 글자가 두 번 이어 서면 등이 멈춘 것처럼 보인다
-            han = if (pool.size > 1) (pool - han).random() else pool.first()
+            // 같은 글자가 두 번 이어 서면 등이 멈춘 것처럼 보인다. 고를 때
+            // 묶음에서 그 글자를 빼고 뽑으면 1.5초마다 묶음을 통째로 베끼게 되므로
+            // (3급 배정한자만 814 자다) 아무 자리나 집어 같으면 한 칸 옆으로 간다.
+            han = if (pool.size > 1) {
+                val i = pool.indices.random()
+                if (pool[i] == han) pool[(i + 1) % pool.size] else pool[i]
+            } else pool.first()
         }
     }
     Box(
@@ -1886,7 +1789,6 @@ private const val B_H = 68.0f            // 그 높이
 private const val B_APEX_X = 42.4932f    // 삼각형 윗 꼭지점
 private const val B_APEX_Y = 4.0f
 private const val B_RIGHT = 80.0664f     // 새 모양의 오른쪽 끝
-private const val B_LEFT = B_RIGHT - B_W // 그 왼쪽 끝 — LICENSES 가 여기에 맞선다
 private const val B_TOP = 18.5605f       // 몸통의 어깨선
 
 /** 새 모양의 잉크가 화면에서 서는 폭(px). 높이는 그림의 비로 따라온다. */

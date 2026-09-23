@@ -54,7 +54,7 @@ object Collect {
     fun list(c: Context, db: ExamDb, bin: Mark): List<String> {
         val out = LinkedHashSet<String>()
         for ((round, no) in marked(c, bin)) {
-            val (_, item) = db.pick(round, no) ?: continue
+            val (_, item) = db.pickPlain(round, no) ?: continue
             out += db.hanjaOf(item)
         }
         val out2 = gone(c, bin)
@@ -73,7 +73,7 @@ object Collect {
         val seen = HashSet<String>()
         return buildList {
             for ((round, no) in marked(c, bin)) {
-                val (_, item) = db.pick(round, no) ?: continue
+                val (_, item) = db.pickPlain(round, no) ?: continue
                 val key = twinKey(item) ?: continue
                 if (seen.add(key)) add(round to no)
             }
@@ -83,11 +83,33 @@ object Collect {
     fun count(c: Context, db: ExamDb, bin: Mark, kind: Kind): Int =
         if (kind == Kind.CHARS) list(c, db, bin).size else cards(c, db, bin).size
 
-    /** 글자마다 어느 묶음인지. 양쪽에 다 들면 노랑이 이긴다 — 급한 쪽이 그쪽이다. */
-    fun bins(c: Context, db: ExamDb): Map<String, Mark> = buildMap {
-        list(c, db, Mark.KNOWN).forEach { put(it, Mark.KNOWN) }
-        list(c, db, Mark.AMBER).forEach { put(it, Mark.AMBER) }
+    /**
+     * 네 묶음을 한자리에서 모아 낸다. 목록 화면은 수(넷)와 글자의 묶음과 등에 띄울
+     * 글자를 함께 쓰는데, 저마다 따로 물으면 표시된 문항을 일곱 번 훑게 된다 —
+     * 훑기마다 문항을 하나씩 집어 오므로 그 몫이 그대로 곱해진다. 한 번만 훑는다.
+     */
+    class Shelf(
+        val chars: Map<Mark, List<String>>,
+        val cards: Map<Mark, List<Pair<Int, Int>>>,
+    ) {
+        fun count(bin: Mark, kind: Kind): Int =
+            (if (kind == Kind.CHARS) chars[bin] else cards[bin])?.size ?: 0
+
+        /** 글자마다 어느 묶음인지. 양쪽에 다 들면 노랑이 이긴다 — 급한 쪽이 그쪽이다. */
+        val bins: Map<String, Mark> = buildMap {
+            chars[Mark.KNOWN]?.forEach { put(it, Mark.KNOWN) }
+            chars[Mark.AMBER]?.forEach { put(it, Mark.AMBER) }
+        }
+
+        companion object {
+            val EMPTY = Shelf(emptyMap(), emptyMap())
+        }
     }
+
+    fun shelf(c: Context, db: ExamDb): Shelf = Shelf(
+        chars = Mark.entries.associateWith { list(c, db, it) },
+        cards = Mark.entries.associateWith { cards(c, db, it) },
+    )
 
     /**
      * 낱글자를 묶음에서 빼거나 도로 넣는다. 뺀 뒤에는 제 글자가 모두 빠진 문항이
@@ -105,7 +127,7 @@ object Collect {
     private fun release(c: Context, db: ExamDb, bin: Mark, out: Set<String>) {
         val done = buildList {
             for ((round, no) in marked(c, bin)) {
-                val (_, item) = db.pick(round, no) ?: continue
+                val (_, item) = db.pickPlain(round, no) ?: continue
                 val han = db.hanjaOf(item)
                 // 한자가 하나도 없는 문항은 놓아 줄 셈이 서지 않는다
                 if (han.isNotEmpty() && han.all { it in out }) add(round to no)
@@ -119,7 +141,7 @@ object Collect {
      * 한 문제를 풀었으면 그 문제는 어느 회차에 실렸든 푼 것이다.
      */
     fun markCards(c: Context, db: ExamDb, round: Int, no: Int, mark: Mark?) {
-        val (_, item) = db.pick(round, no) ?: return
+        val (_, item) = db.pickPlain(round, no) ?: return
         val twins = if (twinKey(item) == null) listOf(round to no) else db.twins(item)
         Marks.setAll(c, twins, mark)
     }

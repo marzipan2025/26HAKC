@@ -71,11 +71,6 @@ object DataFile {
             .apply()
     }
 
-    fun forget(c: Context) {
-        prefs(c).edit().clear().apply()
-        Settings.GRADES.forEach { File(c.filesDir, "hanja$it.db").delete() }
-    }
-
     /** 지정한 폴더. 파일 하나를 골랐거나 아직 고르지 않았으면 null. */
     fun readableFolder(c: Context): DocumentFile? {
         val (uri, kind) = source(c) ?: return null

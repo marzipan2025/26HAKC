@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.animation.core.AnimationSpec
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -42,8 +39,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -72,7 +67,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -89,7 +83,6 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.res.painterResource
-import androidx.compose.material3.Icon
 
 private val HANJA = Regex("[\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uF900-\\uFAFF]")
 
@@ -895,23 +888,6 @@ private fun day(s: String?): String = s?.replace('-', '.') ?: "unknown"
 @Composable
 private fun Label(text: String) {
     Text(text, fontSize = 15.sp, letterSpacing = 1.6.sp, color = Hak3.TextDim)
-}
-
-/**
- * 서랍의 단추. 테가 아니라 면으로 서고 꼴은 알약이다 — 단어장 셀과 같은 결이다.
- * 면이 색이면 글은 검정으로 앉는다.
- */
-@Composable
-private fun Key(label: String, face: Color, ink: Color, onPick: () -> Unit) {
-    Text(
-        label,
-        fontSize = 15.sp,
-        color = ink,
-        modifier = Modifier
-            .background(face, CircleShape)
-            .clickable(onClick = onPick)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-    )
 }
 
 /** 표시 단추가 설 쪽을 고르는 글자. 색면이 아니라 글자만으로 선다. */

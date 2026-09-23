@@ -103,9 +103,22 @@ class ExamDb private constructor(private val db: SQLiteDatabase) {
         return seen.filter { gloss(it) != null }
     }
 
-    private fun gloss(han: String): String? = db.rawQuery(
-        "SELECT gloss FROM hunmeum WHERE han=?", arrayOf(han)
-    ).use { c -> if (c.moveToNext()) c.getString(0) else null }
+    /**
+     * 글자 하나의 訓音. 한 번 캔 것은 들고 있는다 — 묶음을 훑을 때 같은 글자를
+     * 몇 번이고 다시 묻게 되는데, 글자 수가 만 자를 넘지 않으므로 들고 있어도
+     * 가볍다. DB 는 읽기 전용이라 캔 값이 뒤에 달라질 일도 없다.
+     */
+    private val glosses = HashMap<String, String?>()
+
+    private fun gloss(han: String): String? {
+        glosses[han]?.let { return it }
+        if (han in glosses) return null
+        val g = db.rawQuery(
+            "SELECT gloss FROM hunmeum WHERE han=?", arrayOf(han)
+        ).use { c -> if (c.moveToNext()) c.getString(0) else null }
+        glosses[han] = g
+        return g
+    }
 
     private fun items(sectionId: Int): List<Item> = db.rawQuery(
         "SELECT no, span_end, question, question_html, target, answer FROM items" +
@@ -128,7 +141,14 @@ class ExamDb private constructor(private val db: SQLiteDatabase) {
     }
 
     /** 회차를 가리지 않고 (회차, 번호)로 한 문항을 그 구역과 함께 집어 온다. */
-    fun pick(round: Int, no: Int): Pair<Section, Item>? = db.rawQuery(
+    fun pick(round: Int, no: Int): Pair<Section, Item>? =
+        pickPlain(round, no)?.let { (s, i) -> s to withGloss(i) }
+
+    /**
+     * 訓音을 붙이지 않은 문항. 묶음을 훑을 때처럼 글이 아니라 자리만 보는 데 쓴다 —
+     * 訓音은 글자마다 한 번씩 더 캐는 일이라, 훑기에서는 그 몫이 문항 수만큼 곱해진다.
+     */
+    fun pickPlain(round: Int, no: Int): Pair<Section, Item>? = db.rawQuery(
         "SELECT s.id, s.start_no, s.end_no, s.instruction," +
             " i.no, i.span_end, i.question, i.question_html, i.target, i.answer" +
             " FROM items i JOIN sections s ON s.id = i.section_id" +
@@ -145,7 +165,7 @@ class ExamDb private constructor(private val db: SQLiteDatabase) {
             target = c.getString(8),
             answer = c.getString(9),
         )
-        section to withGloss(item)
+        section to item
     }
 
     /**

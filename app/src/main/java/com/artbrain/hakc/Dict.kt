@@ -378,10 +378,28 @@ class Dict private constructor(private val db: SQLiteDatabase) {
          * 판이 바뀌면 사전도 바뀌었을 수 있으니 그때는 다시 베낀다 — 안 그러면
          * 예전 사본이 남아 새 자료를 못 읽는다.
          */
+        /**
+         * 앱 안의 사전이 그대로인지 가리는 표. apk 안에서 그 파일이 차지한 크기와
+         * CRC 를 읽는다 — 풀어 보지 않고 목록만 보므로 값이 거의 들지 않고, 파일이
+         * 바뀌어야만 값이 바뀐다.
+         *
+         * 판 번호로 가리던 것을 이리로 옮겼다. 사전은 좀처럼 바뀌지 않는데 판 번호는
+         * 손질할 때마다 오르므로, 갱신할 때마다 26MB 를 다시 베끼고 있었다.
+         */
+        private fun stampOf(context: Context): String = runCatching {
+            java.util.zip.ZipFile(context.applicationInfo.sourceDir).use { zip ->
+                zip.getEntry("assets/dict.db")?.let { "${it.size}:${it.crc}" }
+            }
+        }.getOrNull() ?: BuildConfig.VERSION_CODE.toString()
+
+        /**
+         * 사전을 연다. 처음 한 번은 26MB 를 앱 안으로 베끼므로 본줄에서 부르지 않는다
+         * — [MainActivity] 가 곁줄에서 열어 들고 있는다.
+         */
         fun open(context: Context): Dict? = try {
             val out = File(context.filesDir, "dict.db")
             val stamp = File(context.filesDir, "dict.stamp")
-            val now = BuildConfig.VERSION_CODE.toString()
+            val now = stampOf(context)
             if (!out.exists() || out.length() == 0L ||
                 !stamp.exists() || stamp.readText() != now
             ) {
