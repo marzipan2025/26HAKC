@@ -59,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
@@ -645,9 +646,11 @@ fun SettingsPanel(
                 Spacer(Modifier.width(20.dp))
                 // 고르는 것은 글자뿐이다 — 그림이 이미 상태를 말하므로 색면까지
                 // 둘 까닭이 없다.
+                // 서랍의 면은 반투명이라 검은 바탕 위에 얹힌 색이 곧 보이는 색이다
+                val ground = face.compositeOver(Hak3.Ground)
                 Column(verticalArrangement = Arrangement.spacedBy(SIDE_GAP)) {
-                    Side("Left", markOnLeft) { onMarkSide(true) }
-                    Side("Right", !markOnLeft) { onMarkSide(false) }
+                    Side("Left", markOnLeft, ground) { onMarkSide(true) }
+                    Side("Right", !markOnLeft, ground) { onMarkSide(false) }
                 }
             }
         }
@@ -730,8 +733,8 @@ fun SettingsPanel(
 
 /**
  * 급수 덩이. 다른 덩이와 같은 낯으로 서되 키가 [GRADE_BLOCK] 로 낮다. 글은 맨 위
- * 덩이의 Data·Version 줄과 같은 글꼴·크기·색으로, 같은 왼쪽 선([DRAWER_PAD])에
- * 선다. 고른 쪽은 테 없이 핑크 면으로 선다.
+ * 덩이의 Data·Version 줄과 같은 글꼴·크기로, 같은 왼쪽 선([DRAWER_PAD])에 흰색으로
+ * 선다. 고른 쪽은 테 없이 핑크 면으로 서고 글이 굵어진다.
  */
 @Composable
 private fun GradeBlock(grade: Int, on: Boolean, radius: Dp, face: Color, onPick: () -> Unit) {
@@ -748,7 +751,15 @@ private fun GradeBlock(grade: Int, on: Boolean, radius: Dp, face: Color, onPick:
             .padding(horizontal = DRAWER_PAD),
         contentAlignment = Alignment.CenterStart,
     ) {
-        Text(gradeName(grade), style = DRAWER_LINE)
+        Text(
+            gradeName(grade),
+            // 줄 상자를 잉크에 바짝 붙인 [DRAWER_LINE] 을 쓰면 글꼴의 어센트 몫이 위로
+            // 쏠려 글이 덩이의 가운데보다 떠 보인다. 크기·글꼴만 받아 오고 줄 상자는
+            // 글꼴 그대로 두어 가운데에 앉힌다.
+            style = GRADE_LINE,
+            color = Color.White,
+            fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+        )
     }
 }
 
@@ -844,6 +855,13 @@ private val DRAWER_LINE = TextStyle(
     ),
 )
 
+/** 급수 덩이의 글 — 서랍 위 덩이의 글과 같은 글꼴·크기, 줄 상자는 글꼴 그대로. */
+private val GRADE_LINE = TextStyle(
+    fontFamily = Mono,
+    fontSize = DRAWER_INK,
+    platformStyle = PlatformTextStyle(includeFontPadding = false),
+)
+
 /** 마지막으로 공부한 날. 한 번도 없으면 줄표만 둔다. */
 private fun studiedOn(context: android.content.Context): String {
     val at = Marks.studied(context)
@@ -905,15 +923,20 @@ private fun Pick(label: String, on: Boolean, onPick: () -> Unit) {
  * 세워도 서로 어긋나지 않는다.
  */
 @Composable
-private fun Side(label: String, on: Boolean, onPick: () -> Unit) {
+private fun Side(label: String, on: Boolean, ground: Color, onPick: () -> Unit) {
     Text(
         label,
         fontSize = 15.sp,
-        color = if (on) Hak3.Text else Hak3.TextDim,
+        // 고른 쪽은 면을 채우므로 글은 서랍 바탕색으로 도려낸 듯 선다
+        color = if (on) ground else Hak3.TextDim,
         textAlign = TextAlign.Center,
         modifier = Modifier
             .width(SIDE_W)
-            .border(1.dp, if (on) Hak3.Hanja else Hak3.Rule, CircleShape)
+            // 고른 쪽은 테 대신 면 — 테에 쓰던 색을 그대로 채운다
+            .then(
+                if (on) Modifier.background(Hak3.Hanja, CircleShape)
+                else Modifier.border(1.dp, Hak3.Rule, CircleShape)
+            )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,

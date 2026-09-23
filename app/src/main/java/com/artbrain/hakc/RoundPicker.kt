@@ -117,6 +117,14 @@ import androidx.compose.ui.unit.sp
  * 된다. 최대는 화면의 60%, 최소는 한자 한 줄과 訓音 두 줄이 남는 높이다. 입력 칸에
  * 포커스가 가면 키보드 바로 위까지 자란다.
  */
+/**
+ * 아래 판의 낯. 1급은 한 겹 가라앉은 남색(#252842)으로 서서 3급과 한눈에 갈린다.
+ * 회차를 열면 이 판이 카드로 늘어나는데, 그 카드의 색은 제 것을 따로 쓴다.
+ */
+private fun panelFace(grade: Int) = if (grade == 1) GRADE1_PANEL else Hak3.Card
+
+private val GRADE1_PANEL = Color(0xFF252842)
+
 /** 판과 목록이 벌어지는 만큼. */
 private val GAP = 6.dp
 
@@ -503,7 +511,7 @@ fun RoundPicker(
                     .padding(horizontal = 8.dp)
                     .graphicsLayer(dim)
                     .then(morph)
-                    .background(Hak3.Card, RoundedCornerShape(radius))
+                    .background(panelFace(grade), RoundedCornerShape(radius))
                     // 위 판과 같은 빛 한 겹, 세기는 그 절반 — 판이 위에서 조금
                     // 들린 것처럼 보인다
                     .background(CardGlow, RoundedCornerShape(radius))
