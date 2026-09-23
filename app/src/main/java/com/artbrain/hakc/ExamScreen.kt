@@ -150,6 +150,9 @@ private const val LAG = 160
  */
 private class Page(val round: Int, val section: Section, val item: Item, val id: String)
 
+/** 표시가 글로 설 때의 색. 면으로 설 때보다 한 겹 가라앉은 녹색을 쓴다. */
+private fun markInk(m: Mark?) = if (m == Mark.KNOWN) Hak3.GreenInk else borderColor(m)
+
 private fun borderColor(m: Mark?) = when (m) {
     Mark.AMBER -> Hak3.Pink
     Mark.KNOWN -> Hak3.Green
@@ -931,6 +934,9 @@ private fun Pick(label: String, on: Boolean, onPick: () -> Unit) {
     )
 }
 
+/** 고른 쪽의 색면이 서는 짙기. 테에 쓰던 색을 이만큼 묽게 채운다. */
+private const val SIDE_FACE = 0.8f
+
 /**
  * 표시 단추가 설 쪽을 고르는 단추. 글자만으로는 누를 데인지 읽히지 않아 테를
  * 하나 두른다 — 색면은 아니다. 둘의 폭을 같게 잡고 글을 가운데 두므로 위아래로
@@ -948,7 +954,7 @@ private fun Side(label: String, on: Boolean, ground: Color, onPick: () -> Unit) 
             .width(SIDE_W)
             // 고른 쪽은 테 대신 면 — 테에 쓰던 색을 그대로 채운다
             .then(
-                if (on) Modifier.background(Hak3.Hanja, CircleShape)
+                if (on) Modifier.background(Hak3.Hanja.copy(alpha = SIDE_FACE), CircleShape)
                 else Modifier.border(1.dp, Hak3.Rule, CircleShape)
             )
             .clickable(
@@ -1226,7 +1232,7 @@ private fun QuestionPage(
             Text(
                 item.label,
                 fontSize = 22.sp,
-                color = ink(if (mark != null) borderColor(mark) else Hak3.TextDim),
+                color = ink(if (mark != null) markInk(mark) else Hak3.TextDim),
                 modifier = Modifier.padding(start = SHIFT),
             )
             Spacer(Modifier.height(6.dp))
@@ -1446,7 +1452,7 @@ private fun AnswerSlot(item: Item, revealed: Boolean, ink: (Color) -> Color) {
                 fontWeight = if (hanja || notice) FontWeight.ExtraLight else FontWeight.Normal,
                 fontSize = if (hanja) 56.sp else 30.sp,
                 lineHeight = if (hanja) 70.sp else 40.sp,
-                color = ink(if (a != null) Hak3.Neon else Hak3.TextDim),
+                color = ink(if (a != null) Hak3.NeonInk else Hak3.TextDim),
                 style = FLUSH_TOP,
             )
             item.gloss?.let { g ->
@@ -1455,7 +1461,7 @@ private fun AnswerSlot(item: Item, revealed: Boolean, ink: (Color) -> Color) {
                     g,
                     fontSize = 22.sp,
                     lineHeight = 35.sp,
-                    color = ink(Hak3.Neon.copy(alpha = 0.66f)),
+                    color = ink(Hak3.NeonInk.copy(alpha = 0.66f)),
                 )
             }
         }

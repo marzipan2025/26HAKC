@@ -590,7 +590,7 @@ fun RoundPicker(
                                     Tally(
                                         title = tallyName(bin, kind),
                                         n = counts[bin]?.get(kind) ?: 0,
-                                        color = if (bin == Mark.AMBER) Hak3.Pink else Hak3.Green,
+                                        color = if (bin == Mark.AMBER) Hak3.Pink else Hak3.GreenInk,
                                         solid = kind == Collect.Kind.CHARS,
                                     ) { onWords(bin, kind, 0) }
                                 }
@@ -1795,7 +1795,7 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                         )
                     }
                     if (counts.known > 0) {
-                        Text("${counts.known}", style = COUNT, color = Hak3.Green)
+                        Text("${counts.known}", style = COUNT, color = Hak3.GreenInk)
                     }
                     if (!live) Text("no text", fontSize = 13.sp, color = Hak3.TextDim)
                 }

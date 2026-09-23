@@ -51,8 +51,12 @@ object Hak3 {
     // 01haka 신호등. 애매/외움을 가르고, 알림에도 그대로 쓴다.
     val Pink = Color(0xFFFF69B4)            // 애매하게 모름
     val Sun = Color(0xFFFFE600)             // 마지막으로 열어 본 회차의 눈금
-    val Green = Color(0xFF29C745)           // 외웠음
-    val Neon = Color(0xFF3DFF6E)            // 펼쳐진 정답 — 형광 녹색
+    val Green = Color(0xFF29C745)           // 외웠음 — 색면·테·도형이 쓴다
+    val Neon = Color(0xFF3DFF6E)            // 펼쳐진 정답의 점 — 형광 녹색
+    // 글로 설 때의 녹색 둘. 면으로 설 때보다 밝기와 채도를 10%씩 낮춘 것이다 —
+    // 같은 색이라도 글자의 가는 획으로 서면 면보다 세게 튄다.
+    val GreenInk = Color(0xFF33B34A)        // 외웠음이 글로 설 때
+    val NeonInk = Color(0xFF48E670)         // 펼쳐진 정답의 글
     val Red = Color(0xFFFF6157)             // 잘못된 것을 알릴 때
 }
 
