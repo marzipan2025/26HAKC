@@ -560,6 +560,11 @@ fun RoundPicker(
                             )
                         }
                         if (hasPink) Spacer(Modifier.height(TALLY_TOP))
+                        // 등이 빠져도 그 자리는 비워 둔다 — 비우지 않으면 단추들과
+                        // 설정 문이 끌려 올라가고, 문을 따라 서는 LICENSES·합격증·
+                        // 앱의 표까지 함께 올라간다. 기록이 없는 급수(처음 연 1급)와
+                        // 있는 급수가 서로 다른 얼굴이 되던 까닭이다.
+                        else Spacer(Modifier.height(lanternSide() + TALLY_TOP))
                         Column(
                             verticalArrangement = Arrangement.spacedBy(TALLY_GAP),
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -617,7 +622,9 @@ fun RoundPicker(
                 ) {
                     // 회차 번호는 급수끼리 겹친다. 급수를 키에 넣어야 급수를 바꿨을 때
                     // 줄마다 붙잡아 둔 수가 남의 급수 것으로 남지 않는다.
-                    items(exams, key = { "$grade-${it.round}" }) { e ->
+                    // 글자를 못 읽어 문항이 하나도 없는 회차(1급 35·41회처럼 원본 PDF 에
+                    // 글꼴 매핑이 없는 것)는 목록에 세우지 않는다. 열어도 볼 것이 없다.
+                    items(exams.filter { it.items > 0 }, key = { "$grade-${it.round}" }) { e ->
                         RoundRow(e, e.round == last) {
                             last = it
                             Settings.setLastRound(context, it)
@@ -1607,6 +1614,21 @@ private fun tallyName(bin: Mark, kind: Collect.Kind): String = when {
     else -> "Known\nCards"
 }
 
+/** 등에 띄우는 한자의 크기(sp 수치). 사전 판의 큰 한자가 다 자랐을 때와 같다. */
+@Composable
+private fun lanternBase(): Float {
+    val square = LocalConfiguration.current.screenWidthDp.dp - CARD * 2
+    return square.value * DICT_HEAD * 0.68f
+}
+
+/**
+ * 등의 한 변. 사전 판의 한자 크기에 사방 여백을 더한 만큼 — 한자는 가로세로가
+ * 같으니 등도 정사각이다. 등이 빠질 때도 이 자리는 비워 둔다.
+ */
+@Composable
+private fun lanternSide(): Dp =
+    with(LocalDensity.current) { lanternBase().sp.toDp() } + LANTERN_PAD * 2
+
 /**
  * 판 어깨의 등. 못 외운 낱글자를 0.8초에 한 자씩 돌려 보인다 — 아직 몇 자 안
  * 될 때는 3급 배정한자에서 아무 글자나 뽑아 그 자리를 채운다.
@@ -1618,14 +1640,10 @@ private fun tallyName(bin: Mark, kind: Collect.Kind): String = when {
  */
 @Composable
 private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit) {
-    val square = LocalConfiguration.current.screenWidthDp.dp - CARD * 2
-    val base = square.value * DICT_HEAD * 0.68f
     // 사전 판의 큰 한자가 다 자랐을 때와 같은 크기다. 서체도 굵기도 같으니
     // 두 자리의 한자가 한 벌로 읽힌다.
-    val glyph = base.sp
-    // 자리는 사전 판의 한자 크기에 사방 여백을 더한 만큼 — 한자는 가로세로가
-    // 같으니 등도 정사각이다.
-    val side = with(LocalDensity.current) { base.sp.toDp() } + LANTERN_PAD * 2
+    val glyph = lanternBase().sp
+    val side = lanternSide()
     // 첫 글자부터 아무 글자다 — 처음 뜨는 것이 늘 묶음의 첫 자면 돌리는 맛이 없다
     var han by remember(pool) { mutableStateOf(pool.randomOrNull().orEmpty()) }
     LaunchedEffect(pool) {
