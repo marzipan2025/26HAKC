@@ -50,6 +50,7 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.zIndex
 import androidx.compose.material3.Icon
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
@@ -317,7 +318,39 @@ fun RoundPicker(
         // 서랍은 가로로 끌어 열지 않는다. 판 왼쪽 아래의 설정 문으로만 열고,
         // 열린 뒤에는 남은 자락을 눌러 닫는다 — 드나드는 길이 하나뿐이라야
         // 사전을 적다가 손이 옆으로 스쳐도 판이 밀려나지 않는다.
-        Box(Modifier.fillMaxSize()) {
+        // 쓸어서 돌아가는 길. 본 판은 서랍 반대쪽으로 물러나 있으므로, 그것을 도로
+        // 끌어오는 손짓이 곧 '돌아가기' 다 — 설정(왼쪽에서 든 서랍)에서는 왼쪽으로,
+        // 라이선스(오른쪽에서 든 것)에서는 오른쪽으로 쓴다.
+        //
+        // 손짓은 '내려가는' 길(Initial)에서 지켜본다. 서랍 위에는 제 손짓을 먹는
+        // 것들이 깔려 있어(덩이의 톡을 삼키는 층, 밀려난 판을 덮는 층) 올라오는
+        // 길에서는 여기까지 오지 않는다. 지켜보기만 하다가 문턱을 넘은 그 순간부터
+        // 삼켜, 쓸다가 단추가 눌리는 일이 없게 한다. 서랍이 닫혀 있으면 아예 걸지
+        // 않는다 — 사전을 적다가 손이 옆으로 스쳐도 판이 밀려나지 않게.
+        val back = with(density) { DRAWER_BACK.toPx() }
+        val way = if (drawer == Drawer.SETTINGS) -1f else 1f
+        val swipeBack = if (!open) Modifier else Modifier.pointerInput(drawer) {
+            awaitPointerEventScope {
+                while (true) {
+                    val first = awaitPointerEvent(PointerEventPass.Initial)
+                        .changes.firstOrNull { it.pressed } ?: continue
+                    var travel = 0f
+                    var closed = false
+                    while (true) {
+                        val e = awaitPointerEvent(PointerEventPass.Initial)
+                        val c = e.changes.firstOrNull { it.id == first.id } ?: break
+                        travel += (c.position.x - c.previousPosition.x) * way
+                        if (!closed && travel > back) {
+                            closed = true
+                            drawer = Drawer.NONE
+                        }
+                        if (closed) c.consume()
+                        if (!c.pressed) break
+                    }
+                }
+            }
+        }
+        Box(Modifier.fillMaxSize().then(swipeBack)) {
         // 밀려난 만큼 어두워진다 — 남은 자락이 지금 쓸 수 없는 것임을 그렇게 알린다.
         // 손잡이 줄의 화살표만 이 층을 벗어나 제 밝기로 선다.
         val dim: GraphicsLayerScope.() -> Unit = {
@@ -1168,6 +1201,9 @@ private val COUNT_GAP = 11.dp
 /** 그 수만 번호 쪽으로 더 당겨지는 만큼. 번호가 비워 둔 자리는 그대로 둔다. */
 private val COUNT_PULL = 2.dp
 
+/** 담아 둔 것이 없는 줄의 00 이 번호의 잉크에서 남기는 몫. */
+private const val EMPTY_COUNT = 0.3f
+
 /** 어깨의 수가 서는 자리의 너비. 세 자리까지 든다. */
 private val COUNT_W = 20.dp
 
@@ -1225,6 +1261,9 @@ private fun anchor(drawer: Drawer, room: Float) = when (drawer) {
     Drawer.LICENSE -> -room
     Drawer.NONE -> 0f
 }
+
+/** 서랍에서 쓸어 돌아가는 데 드는 거리. 손이 스치는 정도로는 닫히지 않을 만큼이다. */
+private val DRAWER_BACK = 48.dp
 
 /** 서랍이 열렸을 때 남는 판의 자락. 돌아가는 길로만 쓰는 자리라 좁게 둔다. */
 private const val STRIP = 0.15f
@@ -1797,6 +1836,19 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                     if (counts.known > 0) {
                         Text("${counts.known}", style = COUNT, color = Hak3.GreenInk)
                     }
+                    // 담아 둔 것이 하나도 없으면 그 자리를 00 으로 채운다 — 번호와
+                    // 같은 잉크를 [EMPTY_COUNT] 만큼만 남겨, 줄마다 어깨가 비어
+                    // 들쭉날쭉해 보이지 않게 한다.
+                    if (counts.amber == 0 && counts.known == 0) {
+                        Text(
+                            "00",
+                            style = COUNT,
+                            fontWeight = FontWeight.Light,
+                            color = (if (on) Color.White else Hak3.Hanja)
+                                .copy(alpha = EMPTY_COUNT),
+                        )
+                    }
+
                     if (!live) Text("no text", fontSize = 13.sp, color = Hak3.TextDim)
                 }
             }
