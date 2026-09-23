@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""~/Downloads/AppIcon_26hakc.png 을 안드로이드 런처 아이콘으로 굽는다.
+"""~/Downloads/AppIcon_26hakc2.png 을 안드로이드 런처 아이콘으로 굽는다.
 
-원본은 먹빛(#21252D) 바탕 한가운데에 판이 놓인 1024px 정사각이고, **런처가 도려내는
+원본은 먹빛(#0C0E11) 바탕 한가운데에 판이 놓인 1024px 정사각이고, **런처가 도려내는
 원(72/108)에 맞춰 그려져 있다**. 그러니 여기서 다시 줄이지 않고 108dp 층에 통째로 얹는다.
 구형 런처용 정사각/원형 아이콘도 원본 그대로다.
 
@@ -14,10 +14,10 @@ numpy 없이 PIL 만 쓴다: /usr/bin/python3 tools/make_icon.py
 import os
 from PIL import Image
 
-SRC = os.path.expanduser('~/Downloads/AppIcon_26hakc.png')
+SRC = os.path.expanduser('~/Downloads/AppIcon_26hakc2.png')
 RES = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'app', 'src', 'main', 'res')
-BG = (33, 37, 45)        # 원본의 바탕 = @color/ic_launcher_background
-PLATE = (85, 103, 128)   # 판의 색 — 바탕과 이만큼 떨어지면 온전히 불투명
+BG = (12, 14, 17)        # 원본의 바탕 = @color/ic_launcher_background
+PLATE = (102, 135, 182)  # 판의 색(글자와 같은 색) — 바탕과 이만큼 떨어지면 온전히 불투명
 
 # mdpi 기준 배수 — 런처 아이콘 48dp, 적응형 레이어 108dp
 DENSITY = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}
