@@ -151,7 +151,7 @@ private fun gradeColor(grade: Int?) = when (grade) {
     0 -> INK
     1 -> Color(0xFF2999D1)
     2 -> Color(0xFFFFEB3B)
-    3 -> Color(0xFF507D2A)
+    3 -> Hak3.GreenInk                         // 아래 판의 글이 쓰는 그 녹색
     else -> INK
 }
 
@@ -362,7 +362,6 @@ private fun Modifier.frozen(on: Boolean): Modifier =
 private val FROZEN_INK = Color(0xFFC79324)
 
 /** 단어장 묶음의 색. */
-private fun binColor(m: Mark) = if (m == Mark.AMBER) Hak3.Accent else Hak3.GreenInk
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -570,16 +569,19 @@ fun DictPanel(
                                     Text(
                                         buildAnnotatedString {
                                             s.variant.hanja.forEach { ch ->
-                                                // 담아 둔 글자는 노랑으로. 훑고 지나가는
-                                                // 표기에서는 흐리게 두어 지금 보는 것이
-                                                // 어느 표기인지는 그대로 알아보게 한다.
-                                                val bin = kept[ch.toString()]
+                                                // 못 외운 묶음에 담아 둔 글자만 그 색으로
+                                                // 알린다 — 이미 외운 글자는 굳이 짚어 줄
+                                                // 까닭이 없어 여느 글자와 같이 선다.
+                                                // 훑고 지나가는 표기에서는 흐리게 두어
+                                                // 지금 보는 것이 어느 표기인지는 그대로
+                                                // 알아보게 한다.
+                                                val kept1 = kept[ch.toString()] == Mark.AMBER
                                                 withStyle(
                                                     SpanStyle(
                                                         color = when {
-                                                            bin != null && i == active -> binColor(bin)
-                                                            bin != null ->
-                                                                binColor(bin).copy(alpha = 0.45f)
+                                                            kept1 && i == active -> Hak3.Accent
+                                                            kept1 ->
+                                                                Hak3.Accent.copy(alpha = 0.45f)
                                                             i != active -> INK_HANJA_DIM
                                                             else -> hanjaLit(seen[ch.toString()] ?: 0)
                                                         }
@@ -834,8 +836,8 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                     lineHeight = HUNEUM_LEAD,
                     // 흰 글씨는 판에서 가장 밝아 한자보다 앞으로 나온다.
                     // 訓音은 한자에 딸린 말이니 한자와 같은 색을 쓴다.
-                    // 담아 둔 글자만 노랑으로 도드라진다.
-                    color = kept[ch.toString()]?.let(::binColor) ?: INK_BROWN,
+                    // 못 외운 묶음에 담아 둔 글자만 그 색으로 도드라진다.
+                    color = if (kept[ch.toString()] == Mark.AMBER) Hak3.Accent else INK_BROWN,
                     // 너비를 못 채우면 줄이 갈리므로 한 줄로 못 박는다
                     maxLines = 1,
                     modifier = Modifier.width(EUM).alignByBaseline(),
