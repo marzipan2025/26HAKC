@@ -1380,7 +1380,7 @@ private val FOOT_INSET = 14.dp
 private val FOOT_PAD = 22.dp
 
 /** 그 색면의 짙기. 흰빛을 overlay 로 얹어 카드 색을 그만큼 들어 올린다. */
-private const val FOOT_VEIL = 0.4f
+private const val FOOT_VEIL = 0.6f
 
 @Composable
 private fun AnswerSlot(item: Item, revealed: Boolean, ink: (Color) -> Color) {
