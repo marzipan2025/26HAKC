@@ -117,7 +117,7 @@ private fun panelFace(grade: Int) = when (grade) {
 }
 
 private val GRADE1_PANEL = Color(0xFF252842)
-private val GRADE2_PANEL = Color(0xFF0E1014)
+private val GRADE2_PANEL = Color(0xFF171927)
 
 /** 판과 목록이 벌어지는 만큼. */
 private val GAP = 6.dp
