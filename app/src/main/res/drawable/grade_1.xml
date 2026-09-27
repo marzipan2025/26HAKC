@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ~/Downloads/grade1.svg 에서 옮겨 온 것. 마름모에서 급수 숫자를 도려낸 그림이고, 색도 원본 그대로다. -->
+<!-- ~/Downloads/grade1.svg 에서 옮겨 온 것. 마름모·나비·육각에서 급수 숫자를
+     도려낸 그림이다. 색은 회차 번호가 쉬고 있을 때의 잉크와 같다. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="317dp"
-    android:height="317dp"
-    android:viewportWidth="317"
-    android:viewportHeight="317">
+    android:width="291dp"
+    android:height="291dp"
+    android:viewportWidth="291"
+    android:viewportHeight="291">
     <path
         android:fillColor="#96A6C3"
-        android:pathData="M316.783 158.392L158.392 316.784L0 158.392L158.392 0L316.783 158.392ZM153.752 101L120.792 131.88L130.712 141.96L160.632 114.12H162.071L147.991 197.96H116.792L114.392 212.68H190.231L192.632 197.96H165.592L181.752 101H153.752Z" />
+        android:fillType="evenOdd"
+        android:pathData="M279.351 145.351L145 279.7L10.6494 145.351L145 11L279.351 145.351ZM157.99 84.46C156.946 89.332 155.438 93.2182 153.466 96.1182C151.61 99.018 149.174 101.164 146.158 102.556C143.142 103.832 139.372 104.47 134.848 104.47H119.188L115.882 119.956H147.55L132.542 190.774H94.6543L91 208H175.912L179.566 190.774H150.81L173.302 84.46H157.99Z" />
 </vector>

@@ -665,7 +665,7 @@ fun SettingsPanel(
             }
         }
 
-        // 급수 — 덩이 하나가 곧 단추 하나다. 위에서부터 1급, 3급. 고르면 본 화면의
+        // 급수 — 덩이 하나가 곧 단추 하나다. 위에서부터 1급, 2급, 3급. 고르면 본 화면의
         // 목록이 그 급수의 것으로 새로 선다.
         for (g in Settings.GRADES) {
             Spacer(Modifier.height(gap))
@@ -774,7 +774,7 @@ private fun GradeBlock(grade: Int, on: Boolean, radius: Dp, face: Color, onPick:
     }
 }
 
-/** 급수의 영문 이름 — 1st Grade, 3rd Grade. */
+/** 급수의 영문 이름 — 1st Grade, 2nd Grade, 3rd Grade. */
 private fun gradeName(grade: Int) = when (grade) {
     1 -> "1st Grade"
     2 -> "2nd Grade"

@@ -106,12 +106,18 @@ import androidx.compose.ui.unit.sp
  * 포커스가 가면 키보드 바로 위까지 자란다.
  */
 /**
- * 아래 판의 낯. 1급은 한 겹 가라앉은 남색(#252842)으로 서서 3급과 한눈에 갈린다.
+ * 아래 판의 낯. 급수마다 다르다 — 3급이 기본색이고, 1급은 한 겹 가라앉은 남색,
+ * 2급은 거의 먹빛이다. 판만 보아도 어느 급수인지 한눈에 갈린다.
  * 회차를 열면 이 판이 카드로 늘어나는데, 그 카드의 색은 제 것을 따로 쓴다.
  */
-private fun panelFace(grade: Int) = if (grade == 1) GRADE1_PANEL else Hak3.Card
+private fun panelFace(grade: Int) = when (grade) {
+    1 -> GRADE1_PANEL
+    2 -> GRADE2_PANEL
+    else -> Hak3.Card
+}
 
 private val GRADE1_PANEL = Color(0xFF252842)
+private val GRADE2_PANEL = Color(0xFF0E1014)
 
 /** 판과 목록이 벌어지는 만큼. */
 private val GAP = 6.dp
@@ -139,7 +145,7 @@ fun RoundPicker(
     dict: Dict?,
     built: String?,
     trouble: String?,
-    /** 지금 보는 급수(1·3). 설정 서랍에서 바꾸고, 오른쪽 기둥에 마름모로 적는다. */
+    /** 지금 보는 급수(1·2·3). 설정 서랍에서 바꾸고, 오른쪽 기둥에 마름모로 적는다. */
     grade: Int,
     onGrade: (Int) -> Unit,
     onFolder: () -> Unit,
@@ -1050,7 +1056,13 @@ private fun GradeMark(top: Float, grade: Int) {
             .aspectRatio(DECO_A),
     ) {
         Image(
-            painterResource(if (grade == 1) R.drawable.grade_1 else R.drawable.grade_3),
+            painterResource(
+                when (grade) {
+                    1 -> R.drawable.grade_1
+                    2 -> R.drawable.grade_2
+                    else -> R.drawable.grade_3
+                }
+            ),
             contentDescription = null,
             modifier = Modifier
                 .offset(x = (HAKC_X0 * k).dp, y = (HAKC_END * k).dp + GRADE_DROP)

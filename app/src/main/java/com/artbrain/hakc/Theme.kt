@@ -50,12 +50,14 @@ object Hak3 {
     val HanjaDim = Color(0xCC647185)        // 고르지 않은 한자
 
     // 01haka 신호등. 애매/외움을 가르고, 알림에도 그대로 쓴다.
-    // 애매하게 모름 — 급수마다 갈린다. 3급은 핑크, 1급은 붉은빛이다. 읽는 쪽은
+    // 애매하게 모름 — 급수마다 갈린다. 3급은 핑크, 2급은 노랑, 1급은 붉은빛이다. 읽는 쪽은
     // [Accent] 하나만 보면 되고, 급수가 정해지거나 바뀔 때 [accentFor] 가 갈아 끼운다.
     private val PINK_3 = Color(0xFFFF69B4)
     private val RED_1 = Color(0xFFFA321C)
+    private val YELLOW_2 = Color(0xFFE8B504)
     private const val NAME_3 = "Pink"
     private const val NAME_1 = "Red"
+    private const val NAME_2 = "Yellow"
     private val accent = mutableStateOf(PINK_3)
     val Accent: Color get() = accent.value
 
@@ -65,8 +67,16 @@ object Hak3 {
     val AccentName: String get() = accentName.value
 
     fun accentFor(grade: Int) {
-        accent.value = if (grade == 1) RED_1 else PINK_3
-        accentName.value = if (grade == 1) NAME_1 else NAME_3
+        accent.value = when (grade) {
+            1 -> RED_1
+            2 -> YELLOW_2
+            else -> PINK_3
+        }
+        accentName.value = when (grade) {
+            1 -> NAME_1
+            2 -> NAME_2
+            else -> NAME_3
+        }
     }
 
     val Sun = Color(0xFFFFE600)             // 마지막으로 열어 본 회차의 눈금

@@ -20,8 +20,8 @@ object Settings {
      */
     const val KEY_IMPORTED = "imported"
 
-    /** 고를 수 있는 급수. 급수마다 기출 파일(hanja1·hanja3)이 따로 있다. */
-    val GRADES = listOf(1, 3)
+    /** 고를 수 있는 급수. 급수마다 기출 파일(hanja1·hanja2·hanja3)이 따로 있다. */
+    val GRADES = listOf(1, 2, 3)
 
     /** 지금 보는 급수. 기본은 3급 — 앱이 처음 3급만 들고 나왔다. */
     fun grade(c: Context): Int =
