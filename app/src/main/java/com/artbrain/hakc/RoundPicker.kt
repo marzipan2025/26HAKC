@@ -583,6 +583,10 @@ fun RoundPicker(
                     ) {
                         // 핑크 묶음이 둘 다 비었으면 등은 자리째 빠진다 —
                         // 돌려 보일 것도, 눌러 갈 데도 없는 자리다.
+                        // 담은 것이 하나도 없으면 돌려 보일 글자가 없다. 그 자리를
+                        // 비워 두는 대신 零 한 자를 세운다 — 자리도 지키고, 아직
+                        // 아무것도 담지 않았음을 그 글자가 말한다.
+                        if (!hasPink) Lantern(listOf(EMPTY_HAN), open = false) { }
                         if (hasPink) Lantern(pool, open = pink.isNotEmpty()) { han ->
                             // 등에 뜬 그 글자가 선 자리로 곧장 편다. 묶음 밖의
                             // 글자면(아직 몇 자 안 될 때다) 첫 장부터 편다.
@@ -592,12 +596,7 @@ fun RoundPicker(
                                 pink.indexOf(han).coerceAtLeast(0),
                             )
                         }
-                        if (hasPink) Spacer(Modifier.height(TALLY_TOP))
-                        // 등이 빠져도 그 자리는 비워 둔다 — 비우지 않으면 단추들과
-                        // 설정 문이 끌려 올라가고, 문을 따라 서는 LICENSES·합격증·
-                        // 앱의 표까지 함께 올라간다. 기록이 없는 급수(처음 연 1급)와
-                        // 있는 급수가 서로 다른 얼굴이 되던 까닭이다.
-                        else Spacer(Modifier.height(lanternSide() + TALLY_TOP))
+                        Spacer(Modifier.height(TALLY_TOP))
                         Column(
                             // 넷만 [TALLY_RISE] 만큼 올려 그린다. 자리는 그대로라 아래의
                             // 설정 문은 움직이지 않는다.
@@ -1506,6 +1505,9 @@ private val LANTERN_PAD = 10.dp
 /** 등에 한 글자가 머무는 참. (ms) */
 private const val BEAT = 1500L
 
+/** 담은 것이 하나도 없을 때 등에 서는 글자. 없음을 뜻하는 한자다. */
+private const val EMPTY_HAN = "零"
+
 /** 못 외운 낱글자가 이보다 많을 때만 그 안에서 뽑는다. 그 아래로는 3급 전체에서. */
 private const val LANTERN_MIN = 10
 
@@ -1589,7 +1591,8 @@ private fun Lantern(pool: List<String>, open: Boolean, onOpen: (String) -> Unit)
     // 첫 글자부터 아무 글자다 — 처음 뜨는 것이 늘 묶음의 첫 자면 돌리는 맛이 없다
     var han by remember(pool) { mutableStateOf(pool.randomOrNull().orEmpty()) }
     LaunchedEffect(pool) {
-        while (pool.isNotEmpty()) {
+        // 한 자뿐이면 돌 것이 없다 — 돌리려 들면 1.5초마다 헛되이 깨어난다
+        while (pool.size > 1) {
             delay(BEAT)
             // 같은 글자가 두 번 이어 서면 등이 멈춘 것처럼 보인다. 고를 때
             // 묶음에서 그 글자를 빼고 뽑으면 1.5초마다 묶음을 통째로 베끼게 되므로
