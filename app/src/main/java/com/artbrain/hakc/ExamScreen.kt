@@ -400,12 +400,16 @@ private fun Deck(
     // 소리만으로 넉넉하다. 이미 그 색이면 바뀐 것이 없으니 울리지 않는다.
     val mark: (Page, Mark?) -> Unit = { p, m ->
         if (m != null && marks[p.id] != m) buzz.tick()
+        // 초록으로 새로 처리한 카드만 오늘의 정답으로 센다 — 이미 초록이면 바뀐 것이 없다
+        if (m == Mark.KNOWN && marks[p.id] != Mark.KNOWN) DayLog.known()
         onMark(p, m)
     }
     val index = pager.currentPage.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
     val page = pages.getOrNull(index)
     // 다음에 열 때 여기서부터 보여 준다
     LaunchedEffect(all, page?.id) { page?.let(onSeen) }
+    // 넘겨 본 카드를 이 세션의 몫으로 센다. 목록만 바뀌고 카드가 그대로면 세지 않는다.
+    LaunchedEffect(page?.id) { if (page != null) DayLog.card() }
 
     // 카드가 캡슐 위로 날아가야 하므로 pager 를 화면 전체로 깔고, 카드만 캡슐·바닥 줄
     // 안쪽으로 밀어 둔다. pager 는 제 영역 밖을 잘라내기 때문에 이렇게 하지 않으면

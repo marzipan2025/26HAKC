@@ -87,6 +87,10 @@ import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
@@ -168,6 +172,9 @@ fun RoundPicker(
             Collect.Kind.entries.associateWith { kind -> shelf.count(bin, kind) }
         }
     }
+    // 아래 판의 그래프가 그리는 날들 — 지금 보는 급수의 것. 회차에서 돌아올 때마다,
+    // 급수를 바꿀 때마다 새로 읽는다.
+    val days = remember(db, grade) { DayLog.days(context, grade) }
     // 사전에서 알릴 글자 — 어느 묶음의 글자인지까지 함께 본다
     val bins = shelf.bins
     // 어깨의 등에 띄울 글자. 못 외운 낱글자가 열 자를 넘으면 그 안에서 뽑아 제
@@ -533,6 +540,11 @@ fun RoundPicker(
             // 단추의 수가 몇인지에 따라 달라지므로 재어서 따라간다.
             var panelTop by remember { mutableFloatStateOf(0f) }
             var doorBottom by remember { mutableFloatStateOf(0f) }
+            // 그래프 자리를 잡는 네 선 — 판의 왼끝, 설정 문의 왼끝·윗끝, LICENSES 의 오른끝
+            var panelLeft by remember { mutableFloatStateOf(0f) }
+            var doorLeft by remember { mutableFloatStateOf(0f) }
+            var doorTop by remember { mutableFloatStateOf(0f) }
+            var licRight by remember { mutableFloatStateOf(0f) }
             // 아래는 판 하나다. 단어장 넷이 왼쪽 어깨에 얹히고, 회차가 그 아래로
             // 굴러간다. 늘어나 카드가 되는 것도 이 판이다.
             Box(
@@ -546,7 +558,10 @@ fun RoundPicker(
                     // 위 판과 같은 빛 한 겹, 세기는 그 절반 — 판이 위에서 조금
                     // 들린 것처럼 보인다
                     .background(CardGlow, RoundedCornerShape(radius))
-                    .onGloballyPositioned { panelTop = it.positionInRoot().y }
+                    .onGloballyPositioned {
+                        panelTop = it.positionInRoot().y
+                        panelLeft = it.positionInRoot().x
+                    }
             ) {
                 // 목록이 키보드 밑으로 다 내려간 뒤에야 알맹이를 비운다. 판이 딱
                 // 맞아떨어지지 않아 한 줄쯤 삐져나올 때가 있는데, 그때 글자가 반쯤
@@ -645,6 +660,8 @@ fun RoundPicker(
                                 .width(DOOR_SETTINGS)
                                 .onGloballyPositioned {
                                     doorBottom = it.positionInRoot().y + it.size.height
+                                    doorTop = it.positionInRoot().y
+                                    doorLeft = it.positionInRoot().x
                                 }
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
@@ -693,32 +710,85 @@ fun RoundPicker(
                         licTop - CERT_GAP.toPx() - CERT_W.toPx() * (CERT_CARD_BOTTOM / CERT_VIEW) -
                             CERT_LIFT.toPx()
                     }
-                    // 앱의 표. LICENSES 와 같은 폭으로 그 오른선에 맞춰 서고,
-                    // 아랫선은 LICENSES 의 윗선에서 [LOGO_GAP] 만큼 뜬다.
-                    // 합격증보다 먼저 그려 그 카드에 한쪽이 가린다.
-                    Image(
-                        painterResource(R.drawable.logo_26),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(end = SIDE + DECO_PULL + LIC_PULL + LOGO_PULL)
-                            .offset {
-                                IntOffset(
-                                    0,
-                                    (licTop - (LOGO_GAP + LOGO_W * (LOGO_H_VIEW / LOGO_W_VIEW))
-                                        .toPx()).roundToInt(),
-                                )
+                    // 쓰임새 그래프. 합격증보다 먼저 그려 3급에서는 그 카드에 한쪽이
+                    // 가린다. 설정 문의 왼끝에서 LICENSES 의 오른끝까지(양쪽으로
+                    // [CHART_INSET] 씩 들여), 문의 윗선 위 [CHART_LOW]~[CHART_HIGH] 에 선다.
+                    //
+                    // 가로는 지금 급수의 첫 기록일부터 오늘까지 모든 날로 나눈다. 세 줄 모두
+                    // 윗줄이 100% 다 —
+                    // 시간과 카드는 그 가운데 가장 많았던 점이, 정답의 몫은 제 스스로
+                    // 100% 가 윗줄이다.
+                    if (doorTop > 0f && licRight > doorLeft) Canvas(Modifier.matchParentSize()) {
+                        val inset = CHART_INSET.toPx()
+                        val shift = CHART_SHIFT.toPx()
+                        val x0 = doorLeft - panelLeft + inset + shift
+                        val x1 = licRight - panelLeft - inset + shift
+                        val bottom = doorTop - panelTop - CHART_LOW.toPx()
+                        val span = (CHART_HIGH - CHART_LOW).toPx()
+                        val step = span / (CHART_LINES - 1)
+                        for (i in 0 until CHART_LINES) {
+                            val y = bottom - step * i
+                            drawLine(CHART_RULE, Offset(x0, y), Offset(x1, y), CHART_THICK.toPx())
+                        }
+                        if (days.isEmpty()) return@Canvas
+                        // 점끼리 붙지 않을 만큼만 찍는다. 날이 그보다 많으면 이웃한 날을
+                        // 고르게 묶어 한 점으로 — 시간과 카드는 묶음의 하루 평균, 정답의
+                        // 몫은 묶음 전체의 정답 ÷ 카드다.
+                        val r = CHART_DOT.toPx()
+                        val pitch = r * 2 + CHART_NODE_GAP.toPx()
+                        val cap = (((x1 - x0) / pitch).toInt() + 1).coerceAtLeast(1)
+                        val total = days.size
+                        val m = minOf(total, cap)
+                        class Node(val time: Float, val cards: Float, val ratio: Float?)
+                        val nodes = (0 until m).map { i ->
+                            val group = days.subList(i * total / m, (i + 1) * total / m)
+                            val cards = group.sumOf { it.cards }
+                            Node(
+                                group.sumOf { it.seconds }.toFloat() / group.size,
+                                cards.toFloat() / group.size,
+                                if (cards > 0) group.sumOf { it.known }.toFloat() / cards else null,
+                            )
+                        }
+                        val maxTime = nodes.maxOf { it.time }.coerceAtLeast(1f)
+                        val maxCards = nodes.maxOf { it.cards }.coerceAtLeast(1f)
+                        // 카드를 넘기지 않은 날(쉰 날)은 정답의 몫이 없다 — 앞의 값을 잇는다
+                        var carry = 0f
+                        val ratios = nodes.map { nd -> (nd.ratio ?: carry).also { carry = it } }
+                        val n = nodes.size
+                        fun points(value: (Int) -> Float) = (0 until n).map { i ->
+                            val x = if (n == 1) (x0 + x1) / 2 else x0 + (x1 - x0) * i / (n - 1)
+                            Offset(x, bottom - span * value(i).coerceIn(0f, 1f))
+                        }
+                        // 아래에 깔리는 것부터 — 사용 시간, 카드 수, 정답의 몫. 정답의 몫이
+                        // 강조색으로 맨 위에 선다 — 그래프가 가장 먼저 말할 것이 그것이다.
+                        val series = listOf(
+                            CHART_TIME to points { nodes[it].time / maxTime },
+                            CHART_CARDS to points { nodes[it].cards / maxCards },
+                            Hak3.Accent to points { ratios[it] },
+                        )
+                        val stroke = CHART_STROKE.toPx()
+                        // 선을 다 그은 뒤에 점을 찍는다 — 점이 다른 선 밑에 묻히지 않게
+                        if (n > 1) series.forEach { (color, pts) ->
+                            drawPath(
+                                Path().apply {
+                                    moveTo(pts[0].x, pts[0].y)
+                                    pts.drop(1).forEach { lineTo(it.x, it.y) }
+                                },
+                                color,
+                                style = Stroke(stroke, cap = StrokeCap.Round, join = StrokeJoin.Round),
+                            )
+                        }
+                        // 점마다 — 판의 바탕색으로 속을 채우고 선의 색으로 테를 두른다
+                        val face = panelFace(grade)
+                        series.forEach { (color, pts) ->
+                            pts.forEach {
+                                drawCircle(face, r, it)
+                                drawCircle(color, r, it, style = Stroke(stroke))
                             }
-                            .width(LOGO_W)
-                            .aspectRatio(LOGO_W_VIEW / LOGO_H_VIEW)
-                            .alpha(LOGO_FADE)
-                            .then(veil)
-                            // 합격증과 같다 — 끌면 목록이 굴러가고 톡은 삼킨다
-                            .nestedScroll(nested)
-                            .scrollable(rounds, Orientation.Vertical, reverseDirection = true)
-                            .pointerInput(Unit) { detectTapGestures { } },
-                    )
-                    Image(
+                        }
+                    }
+                    // 합격증은 3급을 붙은 뒤의 것이라 3급 판에만 선다
+                    if (grade == 3) Image(
                         painterResource(R.drawable.cert),
                         contentDescription = null,
                         modifier = Modifier
@@ -809,7 +879,7 @@ fun RoundPicker(
                         (doorBottom - panelTop - ROOF.toPx() - LIC_LIFT.toPx())
                             .coerceAtLeast(0f)
                     }
-                    LicenseTag(licTop) { drawer = Drawer.LICENSE }
+                    LicenseTag(licTop, onPlaced = { licRight = it }) { drawer = Drawer.LICENSE }
                 }
             }
         }
@@ -1108,7 +1178,7 @@ private fun UpdateMark(top: Float, fresh: Boolean, onOpen: () -> Unit) {
  * 그림을 그 가운데 둔다.
  */
 @Composable
-private fun LicenseTag(top: Float, onOpen: () -> Unit) {
+private fun LicenseTag(top: Float, onPlaced: (Float) -> Unit = {}, onOpen: () -> Unit) {
     val tall = LIC_W * (LIC_VIEW_H / LIC_VIEW_W)
     val room = maxOf(TOUCH, tall)
     Box(
@@ -1130,7 +1200,11 @@ private fun LicenseTag(top: Float, onOpen: () -> Unit) {
             // 설정 문과 같은 잉크로 통일한다 — 두 조각이 한 줄로 읽히는 자리라
             // 한쪽만 제 색을 들고 서면 짝이 어긋난다
             colorFilter = ColorFilter.tint(Hak3.Hanja),
-            modifier = Modifier.fillMaxWidth().aspectRatio(LIC_VIEW_W / LIC_VIEW_H),
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(LIC_VIEW_W / LIC_VIEW_H)
+                // 그림의 오른끝 — 잉크가 캔버스 오른끝까지 닿는다([LIC_INK_RIGHT])
+                .onGloballyPositioned { onPlaced(it.positionInRoot().x + it.size.width) },
         )
     }
 }
@@ -1457,27 +1531,38 @@ private const val CERT_TILT = 6f
 /** 자리는 그대로 둔 채 그림만 키우는 만큼. 왼위 귀가 붙박이고 비율은 그대로다. */
 private val CERT_GROW = 8.dp
 
-/**
- * 앱의 표(logo_26.png)의 캔버스. 첫 화면·런처 아이콘과 같은 그림이되, 판만 남기고
- * 얼룩은 도려낸 것이다 — 뚫린 자리로 판 색이 그대로 비친다.
- */
-private const val LOGO_W_VIEW = 325f
-private const val LOGO_H_VIEW = 439f
+/** 그래프 자리의 가로줄 — 수, 설정 문의 윗선에서 가장 아랫줄·가장 윗줄까지, 두께와 잉크. */
+private const val CHART_LINES = 5
+private val CHART_LOW = 30.dp
+private val CHART_HIGH = 90.dp
+private val CHART_THICK = 0.5.dp
+private val CHART_RULE = Color(0xFF4D5671)
 
-/**
- * 표의 폭. 앞서 쓰던 그림(444x509)에서 판이 서던 크기를 그대로 잇는다 —
- * 그림이 판만 남게 잘려 왔으므로 캔버스는 작아졌지만 눈에 보이는 크기는 같다.
- */
-private val LOGO_W = 55.dp
+/** 그래프가 설정 문의 왼끝·LICENSES 의 오른끝에서 안으로 드는 만큼(한쪽). */
+private val CHART_INSET = 4.dp
 
-/** 표의 오른선이 LICENSES 의 오른선에서 물러나는 만큼. */
-private val LOGO_PULL = 2.dp
+/** 그래프를 통째로 오른쪽으로 옮기는 만큼. */
+private val CHART_SHIFT = 5.dp
 
-/** 표의 아랫선에서 LICENSES 조각의 윗선까지. */
-private val LOGO_GAP = 36.dp
+/** 꺾은선과 점 테의 굵기. */
+private val CHART_STROKE = 0.4.dp
 
-/** 표가 판 위에서 묽어지는 만큼. 장식이라 뒤로 한 걸음 물러나 선다. */
-private const val LOGO_FADE = 0.8f
+/** 점의 반지름. */
+private val CHART_DOT = 1.6.dp
+
+/** 이웃한 두 점의 테 사이에 남기는 틈. 점의 최대 개수가 여기서 정해진다. */
+private val CHART_NODE_GAP = 2.dp
+
+/** 넘겨 본 카드 수의 선 — 본문 글씨를 80% 명도로 내린 데서 다시 40% 낮춘 것(48%). */
+private val CHART_CARDS = Hak3.Text.let {
+    val k = 0.8f * 0.6f
+    Color(it.red * k, it.green * k, it.blue * k, it.alpha)
+}
+
+/** 사용 시간의 선 — 글로 서는 녹색을 50% 어둡게. */
+private val CHART_TIME = Hak3.GreenInk.let {
+    Color(it.red * 0.5f, it.green * 0.5f, it.blue * 0.5f, it.alpha)
+}
 
 /**
  * 그림이 판 오른벽에서 물러나는 만큼. 카드의 오른귀가 LICENSES 의 오른선과 한

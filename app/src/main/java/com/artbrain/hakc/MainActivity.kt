@@ -63,9 +63,16 @@ class MainActivity : ComponentActivity() {
      * 화면에서 내려갈 때마다 기록을 폴더에 한 벌 적어 둔다([UserData]). 앱이 지워지거나
      * 다른 판으로 갈아 끼워져도 그 폴더를 다시 가리키면 기록이 돌아온다.
      */
+    /** 화면에 올라와 있는 동안의 쓰임새를 모았다가 내려갈 때 오늘 칸에 더한다([DayLog]). */
+    override fun onStart() {
+        super.onStart()
+        DayLog.start(this)
+    }
+
     override fun onStop() {
         super.onStop()
         val app = applicationContext
+        DayLog.stop(app)
         lifecycleScope.launch(NonCancellable) { UserData.save(app) }
     }
 
@@ -141,6 +148,8 @@ private fun Root() {
                 return@LaunchedEffect
             }
         }
+        // 폴더에 첫 세션 기록이 있고 앱이 아직 세션을 모르면 들인다 — 그래프의 시작점
+        withContext(Dispatchers.IO) { DayLog.importSeedIfEmpty(context) }
         val r = DataFile.sync(context)
         // 급수를 바꿨는데 그 파일이 없으면 바꾸지 않은 것으로 한다. 그대로 두면
         // 안내 화면이 서랍까지 덮어 원래 급수로 돌아갈 길이 막힌다.
@@ -223,6 +232,7 @@ private fun Root() {
                         Picker(state, reload, ready, dict, pickFolder, morph, veil,
                             grade = grade,
                             onGrade = { g ->
+                                DayLog.gradeChanged(g)
                                 Settings.setGrade(context, g)
                                 grade = g
                             },

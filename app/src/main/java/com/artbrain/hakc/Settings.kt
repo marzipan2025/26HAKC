@@ -92,7 +92,7 @@ object Settings {
         val scopedNames = GRADES.flatMap { g ->
             listOf("marks", "collect").map { if (g == 3) it else "$it$g" }
         }
-        (scopedNames + "seen").forEach {
+        (scopedNames + "seen" + GRADES.map { DayLog.prefsName(it) }).forEach {
             c.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().apply()
         }
         c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().apply {

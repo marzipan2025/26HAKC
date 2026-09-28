@@ -31,7 +31,7 @@ object UserData {
     private fun prefNames(): List<String> =
         Settings.GRADES.flatMap { g ->
             listOf("marks", "collect").map { if (g == 3) it else "$it$g" }
-        } + listOf("seen", "dict", "settings")
+        } + Settings.GRADES.map { DayLog.prefsName(it) } + listOf("seen", "dict", "settings")
 
     /** 이 기기에서만 뜻이 있는 값. 다른 폰에 들이면 틀린 값이 된다. */
     private val DEVICE_ONLY = setOf("keyboard_px", Settings.KEY_IMPORTED)
