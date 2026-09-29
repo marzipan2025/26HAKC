@@ -1792,8 +1792,9 @@ private fun RoundRow(e: ExamRow, on: Boolean, onPick: (Int) -> Unit) {
                 // 올려 잉크가 줄 한가운데에 오게 한다.
                 Text(
                     roundNo(e.round),
-                    // 숫자만 서는 자리라 폭이 고른 서체로
+                    // 숫자만 서는 자리라 폭이 고른 서체로. 크게 앉으니 한 걸음 얇게.
                     fontFamily = Mono,
+                    fontWeight = FontWeight.Light,
                     fontSize = 42.sp,
                     // 마지막으로 열어 본 회차만 온전한 흰빛으로 선다. 나머지는
                     // 한 겹 물러나고, 아직 문항이 없는 회차는 더 물러난다.

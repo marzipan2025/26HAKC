@@ -597,7 +597,7 @@ fun DictPanel(
                                     if (s.many) {
                                         Text(
                                             if (s.index == 0) "●" else "${s.index}",
-                                            // ● 는 수가 아니다. Plex 에 그 글자가
+                                            // ● 는 수가 아니다. 숫자 서체에 그 글자가
                                             // 없기도 하고, 폭이 고를 까닭도 없다.
                                             fontFamily = if (s.index == 0) Korail else Mono,
                                             fontSize = ((glyph.value * 0.16f + 2f) *

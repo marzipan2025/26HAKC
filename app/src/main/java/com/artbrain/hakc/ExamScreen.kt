@@ -11,6 +11,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -54,6 +56,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.graphicsLayer
@@ -1127,6 +1136,12 @@ private fun QuestionPage(
     // 들려 있는 동안에는 캡슐과 바닥 줄 위로 올라온다
     LaunchedEffect(lift != 0f) { onLifted(lift != 0f) }
 
+    // 정답 아래의 訓音 목록이 쓸 수 있는 아랫선을 잰다 — 카드 안의 좌표로. 카드를
+    // 끌어 들어 올리거나 기울여도 카드 안에서의 자리는 그대로라 값이 흔들리지 않는다.
+    var cardBox by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var cardHigh by remember { mutableFloatStateOf(0f) }
+    var footTop by remember(item.no) { mutableFloatStateOf(-1f) }
+
     Box(
         Modifier
             .fillMaxSize()
@@ -1144,7 +1159,11 @@ private fun QuestionPage(
             )
             // 표시가 없으면 1픽셀, 담긴 카드는 1dp. 어느 쪽이든 카드 경계 안쪽에 붙는다.
             .border(if (mark == null) Dp.Hairline else 1.dp, borderColor(mark), RoundedCornerShape(radius))
-            .onSizeChanged { wide = it.width.toFloat() }
+            .onSizeChanged {
+                wide = it.width.toFloat()
+                cardHigh = it.height.toFloat()
+            }
+            .onGloballyPositioned { cardBox = it }
             // 위로 밀면 초록 쪽으로, 아래로 밀면 노랑 쪽으로 한 칸. 카드는 제자리로 돌아온다.
             .draggable(
                 state = rememberDraggableState { dy ->
@@ -1194,6 +1213,15 @@ private fun QuestionPage(
                 .fillMaxWidth(0.7f)
                 .padding(top = 14.dp),
         )
+        // 카드 바닥의 뜻풀이 — 아래에서 세운다. 정답 목록의 아랫선이 그 윗선이라 먼저 안다.
+        val meaning = remember(item.no, dict) { wordGloss(dict, item) }
+        val showFoot = revealed && meaning != null
+        // 訓音 목록이 내려올 수 있는 아랫선(카드 안의 y). 뜻풀이가 서면 그 윗선에서,
+        // 없으면 카드 아래 여백에서 [ANSWER_CLEAR] 만큼 떨어진다.
+        val floor = with(density) {
+            if (showFoot && footTop > 0f) footTop - ANSWER_CLEAR.toPx()
+            else cardHigh - (FOOT_INSET + ANSWER_CLEAR).toPx()
+        }
         val (raw, tail) = split(item)
         // 큰 자리에 설 글은 줄을 나눠 세운다 — 고르는 문제와 마주 세우는 문제.
         val head = shape(raw)
@@ -1257,19 +1285,25 @@ private fun QuestionPage(
                 }
 
                 Spacer(Modifier.height(if (tail != null) 38.dp else 26.dp))
-                Box(Modifier.padding(start = SHIFT)) { AnswerSlot(item, revealed, ::ink) }
+                Box(Modifier.padding(start = SHIFT)) {
+                    AnswerSlot(item, revealed, ::ink, cardBox, floor)
+                }
             }
         }
 
         // 카드 바닥의 뜻풀이. 두 자 이상의 한자어의 讀音을 묻는 문항에서, 사전에
         // 그 낱말의 뜻이 있을 때만 선다 — 노란 판이 보여 주는 그 뜻이다.
         // 정답을 펼쳐야 함께 나온다.
-        val meaning = remember(item.no, dict) { wordGloss(dict, item) }
-        if (revealed && meaning != null) {
+        if (showFoot) {
             GlossFoot(
-                meaning,
+                meaning!!,
                 card = radius,
-                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .onGloballyPositioned { c ->
+                        cardBox?.let { footTop = it.localPositionOf(c, Offset.Zero).y }
+                    },
             )
         }
     }
@@ -1387,7 +1421,15 @@ private val FOOT_PAD = 22.dp
 private const val FOOT_VEIL = 0.6f
 
 @Composable
-private fun AnswerSlot(item: Item, revealed: Boolean, ink: (Color) -> Color) {
+private fun AnswerSlot(
+    item: Item,
+    revealed: Boolean,
+    ink: (Color) -> Color,
+    /** 카드의 좌표. 목록이 카드 안 어디에 서 있는지 재는 데 쓴다. */
+    card: LayoutCoordinates?,
+    /** 목록이 내려올 수 있는 아랫선 — 카드 안의 y. 넘치면 글을 줄이고, 그래도 넘치면 자른다. */
+    floor: Float,
+) {
     val a = item.answer
     val hanja = a != null && HANJA.containsMatchIn(a)
     // 답이 없다는 말도 한자 자리에 서는 글이니 같은 얇기로 적는다
@@ -1431,17 +1473,95 @@ private fun AnswerSlot(item: Item, revealed: Boolean, ink: (Color) -> Color) {
             )
             item.gloss?.let { g ->
                 Spacer(Modifier.height(6.dp))
-                Text(
-                    g,
-                    fontSize = 22.sp,
-                    lineHeight = 35.sp,
-                    color = ink(Hak3.NeonInk.copy(alpha = 0.66f)),
-                )
+                GlossList(g, ink(Hak3.NeonInk.copy(alpha = 0.66f)), card, floor)
             }
         }
         }
     }
 }
+
+/**
+ * 정답 아래의 訓音 목록. 한 글자에 한 줄이다. 문항에 나온 한자를 모두 싣는 목록이라
+ * 문장이 길면 수십 줄이 되는데, 카드는 늘어나지 않는다 — 넘치면 카드 바닥의 뜻풀이를
+ * 덮고 카드 밖으로까지 흘렀다.
+ *
+ * 그래서 제 윗선에서 [floor] 까지만 아래로 쓰고, 모자라면 옆 단으로 넘어가 다시
+ * 위에서부터 쓴다. 글은 줄이지도 자르지도 않는다. 단은 오른쪽으로 얼마든지 늘어서고,
+ * 보이는 것은 카드의 왼벽에서 오른벽까지다 — 나머지는 좌우로 밀어 본다. 이
+ * 영역의 가로 밀기는 끝에 닿아도, 밀 거리가 아예 없어도 목록이 다 삼킨다 — 목록을
+ * 보다가 문항이 넘어가 버리면 안 된다. 문항은 목록 밖을 밀어 넘긴다.
+ *
+ * 단은 제 가장 긴 줄만큼만 차지하고 단 사이는 [GLOSS_GUTTER] 다 — 짧은 줄의 단은
+ * 좁게 서서 한 화면에 더 많이 든다.
+ */
+@Composable
+private fun GlossList(g: String, color: Color, card: LayoutCoordinates?, floor: Float) {
+    val density = LocalDensity.current
+    val lines = remember(g) { g.split('\n') }
+    // 목록의 왼위 귀 — 카드 안의 좌표
+    var at by remember(g) { mutableStateOf<Offset?>(null) }
+    val cardWide = card?.size?.width?.toFloat() ?: 0f
+    val lead = with(density) { (GLOSS_SIZE * GLOSS_LEAD).sp.toPx() }
+    val o = at
+    // 재기 전에는 한 단에 다 적어 둔다 — 한 프레임 뒤에 제자리를 잡는다
+    val rows = if (o == null) lines.size else ((floor - o.y) / lead).toInt().coerceAtLeast(1)
+    // 보이는 폭은 카드의 왼벽에서 오른벽까지 — 밀면 양쪽 벽까지 흘러가 사라진다.
+    // 처음에는 목록의 왼벽(정답 글자의 왼선)에서 시작하도록 앞에 그만큼 비워 둔다.
+    val lead0 = with(density) { (o?.x ?: 0f).toDp() }
+    val view = with(density) { if (o == null) 0.dp else cardWide.toDp() }
+    // 자리를 재는 것은 제자리에 선 이 상자다. 밀리는 영역은 카드 왼벽으로 옮겨 서므로
+    // 그것으로 재면 잰 값이 제 자리를 도로 옮겨 끝없이 흔들린다.
+    Box(Modifier.onGloballyPositioned { c -> card?.let { at = it.localPositionOf(c, Offset.Zero) } }) {
+        Row(
+            Modifier
+                .wrapContentWidth(Alignment.Start, unbounded = true)
+                .offset(x = -lead0)
+                // 폭은 늘 정해 둔다 — 밀리는 영역은 폭이 무한이면 그 자리에서 앱을 멈춘다.
+                // 재기 전(첫 프레임)에는 0 이었다가 한 프레임 뒤 제 폭으로 펼쳐진다.
+                .width(view)
+                .nestedScroll(KEEP_CARD)
+                .horizontalScroll(rememberScrollState()),
+        ) {
+            Spacer(Modifier.width(lead0))
+            lines.chunked(rows).forEach { column ->
+                Column(Modifier.padding(end = GLOSS_GUTTER)) {
+                    column.forEach { line ->
+                        Text(
+                            line,
+                            fontSize = GLOSS_SIZE.sp,
+                            lineHeight = (GLOSS_SIZE * GLOSS_LEAD).sp,
+                            color = color,
+                            maxLines = 1,
+                            softWrap = false,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 목록이 쓰고 남긴 가로 밀기를 여기서 다 삼킨다. 그러지 않으면 남은 몫이 바깥의
+ * pager 로 올라가 옆 문항으로 넘어간다 — 목록 끝에서 한 번 더 밀거나 크게 휙 밀 때.
+ */
+private val KEEP_CARD = object : NestedScrollConnection {
+    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource) =
+        Offset(available.x, 0f)
+
+    override suspend fun onPostFling(consumed: Velocity, available: Velocity) =
+        Velocity(available.x, 0f)
+}
+
+/** 訓音 목록의 글 크기와 줄 높이. 넘쳐도 줄이지 않는다 — 옆 단으로 넘어간다. */
+private const val GLOSS_SIZE = 20f
+private const val GLOSS_LEAD = 33f / 20f
+
+/** 단과 단 사이의 틈. */
+private val GLOSS_GUTTER = 24.dp
+
+/** 訓音 목록이 뜻풀이의 윗선(또는 카드 아래 여백)에서 떨어져 멈추는 만큼. */
+private val ANSWER_CLEAR = 10.dp
 
 /**
  * 바닥 줄의 높이. 양옆 두 단추는 이 값을 한 변으로 하는 정사각이라 지름이 곧
@@ -1786,8 +1906,8 @@ Used for the large hanja glyphs only.
 Korail Font (코레일체)
 Copyright © Korea Railroad Corporation. Released by KORAIL for free public use, including commercial use, provided the font itself is not sold. Used for all Korean and Latin text in the app.
 
-IBM Plex Mono
-Copyright © 2017 IBM Corp. with Reserved Font Name "Plex". Licensed under the SIL Open Font License, Version 1.1, and distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND.
+Geist Mono
+Copyright 2024 The Geist Project Authors (https://github.com/vercel/geist-font). Licensed under the SIL Open Font License, Version 1.1, and distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND.
 http://scripts.sil.org/OFL
 Used for figures and technical readouts.
 
