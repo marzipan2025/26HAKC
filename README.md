@@ -320,6 +320,17 @@ python3 tools/saem.py <우리말샘 xml 폴더> app/src/main/assets/dict.db     
 ([DataFile.kt](app/src/main/java/com/artbrain/hakc/DataFile.kt)).
 그 파일을 만드는 도구는 [hanja-mock](../hanja-mock/tools) 에 있다.
 
+### 일본어 읽기
+
+설정의 **Japanese Voice** 를 켜면(기본은 끔) 사전의 첫 訓音 줄 오른끝에 japlay 단추가
+선다. 누르면 기기의 TTS 가 그 낱말의 일본어 읽기를 소리 내고, 소리 나는 동안 화면
+한가운데 캡슐에 히라가나가 떴다 진다. 일본에 없는 우리 한자말(學敎 등)에는 단추가
+서지 않는다.
+
+읽기는 `dict.db` 의 `ja(hanja, kana)` 표에 구워 둔다([tools/ja.py](tools/ja.py)).
+JMdict(낱말), KANJIDIC2(낱말에 없는 한 글자의 음독), OpenCC 의 신자체 표(學→学)로
+표기 29만 9천 개 중 6만 7천 개에 읽기가 붙는다. 사전이 26 → 29.5MB 로 늘었다.
+
 ## 01HAKA 에서 가져온 것과 두고 온 것
 
 | 가져온 것 | 두고 온 것 |

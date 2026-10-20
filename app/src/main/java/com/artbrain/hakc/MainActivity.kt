@@ -243,6 +243,8 @@ private fun Root() {
             }
     }
     if (state == null) Box(Modifier.fillMaxSize().background(Hak3.Surface))
+    // 일본어 읽기가 소리 나는 동안 화면 한가운데에 그 히라가나가 선다
+    VoiceCapsule()
     }
 }
 

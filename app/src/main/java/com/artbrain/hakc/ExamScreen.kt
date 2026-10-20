@@ -591,6 +591,9 @@ fun SettingsPanel(
     grade: Int,
     onGrade: (Int) -> Unit,
     onMarkSide: (Boolean) -> Unit,
+    /** 사전의 訓音 곁에 일본어 읽기 단추를 세우는가. */
+    jaVoice: Boolean,
+    onJaVoice: (Boolean) -> Unit,
     onWipe: () -> Unit,
 ) {
     // 한 번에 지워지지 않는다. 물음이 단추 자리에 서고, 대답해야 지운다.
@@ -693,6 +696,26 @@ fun SettingsPanel(
                 .weight(1f)
                 .background(face, RoundedCornerShape(radius))
         )
+
+        // 일본어 읽기 — 이름을 왼쪽에, 켜고 끄는 단추 하나를 오른쪽에. 누를 때마다
+        // 뒤집히고, 켜지면 면이 채워진다.
+        Spacer(Modifier.height(gap))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(face, RoundedCornerShape(radius))
+                .padding(horizontal = DRAWER_PAD, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "Japanese Voice",
+                style = GRADE_LINE,
+                color = Hak3.TextSoft,
+                modifier = Modifier.weight(1f),
+            )
+            val ground = face.compositeOver(Hak3.Ground)
+            Side(if (jaVoice) "On" else "Off", jaVoice, ground) { onJaVoice(!jaVoice) }
+        }
 
         // 맨 아래 — 다 지우는 자리. 이름을 두지 않는다. 되돌릴 수 없는 자리라
         // 다른 묶음처럼 이름부터 세우지 않고, 무엇이 사라지는지를 먼저 적는다.
@@ -956,8 +979,11 @@ private fun Side(label: String, on: Boolean, ground: Color, onPick: () -> Unit) 
     )
 }
 
-/** 그 두 단추의 폭. 긴 쪽(Right)이 넉넉히 들어가는 자리다. */
-private val SIDE_W = 72.dp
+/**
+ * 그 두 단추의 폭. 72dp 이던 것을 75% 로 줄였다 — 줄어든 자리만큼 곁의 그림이
+ * 넓어진다(그림은 남은 폭을 다 받는다). 일본어 읽기의 단추도 이 폭이다.
+ */
+private val SIDE_W = 54.dp
 
 /** 두 단추 사이. */
 private val SIDE_GAP = 8.dp

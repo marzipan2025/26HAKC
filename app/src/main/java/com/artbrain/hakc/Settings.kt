@@ -12,6 +12,7 @@ object Settings {
     private const val KEY_LAST_ROUND = "last_round"
     private const val KEY_KEYBOARD = "keyboard_px"
     private const val KEY_GRADE = "grade"
+    private const val KEY_VOICE = "ja_voice"
 
     /**
      * 폴더에 적어 둔 기록을 이 앱이 한 번 들였는가([UserData.restoreIfFresh]).
@@ -56,6 +57,15 @@ object Settings {
     fun setMarkOnLeft(c: Context, left: Boolean) {
         c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putBoolean(KEY_MARK_LEFT, left).apply()
+    }
+
+    /** 사전의 訓音 곁에 일본어 읽기 단추를 세울 것인가. 기본은 끔. */
+    fun jaVoice(c: Context): Boolean =
+        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_VOICE, false)
+
+    fun setJaVoice(c: Context, on: Boolean) {
+        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_VOICE, on).apply()
     }
 
     /** 마지막으로 열어 본 회차. 목록에서 그 줄에 알약을 두른다. 없으면 0. */

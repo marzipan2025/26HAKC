@@ -6,6 +6,13 @@
     <!-- 스토어를 거치지 않는 배포라 앱이 직접 갱신을 챙긴다 -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- 일본어 읽기에 기기의 TTS 엔진을 빌린다. 안드로이드 11 부터는 찾을 엔진을 밝혀 둬야 보인다 -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"

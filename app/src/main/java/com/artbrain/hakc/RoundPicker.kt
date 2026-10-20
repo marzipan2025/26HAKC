@@ -208,6 +208,7 @@ fun RoundPicker(
     }
     var last by remember(grade) { mutableIntStateOf(Settings.lastRound(context)) }
     var markOnLeft by remember { mutableStateOf(Settings.markOnLeft(context)) }
+    var jaVoice by remember { mutableStateOf(Settings.jaVoice(context)) }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val square = maxWidth - 16.dp                       // 정사각형이었을 때의 한 변
@@ -386,6 +387,11 @@ fun RoundPicker(
                         markOnLeft = left
                         Settings.setMarkOnLeft(context, left)
                     },
+                    jaVoice = jaVoice,
+                    onJaVoice = { on ->
+                        jaVoice = on
+                        Settings.setJaVoice(context, on)
+                    },
                     // 지운 뒤에는 화면을 처음부터 다시 짓는다 — 여기저기 붙잡아 둔
                     // 수와 표시를 하나씩 되돌리는 것보다 이 편이 틀림없다.
                     // 지우기만 하고 화면은 그대로 둔다 — 서랍이 결과를 보여야
@@ -405,6 +411,7 @@ fun RoundPicker(
                 DictPanel(
                     dict,
                     kept = bins,
+                    voice = jaVoice,
                     radius = radius,
                     onFocus = { typing = it },
                     modifier = Modifier

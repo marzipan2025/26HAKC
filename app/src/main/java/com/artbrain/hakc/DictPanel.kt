@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -368,6 +369,8 @@ private val FROZEN_INK = Color(0xFFC79324)
 fun DictPanel(
     dict: Dict,
     kept: Map<String, Mark>,
+    /** 일본어 읽기 단추를 세우는가 — 설정의 Japanese Voice. */
+    voice: Boolean,
     radius: Dp,
     onFocus: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -631,7 +634,7 @@ fun DictPanel(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(TEXT_WALL + 6.dp, RULE_GAP, TEXT_WALL, RULE_GAP),
                     ) {
-                        itemsIndexed(slots) { _, s -> VariantBlock(s, kept) }
+                        itemsIndexed(slots) { _, s -> VariantBlock(s, kept, voice && !frozen) }
                     }
                 }
             }
@@ -823,13 +826,19 @@ private val GLOSS_LEAD = (GLOSS.value * LEAD).sp
  * [kept] 는 단어장에 든 글자와 그 묶음이다.
  */
 @Composable
-private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
+private fun VariantBlock(s: Slot, kept: Map<String, Mark>, voice: Boolean) {
+    val context = LocalContext.current
+    // 일본어 읽기 단추는 첫 訓音 줄의 오른끝에 하나만 선다. 일본에 없는 낱말이면 서지 않는다.
+    val kana = s.variant.kana?.takeIf { voice }
+    var placed = false
     Column(Modifier.padding(bottom = 15.dp)) {
         s.variant.hanja.forEachIndexed { i, ch ->
             val g = s.word.chars[ch.toString()] ?: return@forEachIndexed
+            val play = kana != null && !placed
+            placed = true
             // 음과 훈은 밑선을 맞춘다. 위끝을 맞추면 오른쪽 글에 낀 급수 표시가
             // 줄 상자를 부풀려 두 글이 어긋난다.
-            Row {
+            Row(if (play) Modifier.fillMaxWidth() else Modifier) {
                 Text(
                     "${g.eum} :",
                     fontSize = HUNEUM,
@@ -866,7 +875,8 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                     fontSize = HUNEUM,
                     lineHeight = HUNEUM_LEAD,
                     color = INK_BROWN,
-                    modifier = Modifier.alignByBaseline(),
+                    modifier = if (play) Modifier.weight(1f).alignByBaseline()
+                    else Modifier.alignByBaseline(),
                     inlineContent = mapOf(
                         GRADE_SLOT to InlineTextContent(
                             Placeholder(HUNEUM, HUNEUM, PlaceholderVerticalAlign.TextCenter)
@@ -879,6 +889,7 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
                         }
                     ),
                 )
+                if (play) Play(Modifier.align(Alignment.Top)) { Voice.say(context, kana!!) }
             }
         }
         s.variant.meaning?.let { body ->
@@ -923,3 +934,45 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>) {
         }
     }
 }
+
+/**
+ * 일본어 읽기 단추 — japlay 그림. 그림 속 도형이 아래 판의 급수 표시(26HAKC 아래
+ * 육각)와 같은 키로 서도록 단추를 [PLAY] 로 키운다. 그만큼 키우면 訓音 줄보다
+ * 높으므로, 자리는 줄의 키만 잡고 그림은 그 밖으로 넘쳐 그린다 — 줄 사이가
+ * 벌어지지 않게. 그린 자리에서 [PLAY_SHIFT] 만큼 오른쪽으로 비켜 선다.
+ */
+@Composable
+private fun Play(modifier: Modifier, onClick: () -> Unit) {
+    val lead = with(LocalDensity.current) { HUNEUM_LEAD.toDp() }
+    Box(
+        modifier
+            .offset(x = PLAY_SHIFT)
+            .padding(start = 8.dp)
+            .size(PLAY_ROOM, lead)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.foundation.Image(
+            painterResource(R.drawable.japlay),
+            contentDescription = null,
+            modifier = Modifier.requiredSize(PLAY),
+        )
+    }
+}
+
+/**
+ * 단추 그림의 한 변. 그림 속 도형은 그 48/120 이다. 아래 판의 급수 표시와 같은 키
+ * (도형 17dp, 그림 41dp)로 세웠다가 70% 로 물리고(29dp), 도형을 2dp 키웠다 —
+ * 그림 34dp 에 도형 13.6dp.
+ */
+private val PLAY = 34.dp
+
+/** 줄 안에서 단추가 잡는 폭. 도형(17dp)에 손끝 몫을 조금 얹었다. */
+private val PLAY_ROOM = 30.dp
+
+/** 처음 그렸던 자리에서 오른쪽으로 비켜 선 만큼. */
+private val PLAY_SHIFT = 20.dp
