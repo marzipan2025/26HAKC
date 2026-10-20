@@ -32,6 +32,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -53,7 +55,7 @@ data class Reading(val kana: String, val jp: String?)
  * 6만 7천 개 몫이라 앱이 감당할 크기가 아니다.
  *
  * 엔진은 처음 누를 때 깨운다. 설정을 꺼 둔 사람에게는 끝내 깨지 않는다.
- * 읽는 동안에는 [speaking] 에 그 읽기가 서 있고, 화면 가운데의 캡슐이
+ * 읽는 동안에는 [speaking] 에 그 읽기가 서 있고, 화면 위 가운데의 캡슐이
  * 그것을 보고 떴다 진다.
  */
 object Voice {
@@ -132,7 +134,8 @@ object Voice {
 }
 
 /**
- * 읽는 동안 화면 한가운데에 뜨는 캡슐 — 그 소리의 히라가나. 소리가 그치면 진다.
+ * 읽는 동안 화면 위 가운데(위에서 [CAPSULE_TOP])에 뜨는 캡슐 — 그 소리의 히라가나.
+ * 소리가 그치면 진다.
  * 손짓은 받지 않는다. 그 뒤의 것을 누르는 데 걸리지 않게.
  *
  * 일본 표기가 우리 한자와 다르면(學校 → 学校) 그 표기를 히라가나 윗줄에 세운다.
@@ -148,16 +151,28 @@ fun VoiceCapsule() {
     // 히라가나 한 줄의 키. 캡슐의 둥글기가 이것으로 정해진다 — 한 줄일 때 반원이 되는 값.
     var kanaH by remember { mutableIntStateOf(0) }
     val radius = with(LocalDensity.current) { kanaH.toDp() } / 2 + CAPSULE_PAD_Y
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(
+        Modifier.fillMaxSize().padding(top = CAPSULE_TOP),
+        contentAlignment = Alignment.TopCenter,
+    ) {
         AnimatedVisibility(
             visible = now != null,
-            enter = fadeIn(tween(120)) + scaleIn(tween(160), initialScale = 0.92f),
-            exit = fadeOut(tween(220)) + scaleOut(tween(220), targetScale = 0.96f),
+            enter = fadeIn(tween(120)) +
+                scaleIn(tween(160), initialScale = 0.92f, transformOrigin = CAPSULE_ORIGIN),
+            exit = fadeOut(tween(220)) +
+                scaleOut(tween(220), targetScale = 0.96f, transformOrigin = CAPSULE_ORIGIN),
         ) {
             Column(
                 Modifier
+                    // 맞춰 둔 치수는 그대로 두고 통째로 줄인다. 윗변을 축으로 줄여
+                    // 위에서 [CAPSULE_TOP] 자리가 흔들리지 않게.
+                    .graphicsLayer {
+                        scaleX = CAPSULE_SCALE
+                        scaleY = CAPSULE_SCALE
+                        transformOrigin = CAPSULE_ORIGIN
+                    }
                     .width(IntrinsicSize.Max)
-                    .background(Hak3.Surface.copy(alpha = 0.94f), RoundedCornerShape(radius))
+                    .background(Hak3.Surface.copy(alpha = 0.9f), RoundedCornerShape(radius))
                     .padding(
                         top = CAPSULE_PAD_Y - if (last.jp == null) CAPSULE_ONE_LINE_LIFT else 0.dp,
                         bottom = CAPSULE_PAD_Y +
@@ -220,6 +235,15 @@ private val CAPSULE_KANJI = CAPSULE_KANA.copy(
     fontWeight = FontWeight.Normal,
     color = Hak3.Panel,
 )
+
+/** 앱 화면(상태 표시줄 아래) 윗변에서 캡슐 윗변까지. */
+private val CAPSULE_TOP = 32.dp
+
+/** 캡슐 전체의 크기. 아래 치수들은 1 일 때의 것이다. */
+private const val CAPSULE_SCALE = 0.9f
+
+/** 줄이고 키우는 축 — 윗변 가운데. */
+private val CAPSULE_ORIGIN = TransformOrigin(0.5f, 0f)
 
 private val CAPSULE_PAD_X = 30.dp
 private val CAPSULE_PAD_Y = 14.dp
