@@ -9,9 +9,15 @@ data class Glyph(val han: String, val hun: String, val eum: String, val grade: I
 
 /**
  * 같은 소리로 적히는 한자 표기 하나. [kana] 는 그 표기의 일본어 읽기(히라가나) —
- * 일본에 없는 우리 한자말이면 null 이다.
+ * 일본에 없는 우리 한자말이면 null 이다. [jp] 는 일본 표기가 우리 것과 다를 때의
+ * 그 표기(學校 → 学校)이고, 같으면 null 이다.
  */
-data class Variant(val hanja: String, val meaning: String?, val kana: String? = null)
+data class Variant(
+    val hanja: String,
+    val meaning: String?,
+    val kana: String? = null,
+    val jp: String? = null,
+)
 
 /**
  * 찾아낸 낱말 하나. 같은 소리에 여러 한자가 있으면 variants 에 모두 담긴다.
@@ -42,16 +48,19 @@ class Dict private constructor(private val db: SQLiteDatabase) {
      * 갈리지 않게 하려는 것이다. 한자를 그대로 넣으면 글자마다 訓音을 돌려준다.
      */
     fun search(text: String): List<Found> = find(text).map { f ->
-        f.copy(variants = f.variants.map { it.copy(kana = kana(it.hanja)) })
+        f.copy(variants = f.variants.map { v ->
+            val (kana, jp) = japanese(v.hanja) ?: (null to null)
+            v.copy(kana = kana, jp = jp)
+        })
     }
 
     /**
-     * 표기의 일본어 읽기. [tools/ja.py] 가 구워 둔 표에서 꺼낸다. 표가 없는 예전
-     * 사전이어도 무너지지 않게 빈손으로 돌아온다.
+     * 표기의 일본어 읽기와, 다르면 일본 표기. [tools/ja.py] 가 구워 둔 표에서 꺼낸다.
+     * 표가 없는 예전 사전이어도 무너지지 않게 빈손으로 돌아온다.
      */
-    private fun kana(hanja: String): String? = runCatching {
-        db.rawQuery("SELECT kana FROM ja WHERE hanja=?", arrayOf(hanja)).use { c ->
-            if (c.moveToNext()) c.getString(0) else null
+    private fun japanese(hanja: String): Pair<String, String?>? = runCatching {
+        db.rawQuery("SELECT kana, jp FROM ja WHERE hanja=?", arrayOf(hanja)).use { c ->
+            if (c.moveToNext()) c.getString(0) to c.getString(1) else null
         }
     }.getOrNull()
 

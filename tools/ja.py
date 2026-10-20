@@ -7,13 +7,14 @@
 자료는 셋이다. 낱말의 읽기는 JMdict, 낱말에 없는 한 글자의 음독은 KANJIDIC2
 (둘 다 jmdict-simplified 의 JSON 판), 우리 한자(舊字)를 일본 신자체로 옮기는 표는
 OpenCC 의 JPShinjitaiCharacters.txt 다. 學校 는 JMdict 에 学校 로 서 있으므로
-그대로 한 번, 신자체로 옮겨 한 번 더 찾는다.
+신자체로 옮겨 먼저 찾고, 없으면 그대로 한 번 더 찾는다. 일본 표기가 우리 것과
+다르면(學校 → 学校) 그 표기도 함께 적어 두어, 캡슐이 히라가나 위에 세운다.
 
 한 표기에 읽기가 여럿이면 흔한 쪽(common)을 먼저, 그다음은 JMdict 에 적힌 차례다
 — 今日 은 きょう 가 こんにち 보다 앞선다. 일본에 없는 우리 한자말은 표에 들지
 않고, 앱은 그 낱말에 단추를 세우지 않는다.
 
-    ja(hanja TEXT PRIMARY KEY, kana TEXT)
+    ja(hanja TEXT PRIMARY KEY, kana TEXT, jp TEXT)   jp 는 일본 표기가 같으면 NULL
 """
 import json
 import sqlite3
@@ -88,18 +89,28 @@ def main(db_path, jmdict, kanjidic, shin):
         if not h or not all(is_han(c) for c in h):
             continue
         new = "".join(to_new.get(c, c) for c in h)
-        kana = jm.get(h) or jm.get(new)
+        # 일본에서 쓰는 꼴(신자체)을 먼저 본다. 學校 는 JMdict 에 찾기용 舊字로도
+        # 실려 있어, 그대로 먼저 찾으면 일본 표기가 学校 임을 놓친다.
+        jp = None
+        if new != h and new in jm:
+            kana, jp = jm[new], new
+        else:
+            kana = jm.get(h)
         if kana is None and len(h) == 1:
-            kana = on.get(h) or on.get(new)
+            if new != h and new in on:
+                kana, jp = on[new], new
+            else:
+                kana = on.get(h)
         if kana:
-            rows.append((h, kana))
+            rows.append((h, kana, jp))
     db.execute("DROP TABLE IF EXISTS ja")
-    db.execute("CREATE TABLE ja(hanja TEXT PRIMARY KEY, kana TEXT NOT NULL)")
-    db.executemany("INSERT INTO ja VALUES(?, ?)", rows)
+    db.execute("CREATE TABLE ja(hanja TEXT PRIMARY KEY, kana TEXT NOT NULL, jp TEXT)")
+    db.executemany("INSERT INTO ja VALUES(?, ?, ?)", rows)
     db.commit()
     db.execute("VACUUM")
     db.close()
-    print(f"{len(rows)} / {len(forms)} 표기에 읽기")
+    diff = sum(1 for r in rows if r[2])
+    print(f"{len(rows)} / {len(forms)} 표기에 읽기, 그중 {diff} 개는 일본 표기가 다르다")
 
 
 if __name__ == "__main__":

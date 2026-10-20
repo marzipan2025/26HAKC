@@ -324,12 +324,17 @@ python3 tools/saem.py <우리말샘 xml 폴더> app/src/main/assets/dict.db     
 
 설정의 **Japanese Voice** 를 켜면(기본은 끔) 사전의 첫 訓音 줄 오른끝에 japlay 단추가
 선다. 누르면 기기의 TTS 가 그 낱말의 일본어 읽기를 소리 내고, 소리 나는 동안 화면
-한가운데 캡슐에 히라가나가 떴다 진다. 일본에 없는 우리 한자말(學敎 등)에는 단추가
-서지 않는다.
+한가운데 캡슐에 히라가나가 떴다 진다. 일본 표기가 우리 한자와 다르면(學校 → 学校)
+그 표기를 히라가나 윗줄에 노란 판의 색으로 세우고, 캡슐은 둥근 네모가 된다. 일본에
+없는 우리 한자말(學敎 등)에는 단추가 서지 않는다.
 
-읽기는 `dict.db` 의 `ja(hanja, kana)` 표에 구워 둔다([tools/ja.py](tools/ja.py)).
+히라가나는 폰의 CJK 서체에 레귤러 한 굵기뿐이라, Noto Sans JP 를 Light 로 굳혀
+가나만 담아 왔다(46KB, [tools/make_kana_font.py](tools/make_kana_font.py),
+[라이선스](licenses/NotoSansJP-OFL.txt)).
+
+읽기는 `dict.db` 의 `ja(hanja, kana, jp)` 표에 구워 둔다([tools/ja.py](tools/ja.py)).
 JMdict(낱말), KANJIDIC2(낱말에 없는 한 글자의 음독), OpenCC 의 신자체 표(學→学)로
-표기 29만 9천 개 중 6만 7천 개에 읽기가 붙는다. 사전이 26 → 29.5MB 로 늘었다.
+표기 29만 9천 개 중 6만 7천 개에 읽기가 붙고, 그중 1만 9천 개는 일본 표기가 다르다. 사전이 26 → 29.5MB 로 늘었다.
 
 ## 01HAKA 에서 가져온 것과 두고 온 것
 

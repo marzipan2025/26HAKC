@@ -23,8 +23,8 @@ android {
         applicationId = "com.artbrain.hakc"
         minSdk = 26
         targetSdk = 36
-        versionCode = 94
-        versionName = "0.7.0"
+        versionCode = 95
+        versionName = "0.7.1"
     }
 
     signingConfigs {

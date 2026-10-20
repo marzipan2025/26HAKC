@@ -889,7 +889,7 @@ private fun VariantBlock(s: Slot, kept: Map<String, Mark>, voice: Boolean) {
                         }
                     ),
                 )
-                if (play) Play(Modifier.align(Alignment.Top)) { Voice.say(context, kana!!) }
+                if (play) Play(Modifier.align(Alignment.Top)) { Voice.say(context, kana!!, s.variant.jp) }
             }
         }
         s.variant.meaning?.let { body ->
