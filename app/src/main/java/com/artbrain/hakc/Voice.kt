@@ -237,7 +237,7 @@ private val CAPSULE_KANJI = CAPSULE_KANA.copy(
 )
 
 /** 앱 화면(상태 표시줄 아래) 윗변에서 캡슐 윗변까지. */
-private val CAPSULE_TOP = 32.dp
+private val CAPSULE_TOP = 38.dp
 
 /** 캡슐 전체의 크기. 아래 치수들은 1 일 때의 것이다. */
 private const val CAPSULE_SCALE = 0.9f
