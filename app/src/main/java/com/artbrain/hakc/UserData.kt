@@ -44,6 +44,9 @@ object UserData {
 
     /** 지금의 기록을 폴더에 적는다. 적을 수 없는 자리면 조용히 넘어간다. */
     suspend fun save(c: Context): Boolean = withContext(Dispatchers.IO) {
+        // 디버그 판(.debug)은 본 앱과 같은 폴더를 가리키지만 기록은 제 것뿐이다. 그것으로
+        // 폴더를 덮으면 본 앱의 백업이 빈 기록이 된다 — 2026-10-20 에 그렇게 덮였다.
+        if (BuildConfig.DEBUG) return@withContext false
         val dir = DataFile.writableFolder(c) ?: return@withContext false
         val json = JSONObject()
             .put("version", VERSION)

@@ -113,7 +113,7 @@ object Voice {
             }
 
             override fun onDone(id: String?) {
-                main.post { if (speaking?.kana == id) speaking = null }
+                main.post { linger(id) }
             }
 
             override fun onStop(id: String?, interrupted: Boolean) {
@@ -131,6 +131,26 @@ object Voice {
             speak(t, w)
         }
     }
+
+    /**
+     * 소리가 다 난 뒤에도 캡슐을 잠시 더 둔다 — 읽기를 눈으로 따라잡을 틈이다.
+     * 한자가 함께 서면 읽을 것이 두 줄이라 더 오래. 그사이 다른 읽기가 시작되면
+     * 그 읽기가 자리를 이어받으므로 여기서 걷지 않는다(같은 낱말을 다시 눌러도
+     * [Reading] 은 새로 지어지므로 === 로 가린다).
+     */
+    private fun linger(id: String?) {
+        val r = speaking?.takeIf { it.kana == id } ?: return
+        main.postDelayed(
+            { if (speaking === r) speaking = null },
+            if (r.jp == null) LINGER_KANA else LINGER_KANJI,
+        )
+    }
+
+    /** 히라가나만 설 때 소리 뒤에 더 머무는 참. (ms) */
+    private const val LINGER_KANA = 300L
+
+    /** 한자가 함께 설 때 더 머무는 참. (ms) */
+    private const val LINGER_KANJI = 800L
 }
 
 /**
