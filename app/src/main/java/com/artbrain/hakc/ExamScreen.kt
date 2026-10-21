@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.animation.core.AnimationSpec
@@ -92,6 +94,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.ColorFilter
 
 private val HANJA = Regex("[\\u3400-\\u4DBF\\u4E00-\\u9FFF\\uF900-\\uFAFF]")
 
@@ -681,11 +684,11 @@ fun SettingsPanel(
             }
         }
 
-        // 급수 — 덩이 하나가 곧 단추 하나다. 위에서부터 1급, 2급, 3급. 고르면 본 화면의
+        // 급수 — 덩이 하나에 단추 셋을 가로로. 왼쪽부터 1급, 2급, 3급. 고르면 본 화면의
         // 목록이 그 급수의 것으로 새로 선다.
-        for (g in Settings.GRADES) {
-            Spacer(Modifier.height(gap))
-            GradeBlock(g, g == grade, radius, face) { if (g != grade) onGrade(g) }
+        Spacer(Modifier.height(gap))
+        GradeRow(grade, (GRADE_BLOCK * 3 + gap * 2) / 2, radius, face) {
+            if (it != grade) onGrade(it)
         }
 
         // 아직 아무것도 들지 않은 칸. 남은 자리를 그대로 받아 선다.
@@ -778,47 +781,94 @@ fun SettingsPanel(
 }
 
 /**
- * 급수 덩이. 다른 덩이와 같은 낯으로 서되 키가 [GRADE_BLOCK] 로 낮다. 글은 맨 위
- * 덩이의 Data·Version 줄과 같은 글꼴·크기로, 같은 왼쪽 선([DRAWER_PAD])에 선다.
- * 고른 쪽은 테 없이 핑크 면으로 서고 글이 희고 굵어진다.
+ * 급수 덩이. 키는 [height] — 급수 덩이 셋이 섰던 자리의 절반이다. 왼쪽에 이름을,
+ * 오른쪽에 급수 표 셋을 모아 세운다(1급·2급·3급). 표는 본 화면 기둥의 로고 아래에
+ * 선 그 그림(grade_1·2·3)이고, 셋 모두 잉크의 키가 [GRADE_INK] 가 되게 키운다.
+ * 고른 쪽만 핑크로 물들고, 나머지는 그림이 든 잉크를 30% 만 비쳐 물러난다.
  */
 @Composable
-private fun GradeBlock(grade: Int, on: Boolean, radius: Dp, face: Color, onPick: () -> Unit) {
-    Box(
+private fun GradeRow(grade: Int, height: Dp, radius: Dp, face: Color, onPick: (Int) -> Unit) {
+    Row(
         Modifier
             .fillMaxWidth()
-            .height(GRADE_BLOCK)
-            .background(if (on) Hak3.Accent else face, RoundedCornerShape(radius))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onPick,
-            )
-            .padding(horizontal = DRAWER_PAD),
-        contentAlignment = Alignment.CenterStart,
+            .height(height)
+            .background(face, RoundedCornerShape(radius))
+            // 표 셋은 오른쪽 선에서 [GRADE_INSET] 만큼 더 물러선다
+            .padding(start = DRAWER_PAD, end = DRAWER_PAD + GRADE_INSET),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        // 일본어 읽기 덩이의 이름과 같은 글꼴·색·왼쪽 선
         Text(
-            gradeName(grade),
-            // 줄 상자를 잉크에 바짝 붙인 [DRAWER_LINE] 을 쓰면 글꼴의 어센트 몫이 위로
-            // 쏠려 글이 덩이의 가운데보다 떠 보인다. 크기·글꼴만 받아 오고 줄 상자는
-            // 글꼴 그대로 두어 가운데에 앉힌다.
+            "Grade",
             style = GRADE_LINE,
-            // 고른 쪽만 희고 굵다. 고르지 않은 쪽은 서랍 윗줄의 글과 같은 결로 물러난다.
-            color = if (on) Color.White else Hak3.TextSoft,
-            fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+            color = Hak3.TextSoft,
+            modifier = Modifier.weight(1f),
         )
+        for (g in Settings.GRADES) {
+            if (g != Settings.GRADES.first()) Spacer(Modifier.width(GRADE_GAP))
+            // 칸은 잉크만큼만 잡는다. 그림은 뷰포트에 빈 테두리를 저마다 다르게 두르고
+            // 있어, 그림째로 늘어놓으면 사이가 고르지 않고 오른끝도 선에서 물러난다.
+            val k = GRADE_INK.value / gradeInkH(g)       // 뷰포트 한 칸이 몇 dp 인가
+            Box(
+                Modifier
+                    .width((gradeInkW(g) * k).dp)
+                    .fillMaxHeight()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { onPick(g) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painterResource(
+                        when (g) {
+                            1 -> R.drawable.grade_1
+                            2 -> R.drawable.grade_2
+                            else -> R.drawable.grade_3
+                        }
+                    ),
+                    contentDescription = "Grade $g",
+                    colorFilter = if (g == grade) ColorFilter.tint(Hak3.Accent) else null,
+                    // 고르지 않은 쪽은 30% 만 비친다
+                    alpha = if (g == grade) 1f else 0.3f,
+                    // 그림 한 변을 잉크의 키가 [GRADE_INK] 가 되게 잡고, 잉크보다 넓은
+                    // 테두리는 칸 밖으로 넘친다
+                    modifier = Modifier
+                        .wrapContentSize(unbounded = true)
+                        .requiredSize((GRADE_VIEW * k).dp),
+                )
+            }
+        }
     }
 }
 
-/** 급수의 영문 이름 — 1st Grade, 2nd Grade, 3rd Grade. */
-private fun gradeName(grade: Int) = when (grade) {
-    1 -> "1st Grade"
-    2 -> "2nd Grade"
-    3 -> "3rd Grade"
-    else -> "${grade}th Grade"
+/** 서랍의 급수 표가 서는 키 — 그림의 빈 테두리를 뺀 잉크만의 키다. */
+private val GRADE_INK = 28.dp
+
+/** 급수 표 잉크 사이의 틈. 20dp 남짓이던 것을 60% 로 붙였다. */
+private val GRADE_GAP = 12.dp
+
+/** 급수 표 셋이 덩이의 오른쪽 선([DRAWER_PAD])에서 더 물러서는 만큼. 눈으로 맞췄다. */
+private val GRADE_INSET = 4.dp
+
+/** 급수 그림(grade_1·2·3)의 뷰포트 한 변. */
+private const val GRADE_VIEW = 291f
+
+/** 급수 그림마다 잉크가 차지하는 키(뷰포트 단위). 그림의 pathData 에서 잰 값이다. */
+private fun gradeInkH(grade: Int) = when (grade) {
+    1 -> 279.7f - 11f      // 마름모
+    2 -> 273f - 18f        // 모래시계
+    else -> 278f - 13f     // 육각
 }
 
-/** 급수 덩이 하나의 키. 30dp 이던 것을 150% 로 키웠다. */
+/** 급수 그림마다 잉크가 차지하는 폭(뷰포트 단위). */
+private fun gradeInkW(grade: Int) = when (grade) {
+    1 -> 279.351f - 10.649f
+    2 -> 270f - 22f
+    else -> 260.248f - 30.752f
+}
+
+/** 급수 덩이 하나가 섰던 키. 셋을 하나로 합친 지금의 덩이는 이것으로 잰다. */
 private val GRADE_BLOCK = 45.dp
 
 /** 첫 덩이가 위에서 물러나는 만큼. 본 화면에서 사전 판이 물러난 것과 같다. */
