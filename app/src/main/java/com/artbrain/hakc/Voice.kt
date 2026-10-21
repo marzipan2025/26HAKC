@@ -150,7 +150,7 @@ object Voice {
     private const val LINGER_KANA = 300L
 
     /** 한자가 함께 설 때 더 머무는 참. (ms) */
-    private const val LINGER_KANJI = 800L
+    private const val LINGER_KANJI = 600L
 }
 
 /**
